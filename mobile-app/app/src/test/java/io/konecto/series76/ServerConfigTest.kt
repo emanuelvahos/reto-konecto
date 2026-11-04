@@ -25,3 +25,4 @@ class ServerConfigTest {
         assertFalse(ServerPreferences.isValidUrl("http://"))
     }
 }
+

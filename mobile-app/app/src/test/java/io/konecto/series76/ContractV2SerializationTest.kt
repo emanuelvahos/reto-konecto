@@ -69,3 +69,4 @@ class ContractV2SerializationTest {
         assertEquals("TEXT_ONLY", resp.uiPayload.displayType)
     }
 }
+
