@@ -1,0 +1,7 @@
+{
+  "_doc": "Excepciones del verificador numerico (REGLA 4). free_patterns: expresiones cuyo numero se permite sin respaldo en herramientas (p. ej. la definicion de giro de 90 grados); se evaluan sin distinguir mayusculas.",
+  "free_patterns": [
+    "\\b90\\s*(?:°|º|-?\\s?deg(?:ree)?s?\\b|-?\\s?grados?\\b)"
+  ],
+  "skip_list_markers": true
+}
