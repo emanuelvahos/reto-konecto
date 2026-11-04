@@ -1,11 +1,13 @@
 import json
+import time
 import uuid
 from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import get_db_cursor
+from app.config import load_llm_config
+from app.database import ensure_schema, get_db_cursor
 from app.auth import authenticate_user, create_access_token, get_optional_current_user
 from app.schemas import (
     LoginRequest,
@@ -57,12 +59,18 @@ def assert_session_access(session_user_id: Any, current_user: Optional[Dict[str,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this session.")
 
 
+@app.on_event("startup")
+def _startup() -> None:
+    ensure_schema()
+
+
 @app.get("/health")
 def health_check():
     with get_db_cursor() as cur:
         cur.execute("SELECT COUNT(*) AS count FROM actuators;")
         act_count = cur.fetchone()["count"]
-    return {"status": "ok", "actuators_loaded": act_count}
+    cfg = load_llm_config()
+    return {"status": "ok", "actuators_loaded": act_count, "llm_provider": cfg.provider, "llm_model": cfg.chat_model}
 
 
 # =====================================================================
@@ -92,6 +100,8 @@ def conversation_endpoint(
     req: ConversationRequest,
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
 ):
+    request_t0 = time.perf_counter()
+    ensure_schema()
     user_id = current_user["id"] if current_user else None
     requested_sid = req.session_id.strip() if req.session_id else None
 
@@ -99,6 +109,7 @@ def conversation_endpoint(
     active_part_numbers: List[str] = []
     active_filters: Dict[str, Any] = {}
 
+    history_t0 = time.perf_counter()
     with get_db_cursor() as cur:
         if requested_sid and is_valid_uuid(requested_sid):
             cur.execute(
@@ -145,13 +156,18 @@ def conversation_endpoint(
                 (session_id, user_id, generate_session_title(req.query)),
             )
 
+    history_load_ms = (time.perf_counter() - history_t0) * 1000
+
     # Ejecutar turno del agente con memoria multi-turno
     try:
-        answer, ui_payload, debug_trace, updated_parts, updated_filters = run_agent_turn(
+        answer, ui_payload, debug_trace, updated_parts, updated_filters, meta = run_agent_turn(
             user_query=req.query,
             history_messages=history_messages,
             active_part_numbers=active_part_numbers,
             active_filters=active_filters,
+            locale=req.locale,
+            request_t0=request_t0,
+            history_load_ms=history_load_ms,
         )
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
@@ -161,6 +177,26 @@ def conversation_endpoint(
 
     # Persistir mensaje del usuario, respuesta del agente y estado actualizado en PostgreSQL
     with get_db_cursor() as cur:
+        cur.execute(
+            """
+            UPDATE chat_sessions
+            SET active_part_numbers = %s::jsonb,
+                active_filters = %s::jsonb,
+                short_title = COALESCE(%s, short_title),
+                cost_usd_total = cost_usd_total + %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE session_id = %s
+            RETURNING cost_usd_total;
+            """,
+            (
+                json.dumps(updated_parts),
+                json.dumps(updated_filters),
+                meta["short_title"],
+                meta["cost_usd"],
+                session_id,
+            ),
+        )
+        debug_trace["session_cost_usd"] = float(cur.fetchone()["cost_usd_total"])
         cur.execute(
             """
             INSERT INTO chat_messages (session_id, role, content, ui_payload, debug_trace)
@@ -180,25 +216,13 @@ def conversation_endpoint(
                 json.dumps(debug_trace, default=str),
             ),
         )
-        cur.execute(
-            """
-            UPDATE chat_sessions
-            SET active_part_numbers = %s::jsonb,
-                active_filters = %s::jsonb,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE session_id = %s;
-            """,
-            (
-                json.dumps(updated_parts),
-                json.dumps(updated_filters),
-                session_id,
-            ),
-        )
 
     return ConversationResponse(
         schema_version=2,
         session_id=session_id,
         answer=answer,
+        intent=meta["intent"],
+        verification=meta["verification"],
         ui_payload=ui_payload,
         debug_trace=debug_trace,
     )
@@ -211,11 +235,12 @@ def conversation_endpoint(
 def list_sessions(
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
 ):
+    ensure_schema()
     with get_db_cursor() as cur:
         if current_user:
             cur.execute(
                 """
-                SELECT s.session_id, s.title, s.active_part_numbers, s.created_at, s.updated_at,
+                SELECT s.session_id, s.title, s.short_title, s.cost_usd_total, s.active_part_numbers, s.created_at, s.updated_at,
                        COUNT(m.id) AS message_count
                 FROM chat_sessions s
                 LEFT JOIN chat_messages m ON s.session_id = m.session_id
@@ -228,7 +253,7 @@ def list_sessions(
         else:
             cur.execute(
                 """
-                SELECT s.session_id, s.title, s.active_part_numbers, s.created_at, s.updated_at,
+                SELECT s.session_id, s.title, s.short_title, s.cost_usd_total, s.active_part_numbers, s.created_at, s.updated_at,
                        COUNT(m.id) AS message_count
                 FROM chat_sessions s
                 LEFT JOIN chat_messages m ON s.session_id = m.session_id
@@ -244,6 +269,8 @@ def list_sessions(
             title=r["title"],
             active_part_numbers=r["active_part_numbers"] or [],
             message_count=r["message_count"],
+            short_title=r["short_title"],
+            cost_usd_total=float(r["cost_usd_total"] or 0),
             created_at=r["created_at"].isoformat(),
             updated_at=r["updated_at"].isoformat(),
         )

@@ -304,6 +304,9 @@ def run_evaluation_suite(
                 print(f"       Tools:  {list(dict.fromkeys(tools_used))}")
         except Exception as e:
             elapsed = round((time.perf_counter() - t0) * 1000)
+            if verbose:
+                import traceback
+                traceback.print_exc()
             status_str = f"❌ FAIL ({str(e)[:60]})"
             print(f"[FAIL] {sc.scenario_id} ({elapsed} ms): {sc.title}")
             print(f"       Error: {e}")

@@ -56,6 +56,8 @@ class DebugTracePayload(BaseModel):
     steps: List[TraceStep] = Field(default_factory=list)
     cost_usd_estimate: float = 0.0
     provider: str = ""
+    session_cost_usd: float = 0.0
+    language: str = ""
 
 
 class UIAlert(BaseModel):
@@ -124,6 +126,8 @@ class SessionSummary(BaseModel):
     title: str
     active_part_numbers: List[str] = Field(default_factory=list)
     message_count: int = 0
+    short_title: Optional[str] = None
+    cost_usd_total: float = 0.0
     created_at: str
     updated_at: str
 
