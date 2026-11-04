@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 
 from app.database import get_db_cursor, sanitize_rows
+from app.i18n import alert_severity, render_alert_message
 
 # ContextVars por turno. LangChain ejecuta tools síncronas en una copia del contexto: un ``.set()``
 # dentro de la tool se perdería. Se enlaza un contenedor MUTABLE nuevo en reset_turn_telemetry() (contexto
@@ -28,13 +29,9 @@ current_turn_tool_traces: ContextVar[List[Dict[str, Any]]] = ContextVar(
 current_turn_actuators: ContextVar[Dict[Any, Any]] = ContextVar(
     "current_turn_actuators", default={}
 )
-current_turn_alerts: ContextVar[List[Dict[str, str]]] = ContextVar(
+# alertas internas {code, params}; se localizan (es/en) al construir el ui_payload
+current_turn_alerts: ContextVar[List[Dict[str, Any]]] = ContextVar(
     "current_turn_alerts", default=[]
-)
-
-SINGLE_TORQUE_MESSAGE = (
-    "La hoja de datos da un único torque de salida para trifásico, "
-    "sin distinguir on/off y modulante."
 )
 
 # Grupos de campos que el LLM puede necesitar según la intención de la pregunta
@@ -87,12 +84,13 @@ def register_ui_actuators(rows: List[Dict[str, Any]]) -> None:
             store[r["id"]] = r["id"]
 
 
-def record_alert(code: str, severity: str, message: str) -> Dict[str, str]:
-    alert = {"code": code, "severity": severity, "message": message}
+def record_alert(code: str, **params: Any) -> Dict[str, str]:
+    """Registra la alerta en el contenedor del turno (mutación en sitio) y devuelve su forma para el LLM (en)."""
     alerts = current_turn_alerts.get()
-    if not any(a["code"] == code and a["message"] == message for a in alerts):
-        alerts.append(alert)
-    return alert
+    entry = {"code": code, "params": params}
+    if entry not in alerts:
+        alerts.append(entry)
+    return {"code": code, "message": render_alert_message(code, params, "en")}
 
 
 def fetch_ui_actuators(ids: List[Any]) -> List[Dict[str, Any]]:
@@ -160,7 +158,7 @@ def _compact_rows(rows: List[Dict[str, Any]], focus: Optional[List[str]] = None)
 
 def _single_torque_alerts(rows: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     if any(is_single_torque(r) for r in rows):
-        return [record_alert("SINGLE_TORQUE_RATING", "warning", SINGLE_TORQUE_MESSAGE)]
+        return [record_alert("SINGLE_TORQUE_RATING")]
     return []
 
 
@@ -219,11 +217,14 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
                 )
                 alternatives = sanitize_rows(cur.fetchall())
                 register_ui_actuators(alternatives)
-                msg = (
-                    f"{na_rows[0]['base_part_number']} is listed as N/A in the {na_rows[0]['power_supply']} table. "
-                    f"Available alternatives of size {target_size} are returned."
-                )
-                alerts = [record_alert("MODEL_LISTED_AS_NA", "warning", msg)] + _single_torque_alerts(alternatives)
+                alerts = [
+                    record_alert(
+                        "MODEL_LISTED_AS_NA",
+                        pn=na_rows[0]["base_part_number"],
+                        supply=na_rows[0]["power_supply"],
+                        size=target_size,
+                    )
+                ] + _single_torque_alerts(alternatives)
                 result: Dict[str, Any] = {
                     "status": "MODEL_LISTED_AS_NA",
                     "queried_part_number": part_number,
@@ -262,8 +263,7 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
 
     if fuzzy_rows:
         register_ui_actuators([r for r in fuzzy_rows if r["is_available"]])
-        msg = f"Part number '{part_number}' does not exist; close matches found (likely a typo such as 8 vs B or 0 vs C)."
-        alerts = [record_alert("TYPO_OR_CLOSEST_MATCH_FOUND", "warning", msg)] + _single_torque_alerts(fuzzy_rows)
+        alerts = [record_alert("TYPO_OR_CLOSEST_MATCH_FOUND", query=part_number)] + _single_torque_alerts(fuzzy_rows)
         result = {
             "status": "TYPO_OR_CLOSEST_MATCH_FOUND",
             "queried_part_number": part_number,
@@ -271,14 +271,10 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
             "alerts": alerts,
         }
     else:
-        msg = (
-            f"No Series 76 actuator matches '{part_number}'. Valid format: "
-            "76[1-7][A,B,C,X,Y][00|30]-113[0,2,3,7,8]0000/A (3-phase: 11330C00)."
-        )
         result = {
             "status": "INVALID_PART_NUMBER",
             "queried_part_number": part_number,
-            "alerts": [record_alert("INVALID_PART_NUMBER", "error", msg)],
+            "alerts": [record_alert("INVALID_PART_NUMBER", query=part_number)],
         }
     record_tool_trace("lookup_actuator_by_part_number", args, sql_fuzzy, result,
                       (time.perf_counter() - t0) * 1000)
@@ -338,7 +334,7 @@ def recommend_actuators(
 
     conditions = ["is_available = TRUE"]
     params: List[Any] = []
-    ambiguity_notes: List[str] = []
+    ambiguous_service = False
 
     app_mode = (application_type or "").strip().lower()
     if app_mode in ("on/off", "on_off", "onoff"):
@@ -380,9 +376,7 @@ def recommend_actuators(
     else:
         # Sin tipo de servicio: cumple en CUALQUIERA de los dos
         if min_torque_nm is not None or min_torque_in_lbs is not None:
-            ambiguity_notes.append(
-                "Service type (On/Off vs Modulating) was not specified; modulating torque is typically lower than on/off."
-            )
+            ambiguous_service = True
         if min_torque_nm is not None:
             conditions.append("(COALESCE(on_off_torque_nm, 0) >= %s OR COALESCE(modulating_torque_nm, 0) >= %s)")
             params.extend([min_torque_nm, min_torque_nm])
@@ -470,7 +464,7 @@ def recommend_actuators(
 
         if matches:
             register_ui_actuators(matches)
-            alerts = [record_alert("AMBIGUOUS_SERVICE_TYPE", "info", n) for n in ambiguity_notes]
+            alerts = [record_alert("AMBIGUOUS_SERVICE_TYPE")] if ambiguous_service else []
             alerts += _single_torque_alerts(matches)
             result: Dict[str, Any] = {
                 "status": "MATCHES_FOUND",
@@ -495,33 +489,32 @@ def recommend_actuators(
             ratio = cur.fetchone()["r"]
             want_nm = float(ratio) * min_torque_in_lbs if ratio else None
 
-        diagnostics: List[str] = []
+        diag: List[Dict[str, Any]] = []  # [{code, params}] -> se localizan al construir el ui_payload
         if want_nm is not None:
             checks = []
             if require_csa_certification:
-                checks.append(("CSA-certified models", "csa_certified = TRUE", []))
+                checks.append(("csa", "", "csa_certified = TRUE", []))
             if voltage_num is not None:
-                checks.append((f"{voltage_num}V models", "voltage_num = %s", [voltage_num]))
+                checks.append(("voltage", voltage_num, "voltage_num = %s", [voltage_num]))
             if enclosure_type:
-                checks.append((f"{enclosure_type.strip()} models", "LOWER(enclosure_type) = LOWER(%s)", [enclosure_type.strip()]))
+                checks.append(("enclosure", enclosure_type.strip(), "LOWER(enclosure_type) = LOWER(%s)", [enclosure_type.strip()]))
             if phase_type:
-                checks.append((f"{phase_type.strip()} models", "LOWER(phase_type) = LOWER(%s)", [phase_type.strip()]))
-            for label, where, p in checks:
+                checks.append(("phase", phase_type.strip(), "LOWER(phase_type) = LOWER(%s)", [phase_type.strip()]))
+            for kind, value, where, p in checks:
                 ceiling = _torque_ceiling(cur, where, p)
                 if ceiling is not None and want_nm > ceiling:
-                    diagnostics.append(
-                        f"The highest torque listed for {label} is {_num(ceiling)} Nm, below the requested {_num(want_nm)} Nm."
-                    )
+                    diag.append({"code": "TORQUE_ABOVE_CEILING", "params": {
+                        "filter_kind": kind, "filter_value": value, "ceiling": _num(ceiling), "requested": _num(want_nm)}})
             catalog_max = _torque_ceiling(cur, "TRUE", [])
             if catalog_max is not None and want_nm > catalog_max:
-                diagnostics.append(f"The highest torque in the whole Series 76 catalog is {_num(catalog_max)} Nm.")
+                diag.append({"code": "CATALOG_TORQUE_CEILING", "params": {"ceiling": _num(catalog_max)}})
             if require_csa_certification:
                 cur.execute("SELECT MIN(frame_size) AS f FROM actuators WHERE is_available AND NOT csa_certified;")
                 f = cur.fetchone()["f"]
                 if f is not None:
-                    diagnostics.append(f"Models of frame size {f} and above are not CSA certified.")
-        if not diagnostics:
-            diagnostics.append("No single model satisfies all constraints together; closest alternatives are listed.")
+                    diag.append({"code": "CSA_SIZE_LIMIT", "params": {"frame_size": f}})
+        if not diag:
+            diag.append({"code": "CONSTRAINT_RELAXED", "params": {}})
 
         if want_nm is not None:
             cur.execute(
@@ -537,8 +530,7 @@ def recommend_actuators(
         relaxed_candidates = sanitize_rows(cur.fetchall())
 
     register_ui_actuators(relaxed_candidates)
-    for d in diagnostics:
-        record_alert("CONSTRAINT_RELAXED", "warning", d)
+    diagnostics = [record_alert(d["code"], **d["params"])["message"] for d in diag]
     single_alerts = _single_torque_alerts(relaxed_candidates)
     result = {
         "status": "NO_EXACT_MATCH_CONSTRAINT_RELAXATION",
@@ -640,6 +632,8 @@ def search_engineering_knowledge(query: str) -> Dict[str, Any]:
             "status": "KNOWLEDGE_ERROR",
             "message": f"Knowledge lookup failed ({type(exc).__name__}). Tell the user the information is unavailable.",
         }
+    if result["status"] in ("KNOWLEDGE_ERROR", "NO_KNOWLEDGE_MATCH"):
+        record_alert("KNOWLEDGE_UNAVAILABLE")
     record_tool_trace(
         "search_engineering_knowledge",
         {"query": query},

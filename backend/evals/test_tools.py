@@ -87,7 +87,9 @@ def test_recommend_modulating_includes_3phase_with_single_torque_alert():
     assert "modulating_torque_nm" not in row and row["single_torque_nm"] == 3000
     assert "SINGLE_TORQUE_RATING" in _codes(res)
     alert = [a for a in current_turn_alerts.get() if a["code"] == "SINGLE_TORQUE_RATING"]
-    assert alert and "único torque de salida" in alert[0]["message"]  # visible en el contexto padre
+    assert alert  # visible en el contexto padre (mutación en sitio)
+    from app.i18n import render_alert
+    assert "único torque de salida" in render_alert(alert[0], "es")["message"]
 
 
 def test_recommend_modulating_with_duty_excludes_unverifiable_3phase():
