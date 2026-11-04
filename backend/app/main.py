@@ -196,6 +196,7 @@ def conversation_endpoint(
         )
 
     return ConversationResponse(
+        schema_version=2,
         session_id=session_id,
         answer=answer,
         ui_payload=ui_payload,

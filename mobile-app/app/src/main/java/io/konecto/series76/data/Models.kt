@@ -34,7 +34,9 @@ data class LoginResponse(
 @Serializable
 data class ConversationRequest(
     @SerialName("session_id") val sessionId: String? = null,
-    val query: String
+    val query: String,
+    val locale: String? = null,
+    @SerialName("input_mode") val inputMode: String? = null
 )
 
 @Immutable
@@ -75,10 +77,53 @@ data class ActuatorDto(
 
 @Immutable
 @Serializable
+data class UIAlert(
+    val code: String = "",
+    val severity: String = "",
+    val message: String = ""
+)
+
+@Immutable
+@Serializable
+data class RankedActuator(
+    @SerialName("part_number") val partNumber: String = "",
+    val score: Double = 0.0,
+    val why: List<String> = emptyList(),
+    @SerialName("why_not") val whyNot: List<String> = emptyList()
+)
+
+@Immutable
+@Serializable
+data class RecommendationPayload(
+    val ranking: List<RankedActuator> = emptyList(),
+    @SerialName("hard_constraints") val hardConstraints: List<String> = emptyList(),
+    @SerialName("relaxed_constraints") val relaxedConstraints: List<String> = emptyList()
+)
+
+@Immutable
+@Serializable
+data class ClarificationOption(
+    val label: String = "",
+    val value: String = ""
+)
+
+@Immutable
+@Serializable
+data class ClarificationPayload(
+    val question: String = "",
+    val options: List<ClarificationOption> = emptyList()
+)
+
+@Immutable
+@Serializable
 data class UIPayload(
+    // SINGLE_SPEC_CARD | COMPARISON_TABLE | EDGE_CASE_ALERT | TEXT_ONLY | RECOMMENDATION_LIST | CLARIFICATION
     @SerialName("display_type") val displayType: String = "TEXT_ONLY",
     val actuators: List<ActuatorDto> = emptyList(),
-    @SerialName("engineering_warnings") val engineeringWarnings: List<String> = emptyList()
+    @SerialName("engineering_warnings") val engineeringWarnings: List<String> = emptyList(),
+    val alerts: List<UIAlert> = emptyList(),
+    val recommendation: RecommendationPayload? = null,
+    val clarification: ClarificationPayload? = null
 )
 
 @Immutable
@@ -93,17 +138,39 @@ data class ToolCallTrace(
 
 @Immutable
 @Serializable
+data class TraceStep(
+    val name: String = "",
+    @SerialName("start_ms") val startMs: Double = 0.0,
+    @SerialName("duration_ms") val durationMs: Double = 0.0
+)
+
+@Immutable
+@Serializable
 data class DebugTracePayload(
     @SerialName("model_used") val modelUsed: String = "",
     @SerialName("total_latency_ms") val totalLatencyMs: Double = 0.0,
     @SerialName("token_usage") val tokenUsage: JsonElement? = null,
     @SerialName("active_context_part_numbers") val activeContextPartNumbers: List<String> = emptyList(),
-    @SerialName("tool_calls") val toolCalls: List<ToolCallTrace> = emptyList()
+    @SerialName("tool_calls") val toolCalls: List<ToolCallTrace> = emptyList(),
+    val steps: List<TraceStep> = emptyList(),
+    @SerialName("cost_usd_estimate") val costUsdEstimate: Double = 0.0,
+    val provider: String = ""
+)
+
+@Immutable
+@Serializable
+data class Verification(
+    val status: String = "unverified",
+    @SerialName("numbers_checked") val numbersChecked: Int = 0,
+    val ungrounded: List<String> = emptyList()
 )
 
 @Immutable
 @Serializable
 data class ConversationResponse(
+    @SerialName("schema_version") val schemaVersion: Int = 2,
+    val intent: String = "lookup",
+    val verification: Verification = Verification(),
     @SerialName("session_id") val sessionId: String,
     val answer: String,
     @SerialName("ui_payload") val uiPayload: UIPayload = UIPayload(),

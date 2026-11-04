@@ -4,6 +4,16 @@ This document defines the strict architectural invariants, physical validation l
 
 ---
 
+## REGLAS VIGENTES (prevalecen sobre lo demás)
+
+1. La fuente de verdad de los datos es el PDF; el archivo de referencia que se creará en la Fase 1 es el oráculo de pruebas.
+2. Las afirmaciones sobre columnas 50/60 Hz "invertidas" en las páginas 2 y 4 son FALSAS: en todas las tablas el orden es 60 Hz | 50 Hz; no las preserves.
+3. Los números de parte trifásicos reales terminan en `11330C00` (no `11330000`).
+4. Ningún número que vea el usuario puede venir del LLM.
+5. Ningún diagnóstico puede llevar cifras escritas a mano en el código.
+
+---
+
 ## 1. Core Architectural Law: Zero-Hallucination Neuro-Symbolic Execution
 
 1. **Deterministic Tool Authority:** The LLM is **strictly forbidden** from computing, interpolating, or recalling actuator specifications (Torque in Nm/in-lbs, Duty Cycle S4%, Operating Speed, FLA, LRA, or Motor Power) from parametric memory. Every numerical metric presented to the user MUST originate from a PostgreSQL tool execution (`lookup_actuator_by_part_number` or `recommend_actuators`).
@@ -22,7 +32,7 @@ Any modification to `backend/scripts/ingest.py` or `backend/app/tools.py` MUST p
 - **Symptom:** In the source PDF tables, the *Motor Power (Watts)* column spans vertically across multiple actuator rows (e.g., `15W`, `40W`, `90W`, `180W`, `700W`). Naive row-by-row parsers leave `NULL` in 75% of the rows.
 - **Defense:** `ingest.py` resolves all vertical spans deterministically during catalog construction, ensuring all 64 available actuator models have an explicit integer `motor_power_watts` (`NOT NULL`).
 
-### Trap 2: Inverted `50 Hz` vs `60 Hz` Sub-Column Headers Across Pages
+### Trap 2: Inverted `50 Hz` vs `60 Hz` Sub-Column Headers Across Pages — EN REVISIÓN, ver REGLAS VIGENTES
 - **Symptom:**
   - **Page 1 (Weatherproof 110V & 220V 1-Phase):** Speed, FLA, and LRA sub-columns are ordered `60 Hz (left) | 50 Hz (right)`.
   - **Page 2 (Weatherproof 220V 3-Phase):** Operating Speed and LRA invert the order to `50 Hz (left) | 60 Hz (right)`, while FLA remains `60 Hz (left) | 50 Hz (right)`.
@@ -30,7 +40,7 @@ Any modification to `backend/scripts/ingest.py` or `backend/app/tools.py` MUST p
   - **Page 4 (Explosionproof 220V 1-Phase):** FLA is inverted to `50 Hz (left) | 60 Hz (right)`.
 - **Defense:** `build_verified_catalog()` in `backend/scripts/ingest.py` explicitly maps each table's exact column header permutation into canonical database columns (`speed_60hz_sec`, `speed_50hz_sec`, `fla_60hz_amps`, `fla_50hz_amps`, `lra_60hz_amps`, `lra_50hz_amps`). Verified by `EVAL-03` (`763A00-11330000/A`: 32s @ 50Hz vs 26s @ 60Hz).
 
-### Trap 3: Explicit `N/A` Models in 220V 3-Phase (Sizes 1 & 2)
+### Trap 3: Explicit `N/A` Models in 220V 3-Phase (Sizes 1 & 2) — EN REVISIÓN, ver REGLAS VIGENTES
 - **Symptom:** In Page 2 (220V 3-Phase), frame sizes 1 and 2 (`761A00-11330000/A`, `761B00-11330000/A`, `762A00-11330000/A`, `762B00-11330000/A`) appear in the table with `N/A` across all metrics. Dropping them during ingestion would cause the assistant to falsely claim the part number is a typo or does not exist.
 - **Defense:** Stored in PostgreSQL with `is_available = FALSE` and `service_support = 'N/A (Not Available in 220V 3-Phase)'`. When queried via `lookup_actuator_by_part_number`, the tool returns `status = "MODEL_LISTED_AS_NA"` and automatically queries available 110V/220V Single-Phase equivalents of the same frame size (`available_alternatives_same_size`).
 
