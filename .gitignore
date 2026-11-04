@@ -33,3 +33,8 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Extraction artifacts (rasters, review crops)
+backend/data/extraction/page*.png
+backend/data/extraction/crops/
+backend/data/extraction/A.partial.json

@@ -18,7 +18,7 @@ def test_tool_exact_lookup():
 
 def test_tool_na_3phase_lookup_returns_alternatives():
     reset_turn_telemetry()
-    res = lookup_actuator_by_part_number.invoke({"part_number": "761A00-11330000/A"})
+    res = lookup_actuator_by_part_number.invoke({"part_number": "761A00-11330C00/A"})
     assert res["status"] == "MODEL_LISTED_AS_NA"
     assert len(res["available_alternatives_same_size"]) >= 2
 

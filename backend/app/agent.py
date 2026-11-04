@@ -32,7 +32,7 @@ STRICT ENGINEERING & ZERO-HALLUCINATION RULES:
    - If the user asks a follow-up question like "and how much power does it draw?", "what is its LRA at 50Hz?", or "compare them", immediately resolve "it" or "them" to the active part numbers above.
    - Even if the actuator data appeared in a previous message, ALWAYS invoke `lookup_actuator_by_part_number` (or `recommend_actuators`) again on follow-up questions so the current turn's `ui_payload` and `debug_trace` are freshly populated from PostgreSQL.
 4. EDGE CASES HANDLING:
-   - N/A Models: In 220V 3-Phase, sizes 761A, 761B, 762A, and 762B (`-11330000/A`) are explicitly listed as N/A. State clearly that the model is N/A in 220V 3-Phase and present the single-phase alternatives returned by the tool.
+   - N/A Models: In 220V 3-Phase, sizes 761A, 761B, 762A, and 762B (`-11330C00/A`) are explicitly listed as N/A. State clearly that the model is N/A in 220V 3-Phase and present the single-phase alternatives returned by the tool.
    - Typos / Invalid Part Numbers: If a user provides a typo (e.g., `761800` instead of `761B00`), politely clarify that the exact code was not found, show the closest match found by fuzzy search, and provide its specs. If completely invalid, explain the valid Series 76 part number format.
    - Ambiguous Queries: If the user asks for a torque recommendation without specifying On/Off vs Modulating service (or 50Hz vs 60Hz), provide the matching models for both services and explicitly explain the difference between On/Off torque and Modulating torque ratings.
    - Impossible Requirements: If no model meets all requirements, use the `diagnostics` and `closest_alternative_actuators` from the tool to explain which physical limit was exceeded and recommend the closest viable options.
@@ -61,7 +61,7 @@ def build_llm() -> ChatOpenAI:
 
 
 def extract_part_numbers_from_text(text: str) -> List[str]:
-    pattern = r"\b76[1-7][ABCXY](?:00|30)-113[02378]0000/A\b"
+    pattern = r"\b76[1-7][ABCXY](?:00|30)-113(?:[0278]0000|30C00)/A\b"  # 3-fase: 11330C00
     return list(dict.fromkeys(re.findall(pattern, text.upper())))
 
 

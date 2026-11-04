@@ -63,7 +63,7 @@ def register_ui_actuators(rows: List[Dict[str, Any]]) -> None:
 class LookupPartNumberInput(BaseModel):
     part_number: str = Field(
         ...,
-        description="Base Part Number of the Series 76 actuator (e.g., '761A00-11300000/A', '763B00-11320000/A', or partial/typo code).",
+        description="Base Part Number of the Series 76 actuator (e.g., '761A00-11300000/A', '763B00-11320000/A', '763B00-11330C00/A' for 3-phase, or partial/typo code).",
     )
 
 
@@ -98,7 +98,7 @@ def lookup_actuator_by_part_number(part_number: str) -> Dict[str, Any]:
             available_rows = [r for r in exact_rows if r["is_available"]]
             na_rows = [r for r in exact_rows if not r["is_available"]]
 
-            # Si el usuario preguntó específicamente por un modelo que es N/A (ej. 761A00-11330000/A en 220V 3-Phase)
+            # Si el usuario preguntó específicamente por un modelo que es N/A (ej. 761A00-11330C00/A en 220V 3-Phase)
             if not available_rows and na_rows:
                 target_size = na_rows[0]["size_code"]
                 cur.execute(

@@ -112,23 +112,23 @@ def build_scenarios() -> List[EvalScenario]:
             lambda res: (
                 assert_in_answer(res[0], ["750", "680"]),
                 assert_in_answer(res[1], ["90"]),
-                assert_in_answer(res[2], ["27", "3.2"]),
+                assert_in_answer(res[2], ["33", "3.0"]),  # oráculo: 764A00-11320000/A speed 50Hz=33 s, FLA 50Hz=3.0 A
             ),
         ),
-        # 3. 220V 3-Phase Inverted Columns Verification
+        # 3. 220V 3-Phase column order (60 Hz | 50 Hz) verification
         EvalScenario(
             "EVAL-03",
             "Specific Data Retrieval",
-            "Lookup 763A00-11330000/A (220V 3-Phase speed 50Hz vs 60Hz)",
-            ["For part number 763A00-11330000/A, what is the operating speed at 50Hz and at 60Hz?"],
+            "Lookup 763A00-11330C00/A (220V 3-Phase speed 50Hz vs 60Hz)",
+            ["For part number 763A00-11330C00/A, what is the operating speed at 50Hz and at 60Hz?"],
             lambda res: assert_in_answer(res[-1], ["32", "26"]),
         ),
         # 4. Edge Case: Model Explicitly Listed as N/A in 220V 3-Phase
         EvalScenario(
             "EVAL-04",
             "Edge Case: N/A Model",
-            "Querying 761A00-11330000/A which is N/A in 220V 3-Phase table",
-            ["Can I get the specs for 761A00-11330000/A?"],
+            "Querying 761A00-11330C00/A which is N/A in 220V 3-Phase table",
+            ["Can I get the specs for 761A00-11330C00/A?"],
             lambda res: (
                 assert_any_in_answer(res[-1], ["n/a", "not available", "single phase", "110v", "220v", "not offered", "unsupported"]),
                 assert_tool_called(res[-1], "lookup_actuator_by_part_number"),

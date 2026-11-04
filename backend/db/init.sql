@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- 3. Tabla Maestra de Actuadores Serie 76 (Datos Estructurados Exactos)
 CREATE TABLE IF NOT EXISTS actuators (
     id SERIAL PRIMARY KEY,
-    base_part_number VARCHAR(64) NOT NULL,
+    base_part_number VARCHAR(64) NOT NULL,       -- Ej: 761A00-11300000/A; 3-fase: 763A00-11330C00/A (sin '*' de nota al pie)
     normalized_part_number VARCHAR(64) NOT NULL, -- Sin guiones ni barras para bÃºsqueda rÃ¡pida
     size_code VARCHAR(16) NOT NULL,              -- Ej: 761A, 761B, 762X, etc.
     frame_size INTEGER NOT NULL,                 -- 1 al 7 (para filtrar Nota de TamaÃ±os 6 y 7)

@@ -1,0 +1,11 @@
+{
+  "_note": "Resoluciones humanas del CHECKPOINT 1 (verificadas contra el PDF). from-pdf falla si aparece un desacuerdo A!=B que no esté cubierto aquí.",
+  "field_values": [
+    {"part_number": "763A00-11300000/A", "field": "motor_power_watts", "value": 40, "reason": "Fila dentro del bloque combinado de 40 W (p1, 110V)"},
+    {"part_number": "764Y30-11300000/A", "field": "motor_power_watts", "value": 180, "reason": "Fila dentro del bloque combinado de 180 W (p4, XP 110V)"}
+  ],
+  "part_number_rules": [
+    {"rule": "strip_footnote_asterisk", "reason": "El '*' es una marca de nota al pie, no parte del número de parte; csa_certified=false se modela aparte (766A-767C, 220V monofásico weatherproof)."},
+    {"rule": "prefer_draft_when_extra_zero", "reason": "Ceros de más en p2 (11330C00) y p4 110V (11300000): errores de conteo del modelo de visión; se usa el valor del borrador."}
+  ]
+}
