@@ -7,7 +7,13 @@
       "chat_model": "openai/gpt-4o-mini",
       "base_url_env": "LLM_BASE_URL",
       "chat_model_env": "LLM_CHAT_MODEL",
-      "api_key_env": "LLM_API_KEY"
+      "api_key_env": "LLM_API_KEY",
+      "pricing_per_1m_usd": {
+        "openai/gpt-4o-mini": {
+          "input": 0.15,
+          "output": 0.6
+        }
+      }
     },
     "nim": {
       "base_url": "https://integrate.api.nvidia.com/v1",
@@ -19,7 +25,9 @@
         "chat_template_kwargs": {
           "enable_thinking": false
         }
-      }
+      },
+      "pricing_per_1m_usd": {}
     }
-  }
+  },
+  "_pricing_doc": "pricing_per_1m_usd: precio de lista USD por 1M de tokens por modelo. NIM (tier gratuito) = 0; modelo sin precio listado = 0 y se marca en debug_trace."
 }
