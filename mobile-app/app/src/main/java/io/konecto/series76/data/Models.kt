@@ -7,6 +7,13 @@ import kotlinx.serialization.json.JsonElement
 
 @Immutable
 @Serializable
+data class HealthResponse(
+    val status: String = "",
+    @SerialName("actuators_loaded") val actuatorsLoaded: Int = 0
+)
+
+@Immutable
+@Serializable
 data class LoginRequest(
     val email: String,
     val password: String

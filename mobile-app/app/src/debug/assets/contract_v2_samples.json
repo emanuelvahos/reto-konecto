@@ -1,0 +1,100 @@
+{
+  "single_spec_card": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {"status": "verified", "numbers_checked": 3, "ungrounded": []},
+    "session_id": "00000000-0000-4000-8000-000000000001",
+    "answer": "Ficha del modelo solicitado.",
+    "ui_payload": {
+      "display_type": "SINGLE_SPEC_CARD",
+      "actuators": [{"base_part_number": "EXAMPLE-PN-1", "frame_size": 1}],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null
+    },
+    "debug_trace": {
+      "model_used": "example-model",
+      "total_latency_ms": 1200.5,
+      "token_usage": {},
+      "active_context_part_numbers": ["EXAMPLE-PN-1"],
+      "tool_calls": [],
+      "steps": [{"name": "tool:lookup", "start_ms": 10.0, "duration_ms": 25.5}],
+      "cost_usd_estimate": 0.0,
+      "provider": "example"
+    }
+  },
+  "comparison_table": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {"status": "verified", "numbers_checked": 8, "ungrounded": []},
+    "session_id": "00000000-0000-4000-8000-000000000002",
+    "answer": "Comparación de dos modelos.",
+    "ui_payload": {
+      "display_type": "COMPARISON_TABLE",
+      "actuators": [
+        {"base_part_number": "EXAMPLE-PN-1", "frame_size": 1},
+        {"base_part_number": "EXAMPLE-PN-2", "frame_size": 2}
+      ],
+      "engineering_warnings": [],
+      "alerts": [{"code": "EXAMPLE_ALERT", "severity": "info", "message": "Mensaje de ejemplo."}]
+    },
+    "debug_trace": {
+      "model_used": "example-model",
+      "total_latency_ms": 2100.0,
+      "active_context_part_numbers": ["EXAMPLE-PN-1", "EXAMPLE-PN-2"],
+      "steps": [
+        {"name": "tool:lookup", "start_ms": 5.0, "duration_ms": 20.0},
+        {"name": "tool:lookup", "start_ms": 30.0, "duration_ms": 18.0}
+      ],
+      "provider": "example"
+    }
+  },
+  "recommendation_with_relaxation": {
+    "schema_version": 2,
+    "intent": "recommend",
+    "verification": {"status": "fallback_template", "numbers_checked": 5, "ungrounded": ["example-ungrounded-token"]},
+    "session_id": "00000000-0000-4000-8000-000000000003",
+    "answer": "Recomendación con restricciones relajadas.",
+    "ui_payload": {
+      "display_type": "RECOMMENDATION_LIST",
+      "actuators": [{"base_part_number": "EXAMPLE-PN-3", "frame_size": 3}],
+      "engineering_warnings": ["Advertencia de ejemplo."],
+      "alerts": [{"code": "CONSTRAINT_RELAXED", "severity": "warning", "message": "Restricción relajada."}],
+      "recommendation": {
+        "ranking": [
+          {"part_number": "EXAMPLE-PN-3", "score": 0.92, "why": ["cumple la restricción A"], "why_not": []},
+          {"part_number": "EXAMPLE-PN-4", "score": 0.55, "why": ["cumple la restricción B"], "why_not": ["no cumple la restricción A"]}
+        ],
+        "hard_constraints": ["restricción dura de ejemplo"],
+        "relaxed_constraints": ["restricción relajada de ejemplo"]
+      }
+    },
+    "debug_trace": {
+      "model_used": "example-model",
+      "total_latency_ms": 3400.0,
+      "steps": [{"name": "tool:recommend", "start_ms": 12.0, "duration_ms": 80.0}],
+      "cost_usd_estimate": 0.0004,
+      "provider": "example"
+    }
+  },
+  "clarification": {
+    "schema_version": 2,
+    "intent": "clarify",
+    "verification": {"status": "unverified", "numbers_checked": 0, "ungrounded": []},
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "answer": "Necesito un dato más.",
+    "ui_payload": {
+      "display_type": "CLARIFICATION",
+      "clarification": {
+        "question": "¿Qué tensión de alimentación necesita?",
+        "options": [
+          {"label": "Opción A", "value": "option_a"},
+          {"label": "Opción B", "value": "option_b"}
+        ]
+      }
+    },
+    "debug_trace": {"model_used": "example-model", "total_latency_ms": 800.0, "provider": "example"}
+  }
+}
+

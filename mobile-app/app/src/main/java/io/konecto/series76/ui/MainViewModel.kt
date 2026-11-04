@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.konecto.series76.data.*
+import io.konecto.series76.mock.DebugMockProvider
 import kotlinx.coroutines.launch
 
 enum class AppScreen {
@@ -28,30 +29,29 @@ class MainViewModel : ViewModel() {
     // Modo Desarrollador (Pantalla Debug oculta por Long-Press para evaluadores/devs)
     var isDeveloperModeUnlocked by mutableStateOf(false)
 
+    private var appContext: Context? = null
+
     fun initPrefs(context: Context) {
-        val prefs = context.getSharedPreferences("konecto_prefs", Context.MODE_PRIVATE)
-        val savedUrl = prefs.getString("base_url", "http://10.0.2.2:8001/") ?: "http://10.0.2.2:8001/"
-        ApiClient.baseUrl = savedUrl
-        val savedToken = prefs.getString("auth_token", null)
-        val savedEmail = prefs.getString("user_email", null)
-        val savedName = prefs.getString("user_name", null)
-        if (!savedToken.isNullOrBlank() && !savedEmail.isNullOrBlank()) {
-            ApiClient.authToken = savedToken
-            currentUser = UserInfo(id = "", email = savedEmail, fullName = savedName ?: savedEmail, role = "engineer")
-            currentScreen = AppScreen.SESSIONS
-            loadSessions()
+        appContext = context.applicationContext
+        viewModelScope.launch {
+            val savedUrl = ServerPreferences.getServerUrlSync(context)
+            ApiClient.baseUrl = savedUrl
+
+            val (savedToken, savedEmail, savedName) = ServerPreferences.getSavedAuth(context)
+            if (!savedToken.isNullOrBlank() && !savedEmail.isNullOrBlank()) {
+                ApiClient.authToken = savedToken
+                currentUser = UserInfo(id = "", email = savedEmail, fullName = savedName ?: savedEmail, role = "engineer")
+                currentScreen = AppScreen.SESSIONS
+                loadSessions()
+            }
         }
     }
 
     fun updateServerUrl(context: Context, newUrl: String) {
-        var cleanUrl = newUrl.trim()
-        if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
-            cleanUrl = "http://$cleanUrl"
+        viewModelScope.launch {
+            ServerPreferences.setServerUrl(context, newUrl)
+            errorMessage = null
         }
-        ApiClient.baseUrl = cleanUrl
-        context.getSharedPreferences("konecto_prefs", Context.MODE_PRIVATE)
-            .edit().putString("base_url", ApiClient.baseUrl).apply()
-        errorMessage = null
     }
 
     fun login(context: Context, email: String, password: String) {
@@ -62,11 +62,7 @@ class MainViewModel : ViewModel() {
                 val resp = ApiClient.api.login(LoginRequest(email.trim(), password))
                 ApiClient.authToken = resp.token
                 currentUser = resp.user
-                context.getSharedPreferences("konecto_prefs", Context.MODE_PRIVATE).edit()
-                    .putString("auth_token", resp.token)
-                    .putString("user_email", resp.user.email)
-                    .putString("user_name", resp.user.fullName)
-                    .apply()
+                ServerPreferences.saveAuth(context, resp.token, resp.user.email, resp.user.fullName)
                 currentScreen = AppScreen.SESSIONS
                 loadSessions()
             } catch (e: Exception) {
@@ -85,13 +81,14 @@ class MainViewModel : ViewModel() {
     }
 
     fun logout(context: Context) {
-        ApiClient.authToken = null
-        currentUser = null
-        sessions = emptyList()
-        messages = emptyList()
-        activeSessionId = null
-        context.getSharedPreferences("konecto_prefs", Context.MODE_PRIVATE).edit().clear().apply()
-        currentScreen = AppScreen.LOGIN
+        viewModelScope.launch {
+            ServerPreferences.clearAuth(context)
+            currentUser = null
+            sessions = emptyList()
+            messages = emptyList()
+            activeSessionId = null
+            currentScreen = AppScreen.LOGIN
+        }
     }
 
     fun loadSessions() {
@@ -162,10 +159,33 @@ class MainViewModel : ViewModel() {
         )
         messages = messages + tempUserMsg
 
-        // 2. Enviar al backend FastAPI y recibir respuesta + ui_payload + debug_trace
+        // 2. Si está activo el modo mock de depuración, servir respuesta local de contract_v2_samples.json
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
+
+            if (DebugMockProvider.isMockEnabled && appContext != null) {
+                val mockResp = DebugMockProvider.getMockResponse(appContext!!, cleanQuery)
+                if (mockResp != null) {
+                    kotlinx.coroutines.delay(400) // Simular latencia sutil
+                    activeSessionId = mockResp.sessionId
+                    if (messages.size <= 1) {
+                        activeSessionTitle = cleanQuery.take(50)
+                    }
+                    val assistantMsg = MessageRecord(
+                        id = messages.size + 1,
+                        role = "assistant",
+                        content = mockResp.answer,
+                        uiPayload = mockResp.uiPayload,
+                        debugTrace = mockResp.debugTrace
+                    )
+                    messages = messages + assistantMsg
+                    isLoading = false
+                    return@launch
+                }
+            }
+
+            // Flujo normal contra backend FastAPI
             try {
                 val resp = ApiClient.api.sendMessage(
                     ConversationRequest(sessionId = activeSessionId, query = cleanQuery)
