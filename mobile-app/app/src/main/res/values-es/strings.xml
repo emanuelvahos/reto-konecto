@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Asistente Serie 76</string>
+    <string name="app_subtitle">Referencia Técnica de Ingeniería de Planta</string>
+    <string name="brand_name">KONECTO</string>
+
+    <!-- Login -->
+    <string name="login_server_label">SERVIDOR</string>
+    <string name="login_change">Cambiar</string>
+    <string name="login_email_label">Identidad Corporativa / Correo</string>
+    <string name="login_password_label">Código de Acceso</string>
+    <string name="login_quick_profiles">PERFILES RÁPIDOS DE PRUEBA</string>
+    <string name="login_profile_engineer">Ingeniero</string>
+    <string name="login_profile_supervisor">Supervisor</string>
+    <string name="login_profile_evaluator">Evaluador</string>
+    <string name="login_sign_in">Iniciar Sesión</string>
+    <string name="login_single_user">Continuar en Modo Usuario Único</string>
+
+    <!-- Sessions -->
+    <string name="sessions_title">Consultas</string>
+    <string name="sessions_default_user">Ingeniero Líder • engineer@konecto.io</string>
+    <string name="sessions_new">Nueva Consulta</string>
+    <string name="sessions_empty_title">Sin consultas aún</string>
+    <string name="sessions_empty_subtitle">Toca una sugerencia o inicia una nueva consulta técnica.</string>
+    <string name="sessions_msgs_count">%1$d mensajes</string>
+    <string name="sessions_undo">Deshacer</string>
+    <string name="sessions_deleted">Conversación eliminada</string>
+    <string name="sessions_refresh">Actualizar</string>
+    <string name="sessions_logout">Cerrar sesión</string>
+    <string name="sessions_delete">Eliminar</string>
+
+    <!-- Chat -->
+    <string name="chat_back">Atrás</string>
+    <string name="chat_default_title">Nueva Consulta Serie 76</string>
+    <string name="chat_subtitle">Asistente Técnico Serie 76</string>
+    <string name="chat_suggested_queries">CONSULTAS TÉCNICAS SUGERIDAS</string>
+    <string name="chat_suggested_1">Especificaciones de 763B00-11300000/A</string>
+    <string name="chat_suggested_2">Compara 763B y 763C</string>
+    <string name="chat_suggested_3">Antiexplosivo 24V con 200 Nm</string>
+    <string name="chat_suggested_4">¿Está 761A00-11330C00/A disponible en 220V Trifásico?</string>
+    <string name="chat_thinking">Analizando catálogo…</string>
+    <string name="chat_input_placeholder">Consulta número de parte, torque o 50Hz…</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_voice">Entrada por voz</string>
+    <string name="chat_open_debug">Abrir pantalla de telemetría</string>
+
+    <!-- Product Card -->
+    <string name="card_datasheet">FICHA TÉCNICA SERIE 76</string>
+    <string name="card_frame">TAMAÑO %1$d</string>
+    <string name="card_csa_certified">Certificado CSA</string>
+    <string name="card_csa_not_certified">Sin Certificación CSA</string>
+    <string name="card_on_off_service">SERVICIO ON/OFF</string>
+    <string name="card_modulating_service">MODULANTE</string>
+    <string name="card_duty_cycle">Ciclo %1$d%%</string>
+    <string name="card_cycles_per_hour">%1$s ciclos/h</string>
+    <string name="card_starts_per_hour">%1$s arranques/h</string>
+    <string name="card_speed_label">Velocidad</string>
+    <string name="card_speed_value">%1$s s</string>
+    <string name="card_fla_label">FLA (%1$d Hz)</string>
+    <string name="card_lra_label">LRA (%1$d Hz)</string>
+    <string name="card_power_label">Potencia</string>
+    <string name="card_power_value">%1$d W</string>
+    <string name="card_frequency_60hz">Frecuencia de Red 60 Hz</string>
+    <string name="card_frequency_50hz">Frecuencia de Red 50 Hz</string>
+    <string name="card_null_placeholder">—</string>
+
+    <!-- Server Dialog -->
+    <string name="server_dialog_title">Configuración del Servidor</string>
+    <string name="server_dialog_subtitle">Configura el endpoint o activa el mock de depuración.</string>
+    <string name="server_dialog_url_label">URL DEL SERVIDOR (PUERTO 8001)</string>
+    <string name="server_dialog_test_btn">Probar Conexión (/health)</string>
+    <string name="server_dialog_testing">Probando /health…</string>
+    <string name="server_dialog_connected">¡Conectado! Estado: %1$s, Actuadores: %2$d</string>
+    <string name="server_dialog_failed">Fallo de conexión: %1$s</string>
+    <string name="server_dialog_save">Guardar</string>
+    <string name="server_dialog_cancel">Cancelar</string>
+    <string name="server_dialog_mock_title">MODO MOCK DE DEPURACIÓN</string>
+    <string name="server_dialog_mock_desc">Servir muestras de contract_v2_samples.json sin backend.</string>
+    <string name="server_dialog_active_sample">MUESTRA ACTIVA</string>
+    <string name="server_dialog_invalid_url">Formato de URL no válido. Ejemplo: http://10.0.2.2:8001/ o http://192.168.1.100:8001/</string>
+    <string name="server_dialog_preset_emulator">Emulador (10.0.2.2)</string>
+    <string name="server_dialog_preset_localhost">Localhost</string>
+
+    <!-- Debug Telemetry -->
+    <string name="debug_title">Inspector de Telemetría X-Ray</string>
+    <string name="debug_subtitle">Herramientas invocadas, parámetros, SQL y salida PostgreSQL</string>
+    <string name="debug_empty">No hay respuestas del agente con telemetría en esta sesión aún.</string>
+    <string name="debug_copy_json">Copiar JSON</string>
+    <string name="debug_copied">JSON de la traza copiado</string>
+    <string name="debug_no_tools">No se invocaron herramientas en este turno.</string>
+    <string name="debug_active_context">Contexto Activo: %1$s</string>
+    <string name="debug_timeline_title">PASOS DE LA LÍNEA DE TIEMPO</string>
+    <string name="debug_answer_preview">Respuesta: \"%1$s…\"</string>
+
+
+    <!-- Common -->
+    <string name="retry">Reintentar</string>
+</resources>
+

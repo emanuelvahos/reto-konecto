@@ -1,17 +1,20 @@
 package io.konecto.series76.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,41 +47,57 @@ fun ChatBubbleItem(msg: MessageRecord) {
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(
+            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+        ) + slideInVertically(
+            initialOffsetY = { 24 },
+            animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+        )
     ) {
-        if (formattedContent.text.isNotBlank()) {
-            Box(
-                modifier = Modifier
-                    .widthIn(max = 340.dp)
-                    .clip(bubbleShape)
-                    .then(
-                        if (isUser) {
-                            Modifier.background(MaterialTheme.colorScheme.primary)
-                        } else {
-                            Modifier
-                                .background(MaterialTheme.colorScheme.surface)
-                                .border(1.dp, MaterialTheme.colorScheme.outline, bubbleShape)
-                        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
+        ) {
+            if (formattedContent.text.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 340.dp)
+                        .clip(bubbleShape)
+                        .then(
+                            if (isUser) {
+                                Modifier
+                                    .background(semantics.accent)
+                                    .border(1.dp, semantics.accent.copy(alpha = 0.8f), bubbleShape)
+                            } else {
+                                Modifier
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, bubbleShape)
+                            }
+                        )
+                ) {
+                    Text(
+                        text = formattedContent,
+                        color = if (isUser) semantics.onAccent else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.bodyLarge,
+                        lineHeight = 21.sp,
+                        modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)
                     )
-            ) {
-                Text(
-                    text = formattedContent,
-                    color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 21.sp,
-                    modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s)
+                }
+            }
+
+            if (!isUser && msg.uiPayload != null) {
+                ProductDataVisualizer(
+                    uiPayload = msg.uiPayload,
+                    contextText = msg.content
                 )
             }
         }
-
-        if (!isUser && msg.uiPayload != null) {
-            ProductDataVisualizer(
-                uiPayload = msg.uiPayload,
-                contextText = msg.content
-            )
-        }
     }
 }
-

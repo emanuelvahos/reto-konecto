@@ -48,8 +48,13 @@ object DebugMockProvider {
     fun getMockResponse(context: Context, query: String): ConversationResponse? {
         if (!isMockEnabled) return null
         val samples = getAvailableSamples(context)
-        // If query matches any sample key or intent, return that, otherwise return selectedSampleKey
-        val match = sampleKeys.firstOrNull { query.contains(it, ignoreCase = true) } ?: selectedSampleKey
+        val match = when {
+            query.contains("compare", ignoreCase = true) || query.contains("compara", ignoreCase = true) -> "comparison_table"
+            query.contains("200 Nm", ignoreCase = true) || query.contains("recomiend", ignoreCase = true) || query.contains("recommend", ignoreCase = true) -> "recommendation_with_relaxation"
+            query.contains("aclar", ignoreCase = true) || query.contains("clarif", ignoreCase = true) -> "clarification"
+            query.contains("763B", ignoreCase = true) || query.contains("spec", ignoreCase = true) || query.contains("ficha", ignoreCase = true) -> "single_spec_card"
+            else -> sampleKeys.firstOrNull { query.contains(it, ignoreCase = true) } ?: selectedSampleKey
+        }
         return samples[match] ?: samples.values.firstOrNull()
     }
 }

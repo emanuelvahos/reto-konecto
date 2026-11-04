@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Series 76 Assistant</string>
+    <string name="app_subtitle">Plant Engineering Technical Reference</string>
+    <string name="brand_name">KONECTO</string>
+
+    <!-- Login -->
+    <string name="login_server_label">SERVER</string>
+    <string name="login_change">Change</string>
+    <string name="login_email_label">Corporate Identity / Email</string>
+    <string name="login_password_label">Passcode</string>
+    <string name="login_quick_profiles">QUICK DEMO PROFILES</string>
+    <string name="login_profile_engineer">Engineer</string>
+    <string name="login_profile_supervisor">Supervisor</string>
+    <string name="login_profile_evaluator">Evaluator</string>
+    <string name="login_sign_in">Sign In</string>
+    <string name="login_single_user">Continue in Single-User Mode</string>
+
+    <!-- Sessions -->
+    <string name="sessions_title">Consultations</string>
+    <string name="sessions_default_user">Lead Plant Engineer • engineer@konecto.io</string>
+    <string name="sessions_new">New Consultation</string>
+    <string name="sessions_empty_title">No consultations yet</string>
+    <string name="sessions_empty_subtitle">Select a prompt or tap New Consultation to size actuators.</string>
+    <string name="sessions_msgs_count">%1$d messages</string>
+    <string name="sessions_undo">Undo</string>
+    <string name="sessions_deleted">Conversation deleted</string>
+    <string name="sessions_refresh">Refresh</string>
+    <string name="sessions_logout">Logout</string>
+    <string name="sessions_delete">Delete</string>
+
+    <!-- Chat -->
+    <string name="chat_back">Back</string>
+    <string name="chat_default_title">New Series 76 Consultation</string>
+    <string name="chat_subtitle">Series 76 Technical Assistant</string>
+    <string name="chat_suggested_queries">SUGGESTED ENGINEERING QUERIES</string>
+    <string name="chat_suggested_1">Specs for Base Part Number 763B00-11300000/A</string>
+    <string name="chat_suggested_2">Compare 763B and 763C</string>
+    <string name="chat_suggested_3">Explosionproof 24V with 200 Nm</string>
+    <string name="chat_suggested_4">Is 761A00-11330C00/A available in 220V 3-Phase?</string>
+    <string name="chat_thinking">Analyzing catalog…</string>
+    <string name="chat_input_placeholder">Ask part number, torque, or 50Hz…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_voice">Voice input</string>
+    <string name="chat_open_debug">Open Developer Debug Screen</string>
+
+    <!-- Product Card -->
+    <string name="card_datasheet">SERIES 76 DATASHEET</string>
+    <string name="card_frame">FRAME %1$d</string>
+    <string name="card_csa_certified">CSA Certified</string>
+    <string name="card_csa_not_certified">Not CSA Certified</string>
+    <string name="card_on_off_service">ON/OFF SERVICE</string>
+    <string name="card_modulating_service">MODULATING</string>
+    <string name="card_duty_cycle">Duty %1$d%%</string>
+    <string name="card_cycles_per_hour">%1$s ciclos/h</string>
+    <string name="card_starts_per_hour">%1$s arranques/h</string>
+    <string name="card_speed_label">Velocidad</string>
+    <string name="card_speed_value">%1$s s</string>
+    <string name="card_fla_label">FLA (%1$d Hz)</string>
+    <string name="card_lra_label">LRA (%1$d Hz)</string>
+    <string name="card_power_label">Potencia</string>
+    <string name="card_power_value">%1$d W</string>
+    <string name="card_frequency_60hz">60 Hz Grid Frequency</string>
+    <string name="card_frequency_50hz">50 Hz Grid Frequency</string>
+    <string name="card_null_placeholder">—</string>
+
+    <!-- Server Dialog -->
+    <string name="server_dialog_title">Server Configuration</string>
+    <string name="server_dialog_subtitle">Configure host endpoint or switch to debug mock.</string>
+    <string name="server_dialog_url_label">SERVER URL (PORT 8001)</string>
+    <string name="server_dialog_test_btn">Test Connection (/health)</string>
+    <string name="server_dialog_testing">Testing /health…</string>
+    <string name="server_dialog_connected">Connected! Status: %1$s, Actuators loaded: %2$d</string>
+    <string name="server_dialog_failed">Failed: %1$s</string>
+    <string name="server_dialog_save">Save</string>
+    <string name="server_dialog_cancel">Cancel</string>
+    <string name="server_dialog_mock_title">DEBUG MOCK MODE</string>
+    <string name="server_dialog_mock_desc">Serve samples from contract_v2_samples.json without backend.</string>
+    <string name="server_dialog_active_sample">ACTIVE MOCK SAMPLE</string>
+    <string name="server_dialog_invalid_url">Invalid URL format. Example: http://10.0.2.2:8001/ or http://192.168.1.100:8001/</string>
+    <string name="server_dialog_preset_emulator">Emulator (10.0.2.2)</string>
+    <string name="server_dialog_preset_localhost">Localhost</string>
+
+    <!-- Debug Telemetry -->
+    <string name="debug_title">X-Ray Telemetry Inspector</string>
+    <string name="debug_subtitle">Tools invoked, parameters, SQL &amp; PostgreSQL output</string>
+    <string name="debug_empty">No agent answers with debug telemetry in this session yet.</string>
+    <string name="debug_copy_json">Copy JSON</string>
+    <string name="debug_copied">Copied Trace JSON</string>
+    <string name="debug_no_tools">No tools invoked in this turn.</string>
+    <string name="debug_active_context">Active Context: %1$s</string>
+    <string name="debug_timeline_title">EXECUTION TIMELINE STEPS</string>
+    <string name="debug_answer_preview">Answer: \"%1$s…\"</string>
+
+
+    <!-- Common -->
+    <string name="retry">Retry</string>
+</resources>
+

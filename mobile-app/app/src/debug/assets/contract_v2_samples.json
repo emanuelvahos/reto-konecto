@@ -2,26 +2,67 @@
   "single_spec_card": {
     "schema_version": 2,
     "intent": "lookup",
-    "verification": {"status": "verified", "numbers_checked": 3, "ungrounded": []},
+    "verification": {"status": "verified", "numbers_checked": 4, "ungrounded": []},
     "session_id": "00000000-0000-4000-8000-000000000001",
-    "answer": "Ficha del modelo solicitado.",
+    "answer": "Here are the technical specifications for Base Part Number 763B00-11300000/A.",
     "ui_payload": {
       "display_type": "SINGLE_SPEC_CARD",
-      "actuators": [{"base_part_number": "EXAMPLE-PN-1", "frame_size": 1}],
+      "actuators": [
+        {
+          "id": 6,
+          "base_part_number": "763B00-11300000/A",
+          "size_code": "763B",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 500.0,
+          "on_off_torque_in_lbs": 4400.0,
+          "modulating_torque_nm": 380.0,
+          "modulating_torque_in_lbs": 3350.0,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 16,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "fla_60hz_amps": 4.8,
+          "fla_50hz_amps": 4.6,
+          "lra_60hz_amps": 5.0,
+          "lra_50hz_amps": 4.9,
+          "motor_power_watts": 90,
+          "csa_certified": true,
+          "ce_ukca_certified": true
+        }
+      ],
       "engineering_warnings": [],
       "alerts": [],
       "recommendation": null,
       "clarification": null
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 1200.5,
-      "token_usage": {},
-      "active_context_part_numbers": ["EXAMPLE-PN-1"],
-      "tool_calls": [],
-      "steps": [{"name": "tool:lookup", "start_ms": 10.0, "duration_ms": 25.5}],
-      "cost_usd_estimate": 0.0,
-      "provider": "example"
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 940.2,
+      "token_usage": {"prompt": 450, "completion": 180},
+      "active_context_part_numbers": ["763B00-11300000/A"],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_part_number",
+          "arguments": {"part_number": "763B00-11300000/A"},
+          "execution_time_ms": 42.1,
+          "sql_executed": "SELECT * FROM actuators WHERE base_part_number = '763B00-11300000/A' LIMIT 1;",
+          "raw_output": {"id": 6, "base_part_number": "763B00-11300000/A", "torque_nm": 500.0, "duty": 30}
+        }
+      ],
+      "steps": [
+        {"name": "tool:lookup_part_number", "start_ms": 12.0, "duration_ms": 42.1},
+        {"name": "llm:generation", "start_ms": 60.0, "duration_ms": 880.2}
+      ],
+      "cost_usd_estimate": 0.0035,
+      "provider": "anthropic"
     }
   },
   "comparison_table": {

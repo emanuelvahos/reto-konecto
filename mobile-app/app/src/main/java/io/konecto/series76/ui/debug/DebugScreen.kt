@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -13,22 +14,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.konecto.series76.R
 import io.konecto.series76.data.ApiClient
 import io.konecto.series76.data.DebugTracePayload
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
+import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
+import io.konecto.series76.ui.theme.ThemeController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,20 +45,20 @@ fun DebugScreen(vm: MainViewModel) {
     }
 
     Scaffold(
-        containerColor = Color(0xFF0F172A),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             Column {
                 TopAppBar(
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF1E293B),
-                        titleContentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
                     ),
                     navigationIcon = {
                         IconButton(onClick = { vm.currentScreen = AppScreen.CHAT }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                                contentDescription = "Back",
-                                tint = Color.White,
+                                contentDescription = stringResource(R.string.chat_back),
+                                tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -60,22 +66,31 @@ fun DebugScreen(vm: MainViewModel) {
                     title = {
                         Column {
                             Text(
-                                text = "X-Ray Telemetry Inspector",
+                                text = stringResource(R.string.debug_title),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 letterSpacing = (-0.3).sp
                             )
                             Text(
-                                text = "Tools invoked, parameters, SQL & PostgreSQL output",
+                                text = stringResource(R.string.debug_subtitle),
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontWeight = FontWeight.Normal
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { ThemeController.toggleTheme() }) {
+                            Icon(
+                                imageVector = if (ThemeController.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Toggle Theme",
+                                tint = KonectoTheme.semantics.accent
                             )
                         }
                     }
                 )
-                HorizontalDivider(thickness = 1.dp, color = Color(0xFF334155))
+                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
             }
         }
     ) { padding ->
@@ -87,8 +102,9 @@ fun DebugScreen(vm: MainViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No agent answers with debug telemetry in this session yet.",
-                    color = Color(0xFF94A3B8)
+                    text = stringResource(R.string.debug_empty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         } else {
@@ -112,15 +128,14 @@ fun DebugScreen(vm: MainViewModel) {
                             .replace(Regex("""#{1,6}\s*"""), "")
                             .replace(Regex("""\s+"""), " ")
                             .trim()
-                            .take(100)
+                            .take(90)
                     }
 
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF1E293B),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, Color(0xFF334155), RoundedCornerShape(14.dp))
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
                             modifier = Modifier.padding(Spacing.m),
@@ -132,8 +147,8 @@ fun DebugScreen(vm: MainViewModel) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Answer: \"$cleanPreview...\"",
-                                    color = Color(0xFFCBD5E1),
+                                    text = stringResource(R.string.debug_answer_preview, cleanPreview),
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp,
                                     modifier = Modifier.weight(1f)
@@ -143,13 +158,13 @@ fun DebugScreen(vm: MainViewModel) {
                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         val jsonString = ApiClient.jsonFormat.encodeToString(DebugTracePayload.serializer(), trace)
                                         clipboard.setPrimaryClip(ClipData.newPlainText("debug_trace", jsonString))
-                                        Toast.makeText(context, "Copied Trace JSON", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.debug_copied), Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copy JSON",
-                                        tint = Color(0xFF38BDF8),
+                                        contentDescription = stringResource(R.string.debug_copy_json),
+                                        tint = KonectoTheme.semantics.accent,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -158,7 +173,7 @@ fun DebugScreen(vm: MainViewModel) {
                             // Model, Provider & Total Latency
                             Text(
                                 text = "Model: ${trace.modelUsed} (${trace.provider.ifEmpty { "unknown" }}) | Latency: ${trace.totalLatencyMs} ms | Cost: \$${trace.costUsdEstimate}",
-                                color = Color(0xFF38BDF8),
+                                color = KonectoTheme.semantics.accent,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -166,8 +181,8 @@ fun DebugScreen(vm: MainViewModel) {
 
                             // Active Context Part Numbers
                             Text(
-                                text = "Active Context: ${trace.activeContextPartNumbers.joinToString(", ").ifEmpty { "None" }}",
-                                color = Color(0xFF4ADE80),
+                                text = stringResource(R.string.debug_active_context, trace.activeContextPartNumbers.joinToString(", ").ifEmpty { "None" }),
+                                color = KonectoTheme.semantics.successText,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             )
@@ -176,7 +191,7 @@ fun DebugScreen(vm: MainViewModel) {
                             if (trace.tokenUsage != null) {
                                 Text(
                                     text = "Token Usage: ${trace.tokenUsage}",
-                                    color = Color(0xFFFDE68A),
+                                    color = KonectoTheme.semantics.warningText,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp
                                 )
@@ -184,10 +199,10 @@ fun DebugScreen(vm: MainViewModel) {
 
                             // Timeline Steps
                             if (trace.steps.isNotEmpty()) {
-                                HorizontalDivider(thickness = 0.5.dp, color = Color(0xFF334155))
+                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                                 Text(
-                                    text = "EXECUTION TIMELINE STEPS",
-                                    color = Color(0xFF94A3B8),
+                                    text = stringResource(R.string.debug_timeline_title),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -198,13 +213,13 @@ fun DebugScreen(vm: MainViewModel) {
                                     ) {
                                         Text(
                                             text = "• ${step.name}",
-                                            color = Color(0xFFE2E8F0),
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
                                         )
                                         Text(
                                             text = "+${step.startMs}ms (${step.durationMs}ms)",
-                                            color = Color(0xFF94A3B8),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 10.sp
                                         )
@@ -212,48 +227,50 @@ fun DebugScreen(vm: MainViewModel) {
                                 }
                             }
 
-                            HorizontalDivider(thickness = 0.5.dp, color = Color(0xFF334155))
+                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
                             // Tool Calls
                             if (trace.toolCalls.isEmpty()) {
                                 Text(
-                                    text = "No tools invoked in this turn.",
-                                    color = Color(0xFFF87171),
+                                    text = stringResource(R.string.debug_no_tools),
+                                    color = KonectoTheme.semantics.errorText,
                                     fontSize = 12.sp
                                 )
                             } else {
+                                val toolBoxBg = if (ThemeController.isDarkTheme) Color(0xFF0F172A) else Color(0xFFE2E8F0)
                                 trace.toolCalls.forEachIndexed { idx, tc ->
                                     Column(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(Color(0xFF0F172A), RoundedCornerShape(8.dp))
+                                            .background(toolBoxBg, RoundedCornerShape(8.dp))
+                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                                             .padding(10.dp),
                                         verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                                     ) {
                                         Text(
                                             text = "TOOL #${idx + 1}: ${tc.toolName} (${tc.executionTimeMs} ms)",
-                                            color = Color(0xFF4ADE80),
+                                            color = KonectoTheme.semantics.successText,
                                             fontFamily = FontFamily.Monospace,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 12.sp
                                         )
                                         Text(
                                             text = "Parameters: ${tc.arguments}",
-                                            color = Color.White,
+                                            color = MaterialTheme.colorScheme.onSurface,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
                                         )
                                         if (!tc.sqlExecuted.isNullOrBlank()) {
                                             Text(
                                                 text = "SQL: ${tc.sqlExecuted}",
-                                                color = Color(0xFF93C5FD),
+                                                color = if (ThemeController.isDarkTheme) Color(0xFF93C5FD) else Color(0xFF1D4ED8),
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 11.sp
                                             )
                                         }
                                         Text(
                                             text = "Returned Data: ${tc.rawOutput.toString().take(900)}",
-                                            color = Color(0xFFD1D1D6),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
                                         )
@@ -267,4 +284,3 @@ fun DebugScreen(vm: MainViewModel) {
         }
     }
 }
-

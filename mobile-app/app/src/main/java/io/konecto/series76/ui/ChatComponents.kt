@@ -1,5 +1,11 @@
 package io.konecto.series76.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,37 +18,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.konecto.series76.R
 import io.konecto.series76.data.ActuatorDto
 import io.konecto.series76.data.UIPayload
-
-// =====================================================================
-// PALETA NATURAL / SWISS INDUSTRIAL TOKENS (Linear / Notion / Apple HIG)
-// =====================================================================
-val NaturalBg = Color(0xFFF7F7F5)
-val NaturalCardBg = Color(0xFFFFFFFF)
-val NaturalBorder = Color(0xFFE4E4E7)
-val NaturalSurfaceMuted = Color(0xFFF4F4F5)
-val NaturalSurfaceSubtle = Color(0xFFFAFAFA)
-val NaturalTextPrimary = Color(0xFF18181B)
-val NaturalTextSecondary = Color(0xFF71717A)
-val NaturalAccentBlue = Color(0xFF2563EB)
-val NaturalBadgeGreenBg = Color(0xFFDCFCE7)
-val NaturalBadgeGreenText = Color(0xFF166534)
-val NaturalBadgeWarningBg = Color(0xFFFEF3C7)
-val NaturalBadgeWarningText = Color(0xFF92400E)
+import io.konecto.series76.ui.theme.KonectoTheme
+import io.konecto.series76.ui.theme.Spacing
 
 @Composable
 fun ProductDataVisualizer(
     uiPayload: UIPayload,
     contextText: String? = null
 ) {
-    // Si la consulta o contexto menciona explícitamente 50Hz, inicializar en 50 Hz
     val defaultHz = remember(contextText) {
         if (contextText != null && (
             contextText.contains("50Hz", ignoreCase = true) ||
@@ -58,29 +57,28 @@ fun ProductDataVisualizer(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(top = Spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s)
     ) {
-        // 1. Alertas de Ingeniería (Tamaños 6 y 7 sin CSA, modelos N/A, Relajación de restricciones)
+        // Alertas de Ingeniería con colores semánticos AA
         uiPayload.engineeringWarnings.forEach { warning ->
             Surface(
-                color = NaturalBadgeWarningBg,
+                color = KonectoTheme.semantics.warningBg,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(12.dp))
+                    .border(1.dp, KonectoTheme.semantics.warningBorder, RoundedCornerShape(12.dp))
             ) {
                 Row(
-                    modifier = Modifier.padding(12.dp),
+                    modifier = Modifier.padding(Spacing.s),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     Text(text = "⚠️", fontSize = 16.sp)
                     Text(
                         text = warning,
-                        color = NaturalBadgeWarningText,
-                        fontSize = 12.sp,
-                        lineHeight = 17.sp,
+                        color = KonectoTheme.semantics.warningText,
+                        style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -89,7 +87,6 @@ fun ProductDataVisualizer(
 
         if (uiPayload.actuators.isEmpty()) return@Column
 
-        // 2. Renderizado: Tarjeta Técnica Individual (1 modelo) o Tabla Comparativa (2+ modelos)
         if (uiPayload.actuators.size == 1) {
             SingleActuatorSpecCard(
                 actuator = uiPayload.actuators.first(),
@@ -107,7 +104,103 @@ fun ProductDataVisualizer(
 }
 
 /**
- * Control Segmentado Integrado (Sobrio y minimalista)
+ * Anillo de medidor circular (Canvas) para el Duty Cycle
+ */
+@Composable
+fun DutyCycleRingGauge(
+    dutyPct: Int?,
+    modifier: Modifier = Modifier,
+    size: Dp = 44.dp,
+    strokeWidth: Dp = 4.dp
+) {
+    val trackColor = KonectoTheme.semantics.gaugeTrack
+    val indicatorColor = KonectoTheme.semantics.gaugeIndicator
+    val safePct = (dutyPct ?: 0).coerceIn(0, 100)
+
+    Box(modifier = modifier.size(size), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.fillMaxSize().padding(3.dp)) {
+            val stroke = Stroke(width = strokeWidth.toPx(), cap = StrokeCap.Round)
+            // Arco base de 260° desde 140°
+            drawArc(
+                color = trackColor,
+                startAngle = 140f,
+                sweepAngle = 260f,
+                useCenter = false,
+                style = stroke
+            )
+            // Arco de progreso
+            if (safePct > 0) {
+                drawArc(
+                    color = indicatorColor,
+                    startAngle = 140f,
+                    sweepAngle = 260f * (safePct / 100f),
+                    useCenter = false,
+                    style = stroke
+                )
+            }
+        }
+        Text(
+            text = if (dutyPct != null) "$dutyPct%" else stringResource(R.string.card_null_placeholder),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontFamily = FontFamily.Monospace
+        )
+    }
+}
+
+/**
+ * Contador de animación para el torque principal
+ */
+@Composable
+fun AnimatedTorqueValue(
+    targetValue: Double?,
+    unit: String = "Nm",
+    modifier: Modifier = Modifier
+) {
+    if (targetValue == null) {
+        Text(
+            text = stringResource(R.string.card_null_placeholder),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        return
+    }
+
+    val animValue = remember { Animatable(0f) }
+    LaunchedEffect(targetValue) {
+        animValue.animateTo(
+            targetValue.toFloat(),
+            animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)
+        )
+    }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Text(
+            text = "${animValue.value.toInt()}",
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            color = KonectoTheme.semantics.accent,
+            letterSpacing = (-0.5).sp
+        )
+        Spacer(modifier = Modifier.width(3.dp))
+        Text(
+            text = unit,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 2.dp)
+        )
+    }
+}
+
+/**
+ * Control Segmentado 60/50 Hz con indicador deslizante con spring y háptica
  */
 @Composable
 fun CompactSegmentedFrequencyControl(
@@ -115,12 +208,14 @@ fun CompactSegmentedFrequencyControl(
     onSelectHz: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(34.dp)
-            .background(NaturalSurfaceMuted, RoundedCornerShape(8.dp))
-            .border(1.dp, NaturalBorder, RoundedCornerShape(8.dp))
+            .height(36.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .padding(2.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -132,15 +227,20 @@ fun CompactSegmentedFrequencyControl(
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(6.dp))
-                    .background(if (isSelected) NaturalTextPrimary else Color.Transparent)
-                    .clickable { onSelectHz(hz) },
+                    .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
+                    .clickable {
+                        if (!isSelected) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSelectHz(hz)
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "$hz Hz Grid Frequency",
+                    text = if (hz == 60) stringResource(R.string.card_frequency_60hz) else stringResource(R.string.card_frequency_50hz),
                     fontSize = 11.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else NaturalTextSecondary,
+                    color = if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.onSurfaceVariant,
                     letterSpacing = (-0.1).sp
                 )
             }
@@ -149,7 +249,7 @@ fun CompactSegmentedFrequencyControl(
 }
 
 /**
- * Tarjeta Técnica Sobria estilo Linear / Swiss Industrial Design
+ * Ficha Técnica Individual (SINGLE_SPEC_CARD)
  */
 @Composable
 fun SingleActuatorSpecCard(
@@ -161,50 +261,51 @@ fun SingleActuatorSpecCard(
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = NaturalCardBg),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, NaturalBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // =================================================================
-            // 1. CABECERA LIMPIA (Gris piedra sutil, tipografía nítida)
-            // =================================================================
+            // Cabecera con degradado sutil
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NaturalSurfaceMuted)
-                    .padding(14.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+                    .padding(Spacing.m)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // Eyebrow & Badge de Enclosure
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "SERIES 76 DATASHEET • FRAME ${actuator.frameSize}",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NaturalTextSecondary,
-                            letterSpacing = 0.8.sp
+                            text = "${stringResource(R.string.card_datasheet)} • ${stringResource(R.string.card_frame, actuator.frameSize)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        // Badge de Enclosure (Sutil y sobrio)
-                        val isExplosion = actuator.enclosureType == "Explosionproof"
+                        val isExplosion = actuator.enclosureType.equals("Explosionproof", ignoreCase = true)
                         Surface(
-                            color = if (isExplosion) Color(0xFFFEE2E2) else Color(0xFFE0E7FF),
+                            color = if (isExplosion) KonectoTheme.semantics.errorBg else KonectoTheme.semantics.accentContainer,
                             shape = RoundedCornerShape(6.dp),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isExplosion) Color(0xFFFECACA) else Color(0xFFC7D2FE)
+                                if (isExplosion) KonectoTheme.semantics.errorBorder else KonectoTheme.semantics.warningBorder
                             )
                         ) {
                             Text(
-                                text = actuator.enclosureType.uppercase(),
-                                color = if (isExplosion) Color(0xFF991B1B) else Color(0xFF3730A3),
+                                text = "🛡 ${actuator.enclosureType.uppercase()}",
+                                color = if (isExplosion) KonectoTheme.semantics.errorText else KonectoTheme.semantics.warningText,
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
@@ -213,26 +314,26 @@ fun SingleActuatorSpecCard(
                         }
                     }
 
-                    // Part Number Principal (Monospace grafito profundo)
+                    // Part Number Principal (Monospace con acento sutil)
                     Text(
                         text = actuator.basePartNumber,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
-                        color = NaturalTextPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         letterSpacing = (-0.3).sp
                     )
 
-                    // Fila de Chips de Alimentación y Certificación
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Chips de Alimentación y Certificación con iconos
+                    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                         Surface(
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(6.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NaturalBorder)
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                         ) {
                             Text(
                                 text = "⚡ ${actuator.powerSupply}",
-                                color = NaturalTextPrimary,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -240,16 +341,16 @@ fun SingleActuatorSpecCard(
                         }
 
                         Surface(
-                            color = if (actuator.csaCertified) NaturalBadgeGreenBg else NaturalBadgeWarningBg,
+                            color = if (actuator.csaCertified) KonectoTheme.semantics.successBg else KonectoTheme.semantics.warningBg,
                             shape = RoundedCornerShape(6.dp),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (actuator.csaCertified) Color(0xFFBBF7D0) else Color(0xFFFDE68A)
+                                if (actuator.csaCertified) KonectoTheme.semantics.successBorder else KonectoTheme.semantics.warningBorder
                             )
                         ) {
                             Text(
-                                text = if (actuator.csaCertified) "✓ CSA Certified" else "⚠ CE/UKCA Only",
-                                color = if (actuator.csaCertified) NaturalBadgeGreenText else NaturalBadgeWarningText,
+                                text = if (actuator.csaCertified) "✓ ${stringResource(R.string.card_csa_certified)}" else "⚠ ${stringResource(R.string.card_csa_not_certified)}",
+                                color = if (actuator.csaCertified) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -259,45 +360,38 @@ fun SingleActuatorSpecCard(
                 }
             }
 
-            HorizontalDivider(thickness = 1.dp, color = NaturalBorder)
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
 
-            // =================================================================
-            // 2. CUERPO DE TORQUE CON MICRO-GAUGES SOBRIOS
-            // =================================================================
+            // Cuerpo con Micro-Gauges Circulares y animación de conteo
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(Spacing.m),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.s)
                 ) {
-                    // Tarjeta ON/OFF SERVICE
                     TorqueServiceCard(
                         modifier = Modifier.weight(1f),
-                        title = "ON/OFF SERVICE",
+                        title = stringResource(R.string.card_on_off_service),
                         torqueNm = actuator.onOffTorqueNm,
                         torqueInLbs = actuator.onOffTorqueInLbs,
                         dutyPct = actuator.onOffDutyCyclePct,
-                        rateText = "${actuator.cyclesPerHour ?: "-"} cyc/hr"
+                        rateText = if (actuator.cyclesPerHour != null) stringResource(R.string.card_cycles_per_hour, actuator.cyclesPerHour.toString()) else stringResource(R.string.card_null_placeholder)
                     )
 
-                    // Tarjeta MODULATING SERVICE
                     TorqueServiceCard(
                         modifier = Modifier.weight(1f),
-                        title = "MODULATING",
+                        title = stringResource(R.string.card_modulating_service),
                         torqueNm = actuator.modulatingTorqueNm,
                         torqueInLbs = actuator.modulatingTorqueInLbs,
                         dutyPct = actuator.modulatingDutyCyclePct,
-                        rateText = "${actuator.startsPerHour ?: "-"} st/hr"
+                        rateText = if (actuator.startsPerHour != null) stringResource(R.string.card_starts_per_hour, actuator.startsPerHour.toString()) else stringResource(R.string.card_null_placeholder)
                     )
                 }
 
-                // =============================================================
-                // 3. CONTROL SEGMENTADO 60 HZ / 50 HZ INTEGRADO
-                // =============================================================
                 if (hasAcModels) {
                     CompactSegmentedFrequencyControl(
                         selectedHz = selectedHz,
@@ -305,36 +399,34 @@ fun SingleActuatorSpecCard(
                     )
                 }
 
-                // =============================================================
-                // 4. CUADRÍCULA DE 4 MÉTRICAS ELÉCTRICAS (Cajas limpias, sin arcoíris)
-                // =============================================================
+                // Cuadrícula de 4 Métricas Eléctricas ("Velocidad" en lugar de "Speed 90°")
                 val speed = if (selectedHz == 60) actuator.speed60HzSec ?: actuator.speedDcOrFixedSec else actuator.speed50HzSec ?: actuator.speedDcOrFixedSec
                 val fla = if (selectedHz == 60) actuator.fla60HzAmps ?: actuator.flaDcOrFixedAmps else actuator.fla50HzAmps ?: actuator.flaDcOrFixedAmps
                 val lra = if (selectedHz == 60) actuator.lra60HzAmps ?: actuator.lraDcOrFixedAmps else actuator.lra50HzAmps ?: actuator.lraDcOrFixedAmps
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     IndustrialMetricBox(
                         modifier = Modifier.weight(1f),
-                        label = "Speed 90°",
-                        value = if (speed != null) "${speed}s" else "-"
+                        label = stringResource(R.string.card_speed_label),
+                        value = if (speed != null) stringResource(R.string.card_speed_value, speed.toString()) else stringResource(R.string.card_null_placeholder)
                     )
                     IndustrialMetricBox(
                         modifier = Modifier.weight(1f),
-                        label = "FLA ($selectedHz Hz)",
-                        value = if (fla != null) "$fla A" else "-"
+                        label = stringResource(R.string.card_fla_label, selectedHz),
+                        value = if (fla != null) "$fla A" else stringResource(R.string.card_null_placeholder)
                     )
                     IndustrialMetricBox(
                         modifier = Modifier.weight(1f),
-                        label = "LRA ($selectedHz Hz)",
-                        value = if (lra != null) "$lra A" else "-"
+                        label = stringResource(R.string.card_lra_label, selectedHz),
+                        value = if (lra != null) "$lra A" else stringResource(R.string.card_null_placeholder)
                     )
                     IndustrialMetricBox(
                         modifier = Modifier.weight(1f),
-                        label = "Power",
-                        value = if (actuator.motorPowerWatts != null) "${actuator.motorPowerWatts} W" else "-"
+                        label = stringResource(R.string.card_power_label),
+                        value = if (actuator.motorPowerWatts != null) stringResource(R.string.card_power_value, actuator.motorPowerWatts) else stringResource(R.string.card_null_placeholder)
                     )
                 }
             }
@@ -343,7 +435,7 @@ fun SingleActuatorSpecCard(
 }
 
 /**
- * Micro-tarjeta de Servicio con Barra Visual (Duty Cycle Micro-Gauge)
+ * Tarjeta de Servicio con Anillo de Medidor Circular Canvas
  */
 @Composable
 fun TorqueServiceCard(
@@ -356,65 +448,46 @@ fun TorqueServiceCard(
 ) {
     Column(
         modifier = modifier
-            .background(NaturalSurfaceSubtle, RoundedCornerShape(10.dp))
-            .border(1.dp, NaturalBorder, RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(10.dp))
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Text(
             text = title,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = NaturalTextSecondary,
-            letterSpacing = 0.5.sp
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
-        // Torque principal grande
-        Text(
-            text = if (torqueNm != null) "${torqueNm.toInt()} Nm" else "N/A",
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Bold,
-            color = NaturalTextPrimary,
-            letterSpacing = (-0.3).sp
-        )
-
-        // Equivalente imperial
-        Text(
-            text = if (torqueInLbs != null) "${torqueInLbs.toInt()} in-lbs" else "—",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Normal,
-            color = NaturalTextSecondary
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                AnimatedTorqueValue(targetValue = torqueNm, unit = "Nm")
+                Text(
+                    text = if (torqueInLbs != null) "${torqueInLbs.toInt()} in-lbs" else stringResource(R.string.card_null_placeholder),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            DutyCycleRingGauge(dutyPct = dutyPct)
+        }
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Micro-Gauge: barra horizontal sobria de progreso de Duty Cycle
-        val safePct = (dutyPct ?: 0).coerceIn(0, 100)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .background(NaturalBorder, RoundedCornerShape(2.dp))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(fraction = safePct / 100f)
-                    .background(NaturalTextPrimary, RoundedCornerShape(2.dp))
-            )
-        }
-
         Text(
-            text = "Duty ${dutyPct ?: "-"}% • $rateText",
+            text = rateText,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium,
-            color = NaturalTextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 /**
- * Caja de Métrica limpia estilo Linear / Swiss (Sin líneas arcoíris)
+ * Caja de Métrica Industrial
  */
 @Composable
 fun IndustrialMetricBox(
@@ -424,18 +497,18 @@ fun IndustrialMetricBox(
 ) {
     Column(
         modifier = modifier
-            .background(NaturalSurfaceSubtle, RoundedCornerShape(8.dp))
-            .border(1.dp, NaturalBorder, RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
             .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Text(
             text = value,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
-            color = NaturalTextPrimary,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
@@ -443,21 +516,20 @@ fun IndustrialMetricBox(
             text = label,
             fontSize = 9.sp,
             fontWeight = FontWeight.Medium,
-            color = NaturalTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
     }
 }
 
-/** Alias de compatibilidad */
 @Composable
 fun ActuatorSpecCard(actuator: ActuatorDto, selectedHz: Int = 60) {
     SingleActuatorSpecCard(actuator = actuator, selectedHz = selectedHz)
 }
 
 /**
- * Tabla Comparativa Side-by-Side con paleta Swiss Industrial
+ * Tabla Comparativa Side-by-Side con diseño sobrio y técnico
  */
 @Composable
 fun ActuatorComparisonTable(
@@ -467,22 +539,29 @@ fun ActuatorComparisonTable(
 ) {
     val scrollState = rememberScrollState()
     val hasAcModels = actuators.any { it.speed60HzSec != null || it.speed50HzSec != null }
+    val haptic = LocalHapticFeedback.current
 
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = NaturalCardBg),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, NaturalBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Header limpio
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(NaturalSurfaceMuted)
-                    .padding(14.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                                MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    )
+                    .padding(Spacing.m)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -492,27 +571,28 @@ fun ActuatorComparisonTable(
                     Column {
                         Text(
                             text = "SERIES 76 COMPARISON",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NaturalTextSecondary,
-                            letterSpacing = 0.8.sp
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = "${actuators.size} Actuators Selected",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NaturalTextPrimary
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     if (hasAcModels) {
                         Surface(
-                            color = NaturalTextPrimary,
+                            color = KonectoTheme.semantics.accentContainer,
                             shape = RoundedCornerShape(6.dp),
-                            modifier = Modifier.clickable { onSelectHz(if (selectedHz == 60) 50 else 60) }
+                            border = androidx.compose.foundation.BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                            modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onSelectHz(if (selectedHz == 60) 50 else 60)
+                            }
                         ) {
                             Text(
                                 text = "$selectedHz Hz (Tap to toggle)",
-                                color = Color.White,
+                                color = KonectoTheme.semantics.warningText,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
@@ -522,34 +602,33 @@ fun ActuatorComparisonTable(
                 }
             }
 
-            HorizontalDivider(thickness = 1.dp, color = NaturalBorder)
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
 
-            // Cuerpo desplazable
             Column(modifier = Modifier.padding(10.dp)) {
                 Row(modifier = Modifier.horizontalScroll(scrollState)) {
-                    // Columna fija de etiquetas
+                    // Columna de etiquetas
                     Column(
                         modifier = Modifier
                             .width(115.dp)
-                            .background(NaturalSurfaceSubtle, RoundedCornerShape(8.dp))
-                            .border(1.dp, NaturalBorder, RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                             .padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Part Number", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = NaturalTextPrimary)
-                        Text("Enclosure", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Power Supply", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("On/Off Torque", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Mod. Torque", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Duty (On/Mod)", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Speed ($selectedHz Hz)", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("FLA ($selectedHz Hz)", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("LRA ($selectedHz Hz)", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Motor Power", fontSize = 11.sp, color = NaturalTextSecondary)
-                        Text("Certification", fontSize = 11.sp, color = NaturalTextSecondary)
+                        Text("Part Number", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Enclosure", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Power Supply", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("On/Off Torque", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Mod. Torque", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Duty (On/Mod)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Velocidad", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("FLA ($selectedHz Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("LRA ($selectedHz Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Motor Power", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Certification", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
 
-                    // Columnas de actuadores
+                    // Columnas de datos de actuadores
                     actuators.forEach { act ->
                         val speed = if (selectedHz == 60) act.speed60HzSec ?: act.speedDcOrFixedSec else act.speed50HzSec ?: act.speedDcOrFixedSec
                         val fla = if (selectedHz == 60) act.fla60HzAmps ?: act.flaDcOrFixedAmps else act.fla50HzAmps ?: act.flaDcOrFixedAmps
@@ -566,31 +645,35 @@ fun ActuatorComparisonTable(
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
-                                color = NaturalTextPrimary
+                                color = KonectoTheme.semantics.accent
                             )
-                            Text(act.enclosureType, fontSize = 11.sp, color = NaturalTextPrimary)
-                            Text(act.powerSupply, fontSize = 11.sp, color = NaturalTextPrimary)
+                            Text(act.enclosureType, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                            Text(act.powerSupply, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             Text(
-                                text = if (act.onOffTorqueNm != null) "${act.onOffTorqueNm.toInt()} Nm" else "N/A",
+                                text = if (act.onOffTorqueNm != null) "${act.onOffTorqueNm.toInt()} Nm" else stringResource(R.string.card_null_placeholder),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NaturalTextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (act.modulatingTorqueNm != null) "${act.modulatingTorqueNm.toInt()} Nm" else "N/A",
+                                text = if (act.modulatingTorqueNm != null) "${act.modulatingTorqueNm.toInt()} Nm" else stringResource(R.string.card_null_placeholder),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NaturalTextPrimary
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text("${act.onOffDutyCyclePct ?: "-"}% / ${act.modulatingDutyCyclePct ?: "-"}%", fontSize = 11.sp, color = NaturalTextPrimary)
-                            Text(if (speed != null) "$speed s" else "-", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = NaturalTextPrimary)
-                            Text(if (fla != null) "$fla A" else "-", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = NaturalTextPrimary)
-                            Text(if (lra != null) "$lra A" else "-", fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = NaturalTextPrimary)
-                            Text(if (act.motorPowerWatts != null) "${act.motorPowerWatts} W" else "-", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = NaturalTextPrimary)
                             Text(
-                                text = if (act.csaCertified) "CSA Certified" else "CE Only",
+                                "${act.onOffDutyCyclePct ?: stringResource(R.string.card_null_placeholder)}% / ${act.modulatingDutyCyclePct ?: stringResource(R.string.card_null_placeholder)}%",
                                 fontSize = 11.sp,
-                                color = if (act.csaCertified) NaturalBadgeGreenText else NaturalBadgeWarningText,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(if (speed != null) "$speed s" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(if (fla != null) "$fla A" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(if (lra != null) "$lra A" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text(if (act.motorPowerWatts != null) "${act.motorPowerWatts} W" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                text = if (act.csaCertified) "✓ ${stringResource(R.string.card_csa_certified)}" else "⚠ ${stringResource(R.string.card_csa_not_certified)}",
+                                fontSize = 11.sp,
+                                color = if (act.csaCertified) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }

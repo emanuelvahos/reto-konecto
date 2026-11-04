@@ -96,7 +96,11 @@ class MainViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             try {
-                sessions = ApiClient.api.getSessions()
+                if (DebugMockProvider.isMockEnabled) {
+                    sessions = emptyList()
+                } else {
+                    sessions = ApiClient.api.getSessions()
+                }
             } catch (e: Exception) {
                 errorMessage = "Could not load conversations (${ApiClient.baseUrl}): ${e.localizedMessage}"
             } finally {
@@ -107,10 +111,20 @@ class MainViewModel : ViewModel() {
 
     fun startNewConversation() {
         activeSessionId = null
-        activeSessionTitle = "New Series 76 Consultation"
+        activeSessionTitle = "Series 76"
         messages = emptyList()
         errorMessage = null
         currentScreen = AppScreen.CHAT
+    }
+
+    fun startNewConversationWithQuery(query: String) {
+        val clean = query.trim()
+        activeSessionId = null
+        activeSessionTitle = clean.take(28)
+        messages = emptyList()
+        errorMessage = null
+        currentScreen = AppScreen.CHAT
+        sendUserMessage(clean)
     }
 
     fun openConversation(session: SessionSummary) {
@@ -118,7 +132,7 @@ class MainViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             activeSessionId = session.sessionId
-            activeSessionTitle = session.title
+            activeSessionTitle = session.title.take(28)
             currentScreen = AppScreen.CHAT
             try {
                 val history = ApiClient.api.getSessionHistory(session.sessionId)
@@ -139,12 +153,19 @@ class MainViewModel : ViewModel() {
                 if (activeSessionId == sessionId) {
                     activeSessionId = null
                     messages = emptyList()
-                    activeSessionTitle = "New Actuator Consultation"
+                    activeSessionTitle = "Series 76"
                 }
             } catch (e: Exception) {
                 errorMessage = "Could not delete session: ${e.localizedMessage}"
             }
         }
+    }
+
+    fun undoDeleteSession(session: SessionSummary, index: Int) {
+        val mutable = sessions.toMutableList()
+        val safeIdx = index.coerceIn(0, mutable.size)
+        mutable.add(safeIdx, session)
+        sessions = mutable
     }
 
     fun sendUserMessage(queryText: String) {
@@ -170,7 +191,7 @@ class MainViewModel : ViewModel() {
                     kotlinx.coroutines.delay(400) // Simular latencia sutil
                     activeSessionId = mockResp.sessionId
                     if (messages.size <= 1) {
-                        activeSessionTitle = cleanQuery.take(50)
+                        activeSessionTitle = cleanQuery.take(28)
                     }
                     val assistantMsg = MessageRecord(
                         id = messages.size + 1,
@@ -192,7 +213,7 @@ class MainViewModel : ViewModel() {
                 )
                 activeSessionId = resp.sessionId
                 if (messages.size <= 1) {
-                    activeSessionTitle = cleanQuery.take(50)
+                    activeSessionTitle = cleanQuery.take(28)
                 }
                 val assistantMsg = MessageRecord(
                     id = messages.size + 1,

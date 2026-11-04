@@ -6,6 +6,7 @@ import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -22,6 +23,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
@@ -31,31 +34,82 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.konecto.series76.R
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
 import io.konecto.series76.ui.components.ChatBubbleItem
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
+import io.konecto.series76.ui.theme.ThemeController
 import io.konecto.series76.util.VoiceNormalizer
 import java.util.Locale
+
+@Composable
+fun TypingIndicator(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "typingDots")
+    val dot1 by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(550, delayMillis = 0), RepeatMode.Reverse),
+        label = "dot1"
+    )
+    val dot2 by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(550, delayMillis = 180), RepeatMode.Reverse),
+        label = "dot2"
+    )
+    val dot3 by infiniteTransition.animateFloat(
+        initialValue = 0.25f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(550, delayMillis = 360), RepeatMode.Reverse),
+        label = "dot3"
+    )
+
+    Row(
+        modifier = modifier.padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        listOf(dot1, dot2, dot3).forEach { alpha ->
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(KonectoTheme.semantics.accent.copy(alpha = alpha))
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(vm: MainViewModel) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     var inputText by remember { mutableStateOf("") }
     var showVoiceSimulationDialog by remember { mutableStateOf(false) }
 
     val activePart = remember(vm.messages) {
         vm.messages.lastOrNull { it.uiPayload?.actuators?.isNotEmpty() == true }
             ?.uiPayload?.actuators?.firstOrNull()?.basePartNumber
+    }
+
+    val displayTitle = remember(vm.activeSessionTitle, activePart) {
+        val title = vm.activeSessionTitle.trim()
+        if (activePart != null && title.contains(activePart, ignoreCase = true)) {
+            // No duplicar el chip si el título ya contiene el part number
+            title.take(28)
+        } else {
+            title.take(28)
+        }
     }
 
     val voiceLauncher = rememberLauncherForActivityResult(
@@ -67,6 +121,7 @@ fun ChatScreen(vm: MainViewModel) {
                 val normalized = VoiceNormalizer.normalizeSpokenTechnicalQuery(spoken)
                 Toast.makeText(context, "🎙️ Recognized: $normalized", Toast.LENGTH_SHORT).show()
                 inputText = ""
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 vm.sendUserMessage(normalized)
             }
         }
@@ -88,7 +143,7 @@ fun ChatScreen(vm: MainViewModel) {
                         }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                                contentDescription = "Back",
+                                contentDescription = stringResource(R.string.chat_back),
                                 tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -101,6 +156,7 @@ fun ChatScreen(vm: MainViewModel) {
                                 onLongClick = {
                                     vm.isDeveloperModeUnlocked = true
                                     vm.currentScreen = AppScreen.DEBUG
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     Toast.makeText(context, "🔧 Developer Debug Mode Opened", Toast.LENGTH_SHORT).show()
                                 }
                             )
@@ -110,24 +166,25 @@ fun ChatScreen(vm: MainViewModel) {
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)
                             ) {
                                 Text(
-                                    text = vm.activeSessionTitle,
+                                    text = displayTitle.ifEmpty { stringResource(R.string.chat_default_title) },
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                if (activePart != null) {
+                                // Mostrar chip solo si no es idéntico al título
+                                if (activePart != null && !displayTitle.equals(activePart, ignoreCase = true)) {
                                     Surface(
-                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        color = KonectoTheme.semantics.accentContainer,
                                         shape = RoundedCornerShape(4.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                        border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder)
                                     ) {
                                         Text(
                                             text = activePart,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = KonectoTheme.semantics.accent,
                                             fontFamily = FontFamily.Monospace,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
@@ -135,19 +192,26 @@ fun ChatScreen(vm: MainViewModel) {
                                 }
                             }
                             Text(
-                                text = "Series 76 Technical Assistant",
+                                text = stringResource(R.string.chat_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
                     actions = {
+                        IconButton(onClick = { ThemeController.toggleTheme() }) {
+                            Icon(
+                                imageVector = if (ThemeController.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Toggle Theme",
+                                tint = KonectoTheme.semantics.accent
+                            )
+                        }
                         if (vm.isDeveloperModeUnlocked) {
                             IconButton(onClick = { vm.currentScreen = AppScreen.DEBUG }) {
                                 Icon(
                                     imageVector = Icons.Default.Terminal,
-                                    contentDescription = "Open Developer Debug Screen",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    contentDescription = stringResource(R.string.chat_open_debug),
+                                    tint = KonectoTheme.semantics.accent
                                 )
                             }
                         }
@@ -178,22 +242,22 @@ fun ChatScreen(vm: MainViewModel) {
                 }
             }
 
-            // Quick Suggestions when chat is empty
+            // Consultas sugeridas cuando el chat está vacío
             if (vm.messages.isEmpty() && !vm.isLoading) {
                 Column(
                     modifier = Modifier.padding(Spacing.m).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     Text(
-                        text = "SUGGESTED ENGINEERING QUERIES",
+                        text = stringResource(R.string.chat_suggested_queries),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     listOf(
-                        "Specs for Base Part Number 763B00-11300000/A",
-                        "Recommend an Explosionproof actuator with at least 200 Nm Modulating torque on 24V DC",
-                        "Compare 110V single phase Weatherproof models between 500 Nm and 1100 Nm",
-                        "Is 761A00-11330C00/A available in 220V 3-Phase?"
+                        stringResource(R.string.chat_suggested_1),
+                        stringResource(R.string.chat_suggested_2),
+                        stringResource(R.string.chat_suggested_3),
+                        stringResource(R.string.chat_suggested_4)
                     ).forEach { sample ->
                         Surface(
                             color = MaterialTheme.colorScheme.surface,
@@ -202,7 +266,10 @@ fun ChatScreen(vm: MainViewModel) {
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-                                .clickable { vm.sendUserMessage(sample) }
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    vm.sendUserMessage(sample)
+                                }
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = Spacing.s),
@@ -219,7 +286,7 @@ fun ChatScreen(vm: MainViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.ChevronRight,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = KonectoTheme.semantics.accent,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -248,15 +315,11 @@ fun ChatScreen(vm: MainViewModel) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs)
+                                modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)
                             ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                TypingIndicator()
                                 Text(
-                                    text = "Thinking...",
+                                    text = stringResource(R.string.chat_thinking),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -266,7 +329,7 @@ fun ChatScreen(vm: MainViewModel) {
                 }
             }
 
-            // Input Bar
+            // Barra de entrada inferior redondeada
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -305,8 +368,8 @@ fun ChatScreen(vm: MainViewModel) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
-                            contentDescription = "Voice Input",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            contentDescription = stringResource(R.string.chat_voice),
+                            tint = KonectoTheme.semantics.accent,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -322,7 +385,7 @@ fun ChatScreen(vm: MainViewModel) {
                     ) {
                         if (inputText.isEmpty()) {
                             Text(
-                                text = "Ask part number, torque, or 50Hz...",
+                                text = stringResource(R.string.chat_input_placeholder),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -334,7 +397,7 @@ fun ChatScreen(vm: MainViewModel) {
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.onSurface),
+                            cursorBrush = SolidColor(KonectoTheme.semantics.accent),
                             maxLines = 4,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -345,8 +408,9 @@ fun ChatScreen(vm: MainViewModel) {
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(if (canSend) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
+                            .background(if (canSend) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline)
                             .clickable(enabled = canSend) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 val q = inputText
                                 inputText = ""
                                 vm.sendUserMessage(q)
@@ -355,8 +419,8 @@ fun ChatScreen(vm: MainViewModel) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowUpward,
-                            contentDescription = "Send",
-                            tint = if (canSend) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            contentDescription = stringResource(R.string.chat_send),
+                            tint = if (canSend) KonectoTheme.semantics.onAccent else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -455,7 +519,7 @@ fun VoiceSimulationDialog(
                         Text(
                             text = normalizedPreview,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = KonectoTheme.semantics.accent,
                             fontFamily = FontFamily.Monospace
                         )
                     }
@@ -465,17 +529,16 @@ fun VoiceSimulationDialog(
         confirmButton = {
             Button(
                 onClick = { onSendNormalizedQuery(customText) },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.onSurface),
+                colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Normalize & Send", color = MaterialTheme.colorScheme.surface, fontWeight = FontWeight.Bold)
+                Text("Normalize & Send", color = KonectoTheme.semantics.onAccent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.server_dialog_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
 }
-

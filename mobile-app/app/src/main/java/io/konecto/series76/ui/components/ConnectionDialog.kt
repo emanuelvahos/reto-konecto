@@ -14,12 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.konecto.series76.R
 import io.konecto.series76.data.ApiClient
 import io.konecto.series76.data.ServerPreferences
 import io.konecto.series76.mock.DebugMockProvider
@@ -41,7 +42,6 @@ fun ConnectionDialog(
     var testResult by remember { mutableStateOf<String?>(null) }
     var testSuccess by remember { mutableStateOf(false) }
 
-    // Mock settings
     var isMockEnabled by remember { mutableStateOf(DebugMockProvider.isMockEnabled) }
     var selectedMockKey by remember { mutableStateOf(DebugMockProvider.selectedSampleKey) }
 
@@ -52,12 +52,12 @@ fun ConnectionDialog(
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(
-                    text = "Server Configuration",
+                    text = stringResource(R.string.server_dialog_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Configure host endpoint or switch to debug mock.",
+                    text = stringResource(R.string.server_dialog_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -71,7 +71,7 @@ fun ConnectionDialog(
                 verticalArrangement = Arrangement.spacedBy(Spacing.s)
             ) {
                 CleanInputField(
-                    label = "Server URL (Port 8001)",
+                    label = stringResource(R.string.server_dialog_url_label),
                     value = urlText,
                     onValueChange = {
                         urlText = it
@@ -83,13 +83,12 @@ fun ConnectionDialog(
 
                 if (!isValid) {
                     Text(
-                        text = "Invalid URL format. Example: http://10.0.2.2:8001/ or http://192.168.1.100:8001/",
+                        text = stringResource(R.string.server_dialog_invalid_url),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
 
-                // Quick buttons for presets (Emulator, Physical Phone hints)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
@@ -100,7 +99,7 @@ fun ConnectionDialog(
                             isValid = true
                             testResult = null
                         },
-                        label = { Text("Emulator (10.0.2.2)", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.server_dialog_preset_emulator), fontSize = 11.sp) }
                     )
                     SuggestionChip(
                         onClick = {
@@ -108,11 +107,11 @@ fun ConnectionDialog(
                             isValid = true
                             testResult = null
                         },
-                        label = { Text("Localhost", fontSize = 11.sp) }
+                        label = { Text(stringResource(R.string.server_dialog_preset_localhost), fontSize = 11.sp) }
                     )
                 }
 
-                // Test Connection Button
+                // Botón de prueba de conexión
                 Button(
                     onClick = {
                         coroutineScope.launch {
@@ -123,10 +122,17 @@ fun ConnectionDialog(
                             if (res.isSuccess) {
                                 val data = res.getOrNull()
                                 testSuccess = true
-                                testResult = "Connected! Status: ${data?.status}, Actuators loaded: ${data?.actuatorsLoaded}"
+                                testResult = context.getString(
+                                    R.string.server_dialog_connected,
+                                    data?.status ?: "ok",
+                                    data?.actuatorsLoaded ?: 0
+                                )
                             } else {
                                 testSuccess = false
-                                testResult = "Failed: ${res.exceptionOrNull()?.localizedMessage ?: "Unreachable"}"
+                                testResult = context.getString(
+                                    R.string.server_dialog_failed,
+                                    res.exceptionOrNull()?.localizedMessage ?: "Unreachable"
+                                )
                             }
                         }
                     },
@@ -141,15 +147,14 @@ fun ConnectionDialog(
                     if (isTesting) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(modifier = Modifier.width(Spacing.xs))
-                        Text("Testing /health...", fontSize = 12.sp)
+                        Text(stringResource(R.string.server_dialog_testing), fontSize = 12.sp)
                     } else {
                         Icon(imageVector = Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(Spacing.xs))
-                        Text("Test Connection (/health)", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.server_dialog_test_btn), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
-                // Test Result Feedback Banner
                 testResult?.let { msg ->
                     Surface(
                         color = if (testSuccess) KonectoTheme.semantics.successBg else KonectoTheme.semantics.errorBg,
@@ -182,7 +187,7 @@ fun ConnectionDialog(
                     }
                 }
 
-                // Debug Mock Switch (Only active in debug source set)
+                // Debug Mock Switch
                 if (DebugMockProvider.isAvailable) {
                     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
                     Row(
@@ -192,12 +197,12 @@ fun ConnectionDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "DEBUG MOCK MODE",
+                                text = stringResource(R.string.server_dialog_mock_title),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Serve samples from contract_v2_samples.json without backend.",
+                                text = stringResource(R.string.server_dialog_mock_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -207,22 +212,30 @@ fun ConnectionDialog(
                             onCheckedChange = {
                                 isMockEnabled = it
                                 DebugMockProvider.isMockEnabled = it
-                            }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = KonectoTheme.semantics.onAccent,
+                                checkedTrackColor = KonectoTheme.semantics.accent
+                            )
                         )
                     }
 
                     if (isMockEnabled) {
                         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                             Text(
-                                text = "ACTIVE MOCK SAMPLE",
+                                text = stringResource(R.string.server_dialog_active_sample),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             DebugMockProvider.sampleKeys.forEach { key ->
                                 val isSelected = selectedMockKey == key
                                 Surface(
-                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                    color = if (isSelected) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
                                     shape = RoundedCornerShape(6.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
+                                    ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(6.dp))
@@ -236,7 +249,7 @@ fun ConnectionDialog(
                                         style = MaterialTheme.typography.bodySmall,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xxs)
                                     )
                                 }
@@ -256,16 +269,15 @@ fun ConnectionDialog(
                     }
                 },
                 enabled = isValid && urlText.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent)
             ) {
-                Text("Save", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.server_dialog_save), color = KonectoTheme.semantics.onAccent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.server_dialog_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     )
 }
-
