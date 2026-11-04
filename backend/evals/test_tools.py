@@ -54,11 +54,11 @@ def test_tool_recommend_valid_and_impossible_relaxation():
     assert len(impossible["closest_alternative_actuators"]) > 0
 
 
-def test_tool_search_knowledge_vector():
+def test_tool_search_knowledge_keyword():
     reset_turn_telemetry()
     res = search_engineering_knowledge.invoke(
         {"query": "What is the allowable voltage tolerance and are sizes 6 and 7 CSA certified?"}
     )
     assert res["status"] == "KNOWLEDGE_RETRIEVED"
-    assert res["retrieval_mode"] == "vector_similarity"
-    assert len(res["chunks"]) >= 1
+    assert res["retrieval_mode"] == "keyword"
+    assert res["chunks"][0]["chunk_key"] == "notes_tolerances_and_certifications"

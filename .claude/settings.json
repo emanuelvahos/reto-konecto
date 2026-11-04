@@ -6,7 +6,7 @@
     "stack": [
       "FastAPI",
       "LangChain Tool Calling",
-      "PostgreSQL 16 + pgvector + pg_trgm",
+      "PostgreSQL 16 + pg_trgm",
       "Kotlin + Jetpack Compose (Android Material 3)"
     ]
   },

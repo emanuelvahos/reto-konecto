@@ -1,6 +1,6 @@
 # Konecto Series 76 — Neuro-Symbolic Heavy-Duty Electric Actuator Assistant
 
-An end-to-end, production-grade conversational engineering assistant for querying, comparing, and recommending **Series 76 Heavy-Duty Electric Actuators**. Built with a **FastAPI + LangChain** backend, a **Hybrid PostgreSQL 16 (`NUMERIC` + `pg_trgm` + `pgvector`)** data layer, and a native **Android (Kotlin + Jetpack Compose Material 3)** mobile client.
+An end-to-end, production-grade conversational engineering assistant for querying, comparing, and recommending **Series 76 Heavy-Duty Electric Actuators**. Built with a **FastAPI + LangChain** backend, a **PostgreSQL 16 (`NUMERIC` + `pg_trgm`)** data layer, and a native **Android (Kotlin + Jetpack Compose Material 3)** mobile client.
 
 ---
 
@@ -19,20 +19,20 @@ An end-to-end, production-grade conversational engineering assistant for queryin
 │   ├── app/
 │   │   ├── main.py                         # FastAPI endpoints (/api/conversation, /api/sessions, /api/auth/login)
 │   │   ├── agent.py                        # Tool-calling agent orchestrator & active entity memory
-│   │   ├── tools.py                        # Deterministic SQL, Constraint Relaxation & pgvector tools
+│   │   ├── tools.py                        # Deterministic SQL, Constraint Relaxation & keyword knowledge tools
 │   │   ├── schemas.py                      # Strict Pydantic request/response contracts (Section 4)
 │   │   ├── auth.py                         # Bcrypt password verification & JWT bearer authentication
 │   │   └── database.py                     # PostgreSQL connection management & Decimal sanitization
 │   ├── db/
-│   │   └── init.sql                        # Hybrid schema: actuators, knowledge_chunks, users, sessions
+│   │   └── init.sql                        # Schema: actuators, users, sessions
 │   ├── data/
 │   │   ├── processed_actuators.json        # Audited 68-row catalog snapshot with physical validation
-│   │   └── processed_knowledge.json        # Semantic knowledge chunks from series_76_summary.pdf
+│   │   └── processed_knowledge.json        # Knowledge fragments (text + tags) from series_76_summary.pdf
 │   ├── scripts/
 │   │   └── ingest.py                       # Deterministic PDF ingestion, physics validator & DB seeder
 │   └── evals/
 │       ├── test_data_integrity.py          # 9 physical & domain integrity tests ($0.00 LLM cost)
-│       ├── test_tools.py                   # 5 deterministic SQL, fuzzy match & pgvector tool tests
+│       ├── test_tools.py                   # deterministic SQL, fuzzy match & keyword-knowledge tool tests
 │       ├── test_api_e2e.py                 # JWT auth, multi-turn coreference & persistence E2E tests
 │       ├── run_evals.py                    # 11-scenario automated benchmark runner
 │       ├── benchmark_nvidia.py             # Empirical LLM latency & tool-calling benchmark script
@@ -73,9 +73,9 @@ flowchart TD
         T3["Tool 3: search_engineering_knowledge"]
     end
 
-    subgraph DB["PostgreSQL 16 + pg_trgm + pgvector (:5433)"]
+    subgraph DB["PostgreSQL 16 + pg_trgm (:5433)"]
         TblAct["Table: actuators (68 Audited NUMERIC Rows + GIN Trigram Index)"]
-        TblKnow["Table: knowledge_chunks (pgvector Cosine Similarity)"]
+        TblKnow["File: data/knowledge.json (keyword / pg_trgm match)"]
         TblChat["Tables: users, chat_sessions, chat_messages"]
     end
 
@@ -86,25 +86,25 @@ flowchart TD
     end
 
     PDF1 & PDF2 --> Physics
-    Physics -->|Seeds 68 rows + 4 vector chunks| TblAct & TblKnow
+    Physics -->|Seeds 68 rows| TblAct & TblKnow
     UI_Chat -->|JSON Request + Bearer JWT| API
     API <--> TblChat
     API --> Memory --> Agent
     Agent --> T1 & T2 & T3
     T1 & T2 -->|Exact SQL / pg_trgm Fuzzy| TblAct
-    T3 -->|pgvector <=> Cosine Search| TblKnow
+    T3 -->|keyword / pg_trgm| TblKnow
     API -->|answer + ui_payload + debug_trace| UI_Chat
     UI_Chat --> UI_Cards & UI_Debug
 ```
 
-### 1.1 Why a Hybrid PostgreSQL Schema (`NUMERIC` + `pg_trgm` + `pgvector`) Instead of Naive Vector RAG?
+### 1.1 Why a Hybrid PostgreSQL Schema (`NUMERIC` + `pg_trgm`) Instead of Naive Vector RAG?
 Standard chunk-based vector RAG fails on dense engineering datasheets like `series_76_electric_data.pdf`:
 1. **High Lexical Overlap:** All 68 part numbers differ by only 1–2 characters (`763B00-11300000/A` vs `763B00-11320000/A` vs `763B00-11330000/A`). Embedding similarity conflates voltage variants (`110V 1-Phase` vs `220V 1-Phase` vs `220V 3-Phase`).
 2. **Numerical Inequality Filtering:** Vector search cannot deterministically evaluate multi-attribute inequalities such as `enclosure_type = 'Explosionproof' AND power_supply = '24V DC' AND modulating_torque_nm >= 200`.
 3. **Our Neuro-Symbolic Solution:**
    - **Exact Relational Engine (`actuators` table):** Every mechanical and electrical metric is stored in strongly typed `NUMERIC(10,2)` and `INTEGER` columns. The LLM is strictly prohibited from calculating or guessing specifications from memory.
    - **Trigram & Levenshtein Fuzzy Recovery (`pg_trgm`):** A GIN index (`gin_trgm_ops`) combined with Levenshtein ranking recovers OCR/user typos (e.g., `761800-11300000/A` $\rightarrow$ `761B00-11300000/A`) in a single query.
-   - **Semantic Vector Search (`knowledge_chunks` table):** `pgvector` cosine distance (`<=>`) retrieves conceptual explanations from `series_76_summary.pdf`, operating tolerances ($\pm 10\%$ voltage, $\pm 5\%$ frequency), and hazardous area classifications (`Class I, Div 1, Groups C, D, T4 | Ex d IIB T4 Gb`).
+   - **Deterministic knowledge lookup (`data/knowledge.json`):** keyword tags with `pg_trgm` typo recovery (no LLM, no embeddings) retrieve conceptual explanations from `series_76_summary.pdf`, operating tolerances ($\pm 10\%$ voltage, $\pm 5\%$ frequency), and hazardous area classifications (`Class I, Div 1, Groups C, D, T4 | Ex d IIB T4 Gb`).
 
 ### 1.2 How `ingest.py` Solves the 5 Traps of `series_76_electric_data.pdf`
 Our `ActuatorRecord` Pydantic sanitizer in `backend/scripts/ingest.py` resolves five critical traps present in the raw PDF tables:
@@ -132,15 +132,13 @@ To protect the **$10.00 USD budget** on the provided evaluation API key while ex
 | :--- | :--- | :--- |
 | **API Endpoint (`LLM_BASE_URL`)** | `https://integrate.api.nvidia.com/v1` | `https://openrouter.ai/api/v1` |
 | **Chat Model (`LLM_CHAT_MODEL`)** | `nvidia/nemotron-3.5-lightning-30b-a3b` | `openai/gpt-4o-mini` |
-| **Embedding Model (`EMBEDDING_MODEL`)** | `nvidia/nemotron-3-embed-1b` (`2048` dims) | `openai/text-embedding-3-small` (`1536` dims) |
 | **Avg. Tool-Call Latency** | ~4.2s – 8.5s | **~1.4s – 2.2s** |
 | **Structured Tool Accuracy** | 100% (11/11 Eval Scenarios) | **100% (11/11 Eval Scenarios)** |
 | **Token Pricing** | $0.00 / 1M tokens (Free Dev Tier) | $0.15 / 1M input, $0.60 / 1M output |
 | **Cost per Full 11-Scenario Eval Suite** | **$0.00 USD** | **~$0.008 USD (< 1 cent)** |
 
-**Why `openai/gpt-4o-mini` + `openai/text-embedding-3-small` for OpenRouter Delivery?**
+**Why `openai/gpt-4o-mini` for OpenRouter Delivery?**
 - `openai/gpt-4o-mini` delivers sub-2-second tool-calling latency and native parallel function-calling reliability at **$0.15 / 1M input tokens**, supporting over **15,000 multi-turn engineering conversations** within the $10.00 USD budget.
-- `openai/text-embedding-3-small` (`1536` dimensions) costs **$0.02 / 1M tokens** (embedding the entire knowledge base costs **$0.00002 USD**).
 
 ---
 
@@ -160,12 +158,9 @@ Open `.env` and paste your OpenRouter API key into `LLM_API_KEY`:
 | `DATABASE_URL` | `postgresql+psycopg://konecto:...@db:5432/series76_db` | Internal Docker connection string (auto-maps to `localhost:5433` when run from host CLI) |
 | `DB_HOST_PORT` | `5433` | Host port mapped to container port `5432` (avoids conflicts with local PostgreSQL instances) |
 | `API_HOST_PORT` | `8001` | Host port mapped to container port `8000` (avoids conflicts with other local services on 8000) |
-| `LLM_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible base URL (`https://openrouter.ai/api/v1` or `https://integrate.api.nvidia.com/v1`) |
-| `LLM_API_KEY` | `your_openrouter_api_key_here` | **Required:** Your OpenRouter (or NVIDIA NIM) API Key |
-| `LLM_CHAT_MODEL` | `openai/gpt-4o-mini` | Primary tool-calling conversational LLM |
-| `LLM_VISION_MODEL` | `google/gemini-2.5-flash` | Multimodal vision model (optional/configurable) |
-| `EMBEDDING_MODEL` | `openai/text-embedding-3-small` | Embedding model for `knowledge_chunks` semantic search |
-| `EMBEDDING_DIMENSIONS` | `1536` | Vector dimension (`1536` for OpenRouter `text-embedding-3-small`, `2048` for NVIDIA `nemotron-3-embed-1b`) |
+| `LLM_PROVIDER` | `openrouter` | Provider profile (`openrouter` or `nim`), defined in `backend/config/llm_profiles.json` |
+| `LLM_BASE_URL` / `LLM_CHAT_MODEL` / `LLM_API_KEY` | OpenRouter / `openai/gpt-4o-mini` / *(your key)* | OpenRouter profile |
+| `LLM_BASE_URL_NIM` / `LLM_CHAT_MODEL_NIM` / `LLM_API_KEY_NIM` | NVIDIA NIM / `nvidia/nemotron-3.5-lightning-30b-a3b` / *(your key)* | NIM profile (free dev tier), used when `LLM_PROVIDER=nim` |
 | `JWT_SECRET_KEY` | `super_secret_konecto_jwt_key_change_in_prod` | Secret key used to sign HS256 JWT tokens |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` | JWT token validity duration (7 days) |
 
@@ -173,18 +168,17 @@ Open `.env` and paste your OpenRouter API key into `LLM_API_KEY`:
 
 ## 3. Backend & Database (Docker Compose)
 
-Start the entire backend stack (PostgreSQL 16 + `pgvector` + automatic ingestion + FastAPI server) with a **single command**:
+Start the entire backend stack (PostgreSQL 16 + `pg_trgm` + automatic ingestion + FastAPI server) with a **single command**:
 
 ```bash
 docker compose up -d --build
 ```
 
 ### What happens automatically on startup:
-1. **`series76_postgres` (`pgvector/pgvector:pg16`):** Initializes extensions (`vector`, `pg_trgm`, `uuid-ossp`) and creates all tables and indexes from `backend/db/init.sql`, exposed on host port **`5433`**.
-2. **Automatic Ingestion & Dynamic Vector Sizing (`scripts/ingest.py --mode auto`):**
+1. **`series76_postgres` (`postgres:16`):** Initializes extensions (`pg_trgm`, `uuid-ossp`) and creates all tables and indexes from `backend/db/init.sql`, exposed on host port **`5433`**.
+2. **Automatic Ingestion (`scripts/ingest.py --mode auto`):**
    - Validates all 68 actuator records against physical laws.
-   - Dynamically adjusts `knowledge_chunks.embedding` to match `EMBEDDING_DIMENSIONS` (`ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(...)`), so switching between OpenRouter (`1536`) and NVIDIA NIM (`2048`) never requires deleting Docker volumes.
-   - Seeds the 3 test users, 68 actuators, and 4 embedded knowledge chunks.
+   - Seeds the 3 test users and 68 actuators. Knowledge fragments are read from `backend/data/knowledge.json` at query time.
 3. **`series76_backend` (FastAPI):** Starts Uvicorn on host port **`8001`**.
    - **Health Check:** [http://localhost:8001/health](http://localhost:8001/health)
    - **Interactive Swagger UI:** [http://localhost:8001/docs](http://localhost:8001/docs)
@@ -208,7 +202,7 @@ python backend/scripts/ingest.py --mode snapshot-only
 
 ### Audited Output Snapshots:
 - **`backend/data/processed_actuators.json`:** Complete 68-record catalog snapshot with resolved `motor_power_watts` rowspans, canonical `50Hz`/`60Hz` columns, `csa_certified` flags, and table footnotes.
-- **`backend/data/processed_knowledge.json`:** Structured semantic knowledge chunks extracted from `series_76_summary.pdf` and table notes.
+- **`backend/data/knowledge.json`:** Knowledge fragments (text + keyword tags) extracted from `series_76_summary.pdf` and table notes.
 
 ---
 
@@ -267,7 +261,7 @@ Industrial part numbers like `763B00-11300000/A` are notoriously mangled by stan
 # 1. Data & Physical Integrity Suite (9 tests: row counts, In-Lbs/Nm ratio, LRA >= FLA, N/A rows, CSA rules)
 python -m pytest backend/evals/test_data_integrity.py -v
 
-# 2. Deterministic Tools & pgvector Suite (5 tests: exact lookup, N/A alternatives, typo fuzzy match, constraint relaxation, vector search)
+# 2. Deterministic Tools Suite (exact lookup, N/A alternatives, typo fuzzy match, 3-phase single torque, constraint relaxation, keyword knowledge)
 python -m pytest backend/evals/test_tools.py -v
 
 # 3. End-to-End API, JWT Auth & Multi-Turn Coreference Suite (2 E2E tests)

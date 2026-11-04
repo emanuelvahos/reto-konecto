@@ -13,7 +13,6 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 
-import httpx
 import psycopg
 from psycopg.rows import dict_row
 import bcrypt
@@ -171,88 +170,16 @@ def run_from_pdf() -> None:
 
 
 # =====================================================================
-# 3. CHUNKS DE CONOCIMIENTO SEMÁNTICO (series_76_summary.pdf + NOTAS)
-# =====================================================================
-def build_knowledge_chunks() -> List[Dict[str, Any]]:
-    return [
-        {
-            "chunk_key": "summary_overview_enclosures",
-            "source_document": "series_76_summary.pdf",
-            "category": "business_context",
-            "title": "Series 76 Overview and Enclosure Types (Weatherproof vs Explosionproof)",
-            "content": (
-                "Series 76 heavy-duty electric actuators are used in industrial automation to open, close, "
-                "or precisely control valves and dampers in HVAC and industrial processing plants. "
-                "Enclosure Types: 1) Weatherproof: Designed for general industrial use, protected against dust, "
-                "rain, and environmental elements (compliant with CSA, CE, & UKCA standards; note that Sizes 6 and 7 "
-                "in 220V Single Phase are not CSA certified). 2) Explosionproof: Built for hazardous environments "
-                "where flammable gases or dust may be present, certified CSA, IECEx/ATEX: Class I, Division 1, "
-                "Groups C, D, T4; Ex d IIB T4 Gb; Class I, Zone 1, AEx d IIB T4 Gb."
-            ),
-        },
-        {
-            "chunk_key": "summary_power_and_applications",
-            "source_document": "series_76_summary.pdf",
-            "category": "business_context",
-            "title": "Power Supplies and Application Service Types (On/Off vs Modulating)",
-            "content": (
-                "Power Supply Options: 24V AC/DC (low voltage), 24V DC (modulating explosionproof), "
-                "110V Single Phase (North American standard), 220V Single Phase (international standard), "
-                "and 220V 3 Phase (industrial three-phase; note that sizes 761A, 761B, 762A, and 762B are N/A in 3-phase). "
-                "Application Types: On/Off actuators operate in two positions (fully open or fully closed) and specify "
-                "Cycles per Hour. Modulating actuators stop at any point in their 90-degree rotation for precise flow "
-                "control and specify Starts per Hour."
-            ),
-        },
-        {
-            "chunk_key": "summary_electrical_metrics",
-            "source_document": "series_76_summary.pdf",
-            "category": "electrical_definitions",
-            "title": "Definitions of Torque, Duty Cycle (S4%), Speed, FLA, LRA, and Motor Power",
-            "content": (
-                "Output Torque: Rotational force measured in in-lbs and Nm. "
-                "Duty Cycle (S4%): Percentage of time the actuator can operate over a cycle without overheating per IEC 60034-1. "
-                "Operating Speed (Sec): Time to complete a 90-degree turn (varies between 50 Hz and 60 Hz for AC models). "
-                "Full Load Current (FLA): Current in Amps drawn under maximum rated load. "
-                "Locked Rotor Current (LRA): Current in Amps drawn by the motor at startup (locked rotor load), higher than FLA. "
-                "Motor Power: Internal motor power rating in Watts (15W, 40W, 90W, 180W, or 700W)."
-            ),
-        },
-        {
-            "chunk_key": "notes_tolerances_and_certifications",
-            "source_document": "series_76_electric_data.pdf",
-            "category": "operating_tolerances",
-            "title": "Electrical Tolerances (+/-10% Voltage, +/-5% Frequency) and Certification Rules",
-            "content": (
-                "Engineering Notes across all Series 76 tables: "
-                "1. Full load current (FLA) = Max. rated load. "
-                "2. Locked rotor current (LRA) @ Locked rotor load. "
-                "3. Allowable motor voltage tolerance is +/- 10% (e.g., 110V models operate safely from 99V to 121V; "
-                "220V models from 198V to 242V; 24V models from 21.6V to 26.4V). "
-                "4. Allowable power frequency tolerance is +/- 5% (50Hz: 47.5-52.5Hz; 60Hz: 57-63Hz). "
-                "5. Duty cycle per IEC 60034-1 for on/off and modulating service. "
-                "6. Starts and cycles per hour are based on rated torque. "
-                "7. Sizes 6 and 7 (models 766A00, 766B00, 767A00, 767B00, 767C00) are NOT CSA Certified."
-            ),
-        },
-    ]
-
-
-# =====================================================================
 # 4. PERSISTENCIA EN ARCHIVOS JSON Y CARGA EN POSTGRESQL
 # =====================================================================
-def save_snapshots(records: List[ActuatorRecord], chunks: List[Dict[str, Any]]) -> None:
+def save_snapshots(records: List[ActuatorRecord]) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     actuators_path = DATA_DIR / "processed_actuators.json"
-    knowledge_path = DATA_DIR / "processed_knowledge.json"
 
     with open(actuators_path, "w", encoding="utf-8") as f:
         json.dump([r.model_dump() for r in records], f, indent=2, ensure_ascii=False)
 
-    with open(knowledge_path, "w", encoding="utf-8") as f:
-        json.dump(chunks, f, indent=2, ensure_ascii=False)
-
-    logger.info(f"💾 Snapshots guardados en {actuators_path} y {knowledge_path}")
+    logger.info(f"💾 Snapshot guardado en {actuators_path}")
 
 
 def resolve_db_url() -> str:
@@ -264,42 +191,7 @@ def resolve_db_url() -> str:
     return url
 
 
-def embed_texts(texts: List[str]) -> Optional[List[List[float]]]:
-    """Genera embeddings (passage) vía API OpenAI-compatible (NVIDIA NIM / OpenRouter)."""
-    base = os.getenv("LLM_BASE_URL", "").rstrip("/")
-    key = os.getenv("LLM_API_KEY", "")
-    model = os.getenv("EMBEDDING_MODEL", "")
-    dims = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
-    if not key or key.startswith(("your_", "PEGA_")) or not base:
-        logger.warning("⚠️ LLM_API_KEY no configurada: chunks se guardan SIN embeddings.")
-        return None
-    body: Dict[str, Any] = {"model": model, "input": texts, "encoding_format": "float"}
-    if "nvidia.com" in base:
-        body["input_type"] = "passage"
-    verify_ssl = True
-    try:
-        import certifi
-        verify_ssl = certifi.where()
-    except Exception:
-        pass
-    r = httpx.post(
-
-        f"{base}/embeddings",
-        headers={"Authorization": f"Bearer {key}"},
-        json=body,
-        timeout=60, verify=verify_ssl,
-    )
-    r.raise_for_status()
-    vectors = [d["embedding"] for d in r.json()["data"]]
-    if any(len(v) != dims for v in vectors):
-        raise ValueError(
-            f"Dimensión de embedding {len(vectors[0])} != EMBEDDING_DIMENSIONS={dims} (init.sql)."
-        )
-    logger.info(f"🧠 {len(vectors)} embeddings generados con {model} ({dims} dims).")
-    return vectors
-
-
-def seed_database(records: List[ActuatorRecord], chunks: List[Dict[str, Any]], with_embeddings: bool = False) -> None:
+def seed_database(records: List[ActuatorRecord]) -> None:
     db_url = resolve_db_url()
 
     with psycopg.connect(db_url, autocommit=False) as conn:
@@ -359,41 +251,18 @@ def seed_database(records: List[ActuatorRecord], chunks: List[Dict[str, Any]], w
                     ),
                 )
 
-            # 3. Insertar Chunks de Conocimiento Técnico
-            dims = int(os.getenv("EMBEDDING_DIMENSIONS", "1536"))
-            cur.execute("TRUNCATE TABLE knowledge_chunks RESTART IDENTITY;")
-            cur.execute(f"ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector({dims});")
-            logger.info(f"🔧 Columna knowledge_chunks.embedding ajustada dinámicamente a vector({dims}).")
-            vectors = embed_texts([f"{c['title']}. {c['content']}" for c in chunks]) if with_embeddings else None
-            if not with_embeddings:
-                logger.info("ℹ️ Embeddings desactivados (--with-embeddings): chunks sin vector.")
-            for i, c in enumerate(chunks):
-                emb = "[" + ",".join(f"{x:.7f}" for x in vectors[i]) + "]" if vectors else None
-                cur.execute(
-                    """
-                    INSERT INTO knowledge_chunks (chunk_key, source_document, category, title, content, embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s::vector)
-                    ON CONFLICT (chunk_key) DO UPDATE
-                    SET content = EXCLUDED.content, title = EXCLUDED.title,
-                        embedding = EXCLUDED.embedding;
-                    """,
-                    (c["chunk_key"], c["source_document"], c["category"], c["title"], c["content"], emb),
-                )
-
         conn.commit()
     logger.info("🚀 Base de datos PostgreSQL poblada exitosamente.")
-    verify_database(db_url, len(records), len(chunks))
+    verify_database(db_url, len(records))
 
 
-def verify_database(db_url: str, n_records: int, n_chunks: int) -> None:
+def verify_database(db_url: str, n_records: int) -> None:
     """Validación final: conteos y consistencia de los datos cargados."""
     with psycopg.connect(db_url) as conn, conn.cursor() as cur:
         cur.execute("SELECT count(*) FROM actuators")
         a = cur.fetchone()[0]
         cur.execute("SELECT count(*) FROM actuators WHERE NOT is_available")
         na = cur.fetchone()[0]
-        cur.execute("SELECT count(*), count(embedding) FROM knowledge_chunks")
-        k, ke = cur.fetchone()
         cur.execute("SELECT count(*) FROM users")
         u = cur.fetchone()[0]
         cur.execute("SELECT count(*) FROM actuators WHERE frame_size IN (6,7) AND csa_certified")
@@ -403,14 +272,13 @@ def verify_database(db_url: str, n_records: int, n_chunks: int) -> None:
     checks = {
         f"actuators == {n_records}": a == n_records,
         "N/A rows == 4": na == 4,
-        f"knowledge_chunks == {n_chunks}": k == n_chunks,
         "users >= 3": u >= 3,
         "tamaños 6/7 sin CSA": bad_csa == 0,
         "filas disponibles con torque": no_torque == 0,
     }
     for name, ok in checks.items():
         logger.info(f"{'✅' if ok else '❌'} {name}")
-    logger.info(f"📊 actuators={a} (N/A={na}) chunks={k} (con embedding={ke}) users={u}")
+    logger.info(f"📊 actuators={a} (N/A={na}) users={u}")
     if not all(checks.values()):
         raise SystemExit("Validación de base de datos FALLIDA")
     logger.info("✅ VALIDACIÓN COMPLETA")
@@ -431,16 +299,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Series 76 Ingestion & Physics Validation Pipeline")
     parser.add_argument("--mode", choices=["auto", "from-pdf", "snapshot-only"], default="auto",
                         help="auto: carga series76_catalog.json | from-pdf: re-extrae del PDF y regenera el catálogo")
-    parser.add_argument("--with-embeddings", action="store_true",
-                        help="genera embeddings de los chunks (desactivado por defecto: pgvector se retira en la Fase 2)")
     args = parser.parse_args()
 
     verify_pdf_presence()
     if args.mode == "from-pdf":
         run_from_pdf()
     records = load_catalog()
-    chunks = build_knowledge_chunks()
-    save_snapshots(records, chunks)
+    save_snapshots(records)
 
     if args.mode != "snapshot-only":
-        seed_database(records, chunks, with_embeddings=args.with_embeddings)
+        seed_database(records)

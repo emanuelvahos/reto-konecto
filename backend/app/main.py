@@ -22,7 +22,7 @@ from app.agent import run_agent_turn
 app = FastAPI(
     title="Konecto Series 76 Technical Assistant API",
     version="1.0.0",
-    description="Agentic Backend with LangChain/LangGraph, PostgreSQL + pgvector, and X-Ray Debug Telemetry.",
+    description="Agentic Backend with LangChain/LangGraph, PostgreSQL + pg_trgm, and X-Ray Debug Telemetry.",
 )
 
 app.add_middleware(

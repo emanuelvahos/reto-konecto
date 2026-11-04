@@ -174,7 +174,7 @@ def test_csa_certification_edge_case_sizes_6_and_7(db_conn):
 
 
 # =====================================================================
-# 5. BÚSQUEDA DIFUSA (pg_trgm) Y VECTORES (pgvector)
+# 5. BÚSQUEDA DIFUSA (pg_trgm)
 # =====================================================================
 def test_fuzzy_search_pg_trgm_recovers_typo(db_conn):
     """Si el usuario ingresa '761800-11300000/A' (error de dedo B->8), pg_trgm debe sugerir '761B00-11300000/A'."""
@@ -195,17 +195,10 @@ def test_fuzzy_search_pg_trgm_recovers_typo(db_conn):
     assert float(best["sim"]) > 0.5
 
 
-def test_knowledge_chunks_embeddings_populated(db_conn):
-    """Verifica que los 4 chunks de conocimiento tengan su vector de embedding no nulo con la dimensión de .env."""
+def test_pgvector_retired(db_conn):
+    """pgvector y knowledge_chunks se retiraron: ni la extensión ni la tabla deben existir."""
     with db_conn.cursor() as cur:
-        cur.execute("SELECT count(embedding) AS n FROM knowledge_chunks;")
-        if cur.fetchone()["n"] == 0:
-            pytest.skip("Embeddings desactivados (ingest sin --with-embeddings); pgvector se retira en la Fase 2")
-    expected_dim = int(os.getenv("EMBEDDING_DIMENSIONS", "2048"))
-    with db_conn.cursor() as cur:
-        cur.execute("SELECT chunk_key, vector_dims(embedding) as dims FROM knowledge_chunks;")
-        rows = cur.fetchall()
-
-    assert len(rows) == 4
-    for r in rows:
-        assert r["dims"] == expected_dim, f"Chunk {r['chunk_key']} tiene dim {r['dims']} != {expected_dim}"
+        cur.execute("SELECT count(*) AS n FROM pg_extension WHERE extname = 'vector';")
+        assert cur.fetchone()["n"] == 0
+        cur.execute("SELECT to_regclass('public.knowledge_chunks') AS t;")
+        assert cur.fetchone()["t"] is None

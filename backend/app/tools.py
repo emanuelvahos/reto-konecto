@@ -4,15 +4,17 @@ try:
 except Exception:
     pass
 
-import os
+import json
 import re
 import time
+import unicodedata
+from functools import lru_cache
+from pathlib import Path
 from contextvars import ContextVar
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
-from openai import OpenAI
 
 from app.database import get_db_cursor, sanitize_rows
 
@@ -459,8 +461,12 @@ def recommend_actuators(
 
 
 # =====================================================================
-# TOOL 3: BÚSQUEDA SEMÁNTICA EN DOCUMENTACIÓN Y NOTAS (pgvector)
+# TOOL 3: CONOCIMIENTO TECNICO DETERMINISTA (palabras clave + pg_trgm, sin LLM)
 # =====================================================================
+KNOWLEDGE_PATH = Path(__file__).resolve().parent.parent / "data" / "knowledge.json"
+FUZZY_MIN_SIM = 0.4
+
+
 class SearchKnowledgeInput(BaseModel):
     query: str = Field(
         ...,
@@ -468,55 +474,79 @@ class SearchKnowledgeInput(BaseModel):
     )
 
 
+def _norm_text(text: str) -> str:
+    t = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in t if not unicodedata.combining(c))
+
+
+@lru_cache(maxsize=1)
+def _load_knowledge() -> List[Dict[str, Any]]:
+    return json.loads(KNOWLEDGE_PATH.read_text(encoding="utf-8"))
+
+
+def _tag_in(tag: str, norm_query: str) -> bool:
+    return re.search(r"(?<![a-z0-9])" + re.escape(_norm_text(tag)) + r"(?![a-z0-9])", norm_query) is not None
+
+
 @tool("search_engineering_knowledge", args_schema=SearchKnowledgeInput)
 def search_engineering_knowledge(query: str) -> Dict[str, Any]:
     """
-    Searches Series 76 business summary and footnote engineering rules using pgvector semantic similarity.
-    Use this for questions about voltage tolerance (+/-10%), frequency tolerance (+/-5%), hazardous area certifications,
-    CSA exceptions for Sizes 6 and 7, or definitions of electrical metrics.
+    Returns the Series 76 knowledge fragment (definitions, voltage +/-10% and frequency +/-5% tolerances,
+    hazardous-area certifications, CSA exception for Sizes 6 and 7) that best matches the query by keywords.
     """
     t0 = time.perf_counter()
-    base_url = os.getenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1")
-    api_key = os.getenv("LLM_API_KEY", "")
-    embed_model = os.getenv("EMBEDDING_MODEL", "nvidia/nemotron-3-embed-1b")
-
-    sql_used = ""
-    rows: List[Dict[str, Any]] = []
-    retrieval_mode = "vector_similarity"
-
+    sql_used = "(keyword match over data/knowledge.json tags)"
     try:
-        client = OpenAI(base_url=base_url, api_key=api_key)
-        extra_body = {"input_type": "query"} if "nvidia" in embed_model.lower() else {}
-        emb_resp = client.embeddings.create(
-            model=embed_model,
-            input=[query],
-            extra_body=extra_body if extra_body else None,
-        )
-        vec_str = "[" + ",".join(f"{x:.6f}" for x in emb_resp.data[0].embedding) + "]"
+        chunks = _load_knowledge()
+        norm_q = _norm_text(query)
+        # Puntaje: cada etiqueta presente suma su numero de palabras (las frases largas son mas especificas)
+        scored = [
+            (sum(len(t.split()) for t in c["tags"] if _tag_in(t, norm_q)), c) for c in chunks
+        ]
+        mode = "keyword"
+        if not any(sc > 0 for sc, _ in scored):
+            # Sin coincidencia exacta: recuperacion de typos con pg_trgm sobre las etiquetas
+            mode = "pg_trgm"
+            words = sorted({w for w in re.findall(r"[a-z0-9]{4,}", norm_q)})
+            tag_owner = {_norm_text(t): c["chunk_key"] for c in chunks for t in c["tags"]}
+            sql_used = (
+                "SELECT w.word, t.tag, similarity(w.word, t.tag) FROM unnest(%s::text[]) w(word), "
+                f"unnest(%s::text[]) t(tag) WHERE similarity(w.word, t.tag) >= {FUZZY_MIN_SIM};"
+            )
+            hits: List[Dict[str, Any]] = []
+            if words:
+                with get_db_cursor() as cur:
+                    cur.execute(sql_used, (words, list(tag_owner)))
+                    hits = cur.fetchall()
+            by_key: Dict[str, float] = {}
+            for h in hits:
+                k = tag_owner[h["tag"]]
+                by_key[k] = by_key.get(k, 0.0) + float(h["similarity"])
+            scored = [(by_key.get(c["chunk_key"], 0.0), c) for c in chunks]
 
-        sql_used = """
-            SELECT chunk_key, source_document, category, title, content,
-                   1 - (embedding <=> %s::vector) AS cosine_similarity
-            FROM knowledge_chunks
-            ORDER BY embedding <=> %s::vector ASC
-            LIMIT 3;
-        """
-        with get_db_cursor() as cur:
-            cur.execute(sql_used, (vec_str, vec_str))
-            rows = sanitize_rows(cur.fetchall())
-    except Exception:
-        # Fallback determinista si la API de embeddings da timeout o rate limit
-        retrieval_mode = "sql_fallback"
-        sql_used = "SELECT chunk_key, source_document, category, title, content FROM knowledge_chunks;"
-        with get_db_cursor() as cur:
-            cur.execute(sql_used)
-            rows = sanitize_rows(cur.fetchall())
-
-    result = {
-        "status": "KNOWLEDGE_RETRIEVED",
-        "retrieval_mode": retrieval_mode,
-        "chunks": rows,
-    }
+        scored = [(sc, c) for sc, c in scored if sc > 0]
+        # Orden determinista: puntaje desc, luego orden de aparicion en knowledge.json
+        scored.sort(key=lambda x: -x[0])
+        if not scored:
+            result: Dict[str, Any] = {
+                "status": "NO_KNOWLEDGE_MATCH",
+                "message": "No knowledge fragment matches the query. Do not answer from memory.",
+            }
+        else:
+            top = scored[0][0]
+            best = [c for sc, c in scored if sc >= top][:2]
+            result = {
+                "status": "KNOWLEDGE_RETRIEVED",
+                "retrieval_mode": mode,
+                "chunks": [
+                    {"chunk_key": c["chunk_key"], "title": c["title"], "content": c["content"]} for c in best
+                ],
+            }
+    except Exception as exc:  # estado de error explicito: nunca se devuelven fragmentos "por si acaso"
+        result = {
+            "status": "KNOWLEDGE_ERROR",
+            "message": f"Knowledge lookup failed ({type(exc).__name__}). Tell the user the information is unavailable.",
+        }
     record_tool_trace(
         "search_engineering_knowledge",
         {"query": query},

@@ -5,7 +5,7 @@ Executes the deterministic Series 76 ingestion pipeline (`backend/scripts/ingest
 ## Execution Steps
 
 ```bash
-# 1. Ensure PostgreSQL + pgvector container is running and healthy
+# 1. Ensure PostgreSQL container is running and healthy
 docker compose up -d db
 
 # 2. Run the ingestion & physics validation pipeline
@@ -32,6 +32,6 @@ python -m pytest backend/evals/test_data_integrity.py -v
    - Confirms `763A00-11330000/A` has `speed_50hz_sec = 32.0` and `speed_60hz_sec = 26.0`, and verifies the 4 `N/A` models (`761A`, `761B`, `762A`, `762B` in 220V 3-Phase).
 6. **CSA Footnote Exclusion (`test_sizes_6_and_7_not_csa_certified`):**
    - Confirms all 5 models in Frame Sizes 6 and 7 (`766A`, `766B`, `767A`, `767B`, `767C`) have `csa_certified = FALSE` and `ce_ukca_certified = TRUE`.
-7. **Semantic Knowledge Vector Completeness (`test_knowledge_chunks_and_embeddings_populated`):**
-   - Confirms all 4 chunks from `series_76_summary.pdf` and table footnotes are stored with non-null `pgvector` embeddings matching `EMBEDDING_DIMENSIONS`.
+7. **pgvector retired (`test_pgvector_retired`):**
+   - Confirms the `vector` extension and `knowledge_chunks` table no longer exist; knowledge lives in `backend/data/knowledge.json`.
 
