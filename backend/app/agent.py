@@ -13,6 +13,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
 from langgraph.prebuilt import create_react_agent
 
+from app.config import load_llm_config
 from app.tools import (
     ALL_SERIES76_TOOLS,
     reset_turn_telemetry,
@@ -46,14 +47,11 @@ STRICT ENGINEERING & ZERO-HALLUCINATION RULES:
 
 
 def build_llm() -> ChatOpenAI:
-    base_url = os.getenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1")
-    api_key = os.getenv("LLM_API_KEY", "")
-    model_name = os.getenv("LLM_CHAT_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
-
+    cfg = load_llm_config()
     return ChatOpenAI(
-        model=model_name,
-        api_key=api_key,
-        base_url=base_url,
+        model=cfg.chat_model,
+        api_key=cfg.api_key,
+        base_url=cfg.base_url,
         temperature=0.0,
         max_tokens=1200,
         timeout=40.0,
@@ -199,9 +197,10 @@ def run_agent_turn(
     ui_payload = build_ui_payload(turn_actuators, traces)
     total_ms = round((time.perf_counter() - t0) * 1000, 2)
 
-    model_used = os.getenv("LLM_CHAT_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
+    cfg = load_llm_config()
     debug_trace = {
-        "model_used": model_used,
+        "model_used": cfg.chat_model,
+        "provider": cfg.provider,
         "total_latency_ms": total_ms,
         "token_usage": {
             "prompt_tokens": prompt_tokens,

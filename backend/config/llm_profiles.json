@@ -1,0 +1,20 @@
+{
+  "_doc": "Perfiles de proveedor LLM. Se elige con LLM_PROVIDER (openrouter|nim). Los valores de *_env, si existen en el entorno/.env, tienen prioridad sobre los defaults de este archivo. Las claves NUNCA van aqui.",
+  "default_provider": "openrouter",
+  "profiles": {
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "chat_model": "openai/gpt-4o-mini",
+      "base_url_env": "LLM_BASE_URL",
+      "chat_model_env": "LLM_CHAT_MODEL",
+      "api_key_env": "LLM_API_KEY"
+    },
+    "nim": {
+      "base_url": "https://integrate.api.nvidia.com/v1",
+      "chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "base_url_env": "LLM_BASE_URL_NIM",
+      "chat_model_env": "LLM_CHAT_MODEL_NIM",
+      "api_key_env": "LLM_API_KEY_NIM"
+    }
+  }
+}

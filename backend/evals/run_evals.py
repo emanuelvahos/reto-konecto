@@ -33,6 +33,7 @@ load_dotenv(BACKEND_DIR / ".env")
 import httpx
 from fastapi.testclient import TestClient
 from app.main import app
+from app.config import load_llm_config
 
 REPORT_PATH = Path(__file__).resolve().parent / "EVALUATION_REPORT.md"
 
@@ -240,15 +241,15 @@ def run_evaluation_suite(
         print(f"⚠️ No scenarios matched filter '{scenario_filter}'. Available: {[s.scenario_id for s in all_scenarios]}")
         return 1
 
-    chat_model = os.getenv("LLM_CHAT_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
-    embed_model = os.getenv("EMBEDDING_MODEL", "nvidia/nemotron-3-embed-1b")
+    llm_cfg = load_llm_config()
+    chat_model = llm_cfg.chat_model
     server_mode = client.base_url if client.base_url else "In-Process TestClient"
 
     results_md = [
         "# Konecto Series 76 Assistant — Automated Evaluation Report",
         "",
         f"- **Model Configured:** `{chat_model}`",
-        f"- **Embedding Model:** `{embed_model}`",
+        f"- **Provider:** `{llm_cfg.provider}`",
         f"- **Evaluation Client:** `{server_mode}`",
         f"- **Total Scenarios:** `{len(scenarios)}`",
         f"- **Execution Timestamp:** `{time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}`",
