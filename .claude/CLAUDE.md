@@ -1,3 +1,11 @@
+## REGLAS DE TRABAJO COMPARTIDO (dos agentes en la misma carpeta y rama)
+- Claude Code es dueño de backend/, docker-compose.yml, docs/ y del contrato (backend/app/schemas.py). El agente de la app (Antigravity/Gemini) es dueño de mobile-app/.
+- Cada agente edita SOLO sus carpetas. Si necesita un cambio en la del otro, se lo pide al usuario.
+- Commits SOLO con rutas explícitas (git add <ruta>), nunca git add -A ni git add . Antes de commitear, git status y verificar que solo van archivos propios.
+- Prohibido en esta carpeta compartida: git checkout/switch, stash, reset, clean, cambiar de rama, push y --force.
+- Los cambios al contrato son aditivos y los hace Claude Code; Models.kt lo mantiene el agente de la app.
+- Nunca claves en archivos rastreados. Las claves viven solo en .env (ignorado por git).
+
 # CLAUDE.md — Konecto Series 76 Neuro-Symbolic Engineering Playbook
 
 This document defines the strict architectural invariants, physical validation laws, domain-specific PDF traps, and budget constraints enforced across the **Konecto Series 76 Heavy-Duty Electric Actuator Assistant** monorepo.
@@ -17,10 +25,10 @@ This document defines the strict architectural invariants, physical validation l
 ## 1. Core Architectural Law: Zero-Hallucination Neuro-Symbolic Execution
 
 1. **Deterministic Tool Authority:** The LLM is **strictly forbidden** from computing, interpolating, or recalling actuator specifications (Torque in Nm/in-lbs, Duty Cycle S4%, Operating Speed, FLA, LRA, or Motor Power) from parametric memory. Every numerical metric presented to the user MUST originate from a PostgreSQL tool execution (`lookup_actuator_by_part_number` or `recommend_actuators`).
-2. **Why Hybrid SQL + `pg_trgm` + `pgvector` Beats Naive Vector RAG on Tabular PDFs:**
-   - Standard chunk-and-embed RAG fails catastrophically on dense multi-header electrical tables (`series_76_electric_data.pdf`) where 68 part numbers share nearly identical strings (`761A00-11300000/A` vs `761A00-11320000/A` vs `761A00-11330000/A`) and relational inequalities (`modulating_torque_nm >= 200 AND voltage_num = 24`).
-   - **Structured Catalog (`actuators` table):** Exact `NUMERIC(10,2)` columns for all 68 catalog rows, indexed with B-Tree and `pg_trgm` (`gin_trgm_ops`) for OCR/typo recovery.
-   - **Semantic Knowledge Base (`knowledge_chunks` table):** `pgvector` cosine similarity search exclusively for conceptual definitions (`series_76_summary.pdf`), operating tolerances ($\pm 10\%$ voltage, $\pm 5\%$ frequency), and hazardous location ratings (`Class I, Div 1, Groups C, D, T4 | Ex d IIB T4 Gb`).
+2. **Why SQL + `pg_trgm` Beats Naive Vector RAG on Tabular PDFs:**
+   - Standard chunk-and-embed RAG fails on dense multi-header electrical tables (`series_76_electric_data.pdf`) where 68 part numbers share nearly identical strings and relational inequalities (`modulating_torque_nm >= 200 AND voltage_num = 24`).
+   - **Structured Catalog (`actuators` table):** Exact `NUMERIC(10,2)` columns, B-Tree and `pg_trgm` (`gin_trgm_ops`) indexes for OCR/typo recovery.
+   - **Knowledge (`backend/data/knowledge.json`):** 4 fragments (text + keyword tags) from `series_76_summary.pdf` and table notes. `search_engineering_knowledge` is deterministic (keyword match, `pg_trgm` for typos, no LLM, no embeddings). pgvector was retired in Phase 2A; on failure the tool returns `KNOWLEDGE_ERROR`, never "all fragments".
 
 ---
 
@@ -73,21 +81,16 @@ Any modification to `backend/scripts/ingest.py` or `backend/app/tools.py` MUST p
 
 ---
 
-## 4. Two-Stage LLM & Embedding Budget Strategy ($10.00 USD Cap Protection)
+## 4. Two-Stage LLM Budget Strategy ($10.00 USD Cap Protection)
 
-To respect the evaluation API key's **$10.00 USD limit** while running hundreds of automated unit, integration, and multi-turn E2E tests:
+Provider profiles live in `backend/config/llm_profiles.json`, selected with `LLM_PROVIDER` (`openrouter` | `nim`); no model or URL is hardcoded in Python (`app/config.py`).
 
-| Stage | Provider & Base URL | Chat Model | Embedding Model (Dims) | Cost on Evaluation Key |
-| :--- | :--- | :--- | :--- | :--- |
-| **Stage 1: Development & Stress Testing** | **NVIDIA NIM** (`https://integrate.api.nvidia.com/v1`) | `nvidia/nemotron-3.5-lightning-30b-a3b` | `nvidia/nemotron-3-embed-1b` (`2048` dims) | **$0.00 USD** (Free Developer Tier) |
-| **Stage 2: Production & Final Delivery** | **OpenRouter** (`https://openrouter.ai/api/v1`) | `openai/gpt-4o-mini` ($0.15/1M in, $0.60/1M out) | `openai/text-embedding-3-small` (`1536` dims, $0.02/1M) | **< $0.05 USD** per full 11-scenario eval suite |
+| Stage | `LLM_PROVIDER` | Env vars | Cost |
+| :--- | :--- | :--- | :--- |
+| **Development & Stress Testing** | `nim` | `LLM_BASE_URL_NIM`, `LLM_CHAT_MODEL_NIM`, `LLM_API_KEY_NIM` | $0.00 (free tier) |
+| **Final Delivery** | `openrouter` | `LLM_BASE_URL`, `LLM_CHAT_MODEL` (`openai/gpt-4o-mini`), `LLM_API_KEY` | single final run only |
 
-- **Zero-Friction Provider Switching:** `backend/scripts/ingest.py` reads `EMBEDDING_DIMENSIONS` from `.env` (`1536` for OpenRouter, `2048` for NVIDIA NIM) and automatically executes:
-  ```sql
-  TRUNCATE TABLE knowledge_chunks RESTART IDENTITY;
-  ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(<EMBEDDING_DIMENSIONS>);
-  ```
-  before generating and inserting the 4 knowledge chunk embeddings. No volume deletion or manual SQL editing is ever required.
+There are no embeddings anymore, so provider switching needs no re-ingest or volume change.
 
 ---
 
