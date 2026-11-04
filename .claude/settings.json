@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "project": {
+    "name": "konecto-series76-assistant",
+    "architecture": "neuro-symbolic-hybrid-rag",
+    "stack": [
+      "FastAPI",
+      "LangChain Tool Calling",
+      "PostgreSQL 16 + pgvector + pg_trgm",
+      "Kotlin + Jetpack Compose (Android Material 3)"
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(python backend/scripts/ingest.py *)",
+      "Bash(python backend/scripts/benchmark_nvidia.py *)",
+      "Bash(python backend/evals/run_evals.py *)",
+      "Bash(pytest *)",
+      "Bash(python -m pytest *)",
+      "Read(backend/**)",
+      "Read(mobile-app/**)",
+      "Read(docs/**)",
+      "Edit(backend/**)",
+      "Edit(mobile-app/**)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Bash(rm -rf *)",
+      "Bash(DROP DATABASE *)"
+    ]
+  },
+  "env": {
+    "PYTHONIOENCODING": "utf-8",
+    "DB_HOST_PORT": "5433",
+    "API_HOST_PORT": "8001"
+  }
+}
+

@@ -1,0 +1,35 @@
+# Environment & Secrets (CRITICAL: Never commit real API keys or DB passwords)
+.env
+.env.*.local
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+
+# Android & Gradle artifacts
+.gradle/
+build/
+**/build/
+*.apk
+*.aab
+local.properties
+**/local.properties
+.cxx/
+*.iml
+
+# IDE & OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
