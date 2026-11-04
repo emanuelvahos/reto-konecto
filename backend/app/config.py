@@ -8,6 +8,7 @@ Si LLM_PROVIDER no esta definido se usa el perfil por defecto del JSON (openrout
 import json
 import os
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 from pathlib import Path
 
 PROFILES_PATH = Path(__file__).resolve().parent.parent / "config" / "llm_profiles.json"
@@ -19,6 +20,7 @@ class LLMConfig:
     base_url: str
     chat_model: str
     api_key: str = ""
+    extra_body: Optional[Dict[str, Any]] = None
 
     def __repr__(self) -> str:  # nunca exponer la clave en logs
         return f"LLMConfig(provider={self.provider!r}, base_url={self.base_url!r}, chat_model={self.chat_model!r}, api_key={'***' if self.api_key else ''})"
@@ -36,4 +38,5 @@ def load_llm_config() -> LLMConfig:
         base_url=(os.getenv(p["base_url_env"]) or p["base_url"]).rstrip("/"),
         chat_model=os.getenv(p["chat_model_env"]) or p["chat_model"],
         api_key=os.getenv(p["api_key_env"], ""),
+        extra_body=p.get("extra_body"),
     )

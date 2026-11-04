@@ -64,7 +64,7 @@ def test_multiturn_conversation_coreference_and_persistence():
     d2 = t2.json()
     assert d2["session_id"] == session_id
     assert "90" in d2["answer"], d2["answer"]
-    assert "4.6" in d2["answer"], d2["answer"]
+    assert "4.8" in d2["answer"], d2["answer"]  # FLA 60 Hz (PDF: 60 Hz | 50 Hz)
 
     # Persistencia: historial completo en PostgreSQL
     hist = client.get(f"/api/sessions/{session_id}/messages")

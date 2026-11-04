@@ -14,7 +14,12 @@
       "chat_model": "nvidia/nemotron-3.5-lightning-30b-a3b",
       "base_url_env": "LLM_BASE_URL_NIM",
       "chat_model_env": "LLM_CHAT_MODEL_NIM",
-      "api_key_env": "LLM_API_KEY_NIM"
+      "api_key_env": "LLM_API_KEY_NIM",
+      "extra_body": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
     }
   }
 }

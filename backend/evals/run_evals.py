@@ -112,7 +112,7 @@ def build_scenarios() -> List[EvalScenario]:
             ],
             lambda res: (
                 assert_in_answer(res[0], ["750", "680"]),
-                assert_in_answer(res[1], ["90"]),
+                assert_in_answer(res[1], ["180"]),  # oráculo: 764A00-11320000/A = 180 W
                 assert_in_answer(res[2], ["33", "3.0"]),  # oráculo: 764A00-11320000/A speed 50Hz=33 s, FLA 50Hz=3.0 A
             ),
         ),
@@ -200,15 +200,24 @@ def build_scenarios() -> List[EvalScenario]:
     ]
 
 
+def _norm_answer(text: str) -> str:
+    """Minúsculas, sin comas y con guiones/espacios Unicode (U+2010..2015, U+2212, NBSP) normalizados."""
+    for ch in "‐‑‒–—―−":
+        text = text.replace(ch, "-")
+    for ch in "   ":
+        text = text.replace(ch, " ")
+    return text.lower().replace(",", "")
+
+
 def assert_in_answer(resp_json: Dict[str, Any], expected_substrings: List[str]) -> None:
-    ans = resp_json.get("answer", "").lower().replace(",", "")
+    ans = _norm_answer(resp_json.get("answer", ""))
     for sub in expected_substrings:
         clean_sub = sub.lower().replace(",", "")
         assert clean_sub in ans, f"Expected '{sub}' in answer, got: {resp_json.get('answer', '')[:250]}"
 
 
 def assert_any_in_answer(resp_json: Dict[str, Any], candidates: List[str]) -> None:
-    ans = resp_json.get("answer", "").lower().replace(",", "")
+    ans = _norm_answer(resp_json.get("answer", ""))
     assert any(c.lower().replace(",", "") in ans for c in candidates), (
         f"Expected at least one of {candidates} in answer, got: {resp_json.get('answer', '')[:250]}"
     )
