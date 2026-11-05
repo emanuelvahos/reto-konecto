@@ -25,6 +25,7 @@ class MainViewModel : ViewModel() {
     var activeSessionId by mutableStateOf<String?>(null)
     var activeSessionTitle by mutableStateOf("New Actuator Consultation")
     var messages by mutableStateOf<List<MessageRecord>>(emptyList())
+    val messageVerifications = androidx.compose.runtime.mutableStateMapOf<Int, Verification>()
     var lastUserQuery by mutableStateOf<String?>(null)
 
     // Modo Desarrollador (Pantalla Debug oculta por Long-Press para evaluadores/devs)
@@ -87,6 +88,7 @@ class MainViewModel : ViewModel() {
             currentUser = null
             sessions = emptyList()
             messages = emptyList()
+            messageVerifications.clear()
             activeSessionId = null
             currentScreen = AppScreen.LOGIN
         }
@@ -114,6 +116,7 @@ class MainViewModel : ViewModel() {
         activeSessionId = null
         activeSessionTitle = "Series 76"
         messages = emptyList()
+        messageVerifications.clear()
         errorMessage = null
         currentScreen = AppScreen.CHAT
     }
@@ -123,6 +126,7 @@ class MainViewModel : ViewModel() {
         activeSessionId = null
         activeSessionTitle = clean.take(28)
         messages = emptyList()
+        messageVerifications.clear()
         errorMessage = null
         currentScreen = AppScreen.CHAT
         sendUserMessage(clean)
@@ -205,8 +209,10 @@ class MainViewModel : ViewModel() {
                     val delayMs = if (cleanQuery.contains("loading", ignoreCase = true) || cleanQuery.contains("skeleton", ignoreCase = true)) 10000L else 400L
                     kotlinx.coroutines.delay(delayMs)
                     activeSessionId = mockResp.sessionId
-                    if (messages.size <= 1) {
-                        activeSessionTitle = cleanQuery.take(28)
+                    val activePart = mockResp.uiPayload.actuators.firstOrNull()?.basePartNumber
+                        ?: mockResp.uiPayload.recommendation?.ranking?.firstOrNull()?.partNumber
+                    if (messages.size <= 2) {
+                        activeSessionTitle = activePart ?: cleanQuery.take(28)
                     }
                     val assistantMsg = MessageRecord(
                         id = messages.size + 1,
@@ -215,6 +221,7 @@ class MainViewModel : ViewModel() {
                         uiPayload = mockResp.uiPayload,
                         debugTrace = mockResp.debugTrace
                     )
+                    messageVerifications[assistantMsg.id] = mockResp.verification
                     messages = messages + assistantMsg
                     isLoading = false
                     return@launch
@@ -223,12 +230,20 @@ class MainViewModel : ViewModel() {
 
             // Flujo normal contra backend FastAPI
             try {
+                val localeLang = if (java.util.Locale.getDefault().language.startsWith("es")) "es" else "en"
                 val resp = ApiClient.api.sendMessage(
-                    ConversationRequest(sessionId = activeSessionId, query = cleanQuery)
+                    ConversationRequest(
+                        sessionId = activeSessionId,
+                        query = cleanQuery,
+                        locale = localeLang,
+                        inputMode = "text"
+                    )
                 )
                 activeSessionId = resp.sessionId
-                if (messages.size <= 1) {
-                    activeSessionTitle = cleanQuery.take(28)
+                val activePart = resp.uiPayload.actuators.firstOrNull()?.basePartNumber
+                    ?: resp.uiPayload.recommendation?.ranking?.firstOrNull()?.partNumber
+                if (messages.size <= 2) {
+                    activeSessionTitle = activePart ?: cleanQuery.take(28)
                 }
                 val assistantMsg = MessageRecord(
                     id = messages.size + 1,
@@ -237,6 +252,7 @@ class MainViewModel : ViewModel() {
                     uiPayload = resp.uiPayload,
                     debugTrace = resp.debugTrace
                 )
+                messageVerifications[assistantMsg.id] = resp.verification
                 messages = messages + assistantMsg
             } catch (e: Exception) {
                 errorMessage = "Backend error or timeout: ${e.localizedMessage ?: e.javaClass.simpleName}"

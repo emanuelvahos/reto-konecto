@@ -32,6 +32,7 @@ import io.konecto.series76.R
 import io.konecto.series76.data.ApiClient
 import io.konecto.series76.data.DebugTracePayload
 import io.konecto.series76.data.TraceStep
+import io.konecto.series76.mock.DebugMockProvider
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
 import io.konecto.series76.ui.theme.KonectoTheme
@@ -118,6 +119,34 @@ fun DebugScreen(vm: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(Spacing.s),
                 contentPadding = PaddingValues(vertical = 14.dp)
             ) {
+                if (DebugMockProvider.isMockEnabled) {
+                    item {
+                        Surface(
+                            color = KonectoTheme.semantics.warningBg,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = Spacing.xxs)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = Spacing.s, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                            ) {
+                                Text("⚠️", fontSize = 16.sp)
+                                Text(
+                                    text = stringResource(R.string.debug_mock_banner),
+                                    color = KonectoTheme.semantics.warningText,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                    }
+                }
+
                 items(assistantMessages, key = { it.id }) { msg ->
                     val trace = msg.debugTrace!!
                     val cleanPreview = remember(msg.content) {
@@ -155,20 +184,41 @@ fun DebugScreen(vm: MainViewModel) {
                                     lineHeight = 16.sp,
                                     modifier = Modifier.weight(1f)
                                 )
-                                IconButton(
-                                    onClick = {
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                        val jsonString = ApiClient.jsonFormat.encodeToString(DebugTracePayload.serializer(), trace)
-                                        clipboard.setPrimaryClip(ClipData.newPlainText("debug_trace", jsonString))
-                                        Toast.makeText(context, context.getString(R.string.debug_copied), Toast.LENGTH_SHORT).show()
-                                    }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = stringResource(R.string.debug_copy_json),
-                                        tint = KonectoTheme.semantics.accentText,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                    if (DebugMockProvider.isMockEnabled) {
+                                        Surface(
+                                            color = KonectoTheme.semantics.accentContainer,
+                                            shape = RoundedCornerShape(4.dp),
+                                            border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder)
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.debug_mock_badge),
+                                                color = KonectoTheme.semantics.accentText,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                fontFamily = FontFamily.Monospace,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                            val jsonString = ApiClient.jsonFormat.encodeToString(DebugTracePayload.serializer(), trace)
+                                            clipboard.setPrimaryClip(ClipData.newPlainText("debug_trace", jsonString))
+                                            Toast.makeText(context, context.getString(R.string.debug_copied), Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ContentCopy,
+                                            contentDescription = stringResource(R.string.debug_copy_json),
+                                            tint = KonectoTheme.semantics.accentText,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -186,6 +236,30 @@ fun DebugScreen(vm: MainViewModel) {
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
+
+                            if (trace.sessionCostUsd > 0.0 || trace.language.isNotBlank()) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (trace.sessionCostUsd > 0.0) {
+                                        Text(
+                                            text = stringResource(R.string.debug_session_cost, trace.sessionCostUsd),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                    if (trace.language.isNotBlank()) {
+                                        Text(
+                                            text = stringResource(R.string.debug_language, trace.language.uppercase()),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
 
                             // Active Context Part Numbers
                             Text(

@@ -19,12 +19,21 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.konecto.series76.data.MessageRecord
+import io.konecto.series76.data.Verification
 import io.konecto.series76.ui.ProductDataVisualizer
+import io.konecto.series76.ui.SuggestedFollowupRow
+import io.konecto.series76.ui.VerificationBadge
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 
 @Composable
-fun ChatBubbleItem(msg: MessageRecord) {
+fun ChatBubbleItem(
+    msg: MessageRecord,
+    verification: Verification? = null,
+    isLastAssistantMessage: Boolean = false,
+    onSendQuery: (String) -> Unit = {},
+    onRetry: () -> Unit = {}
+) {
     val isUser = msg.role == "user"
     val bubbleShape = if (isUser) {
         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
@@ -34,6 +43,16 @@ fun ChatBubbleItem(msg: MessageRecord) {
 
     val semantics = KonectoTheme.semantics
     val onSurface = MaterialTheme.colorScheme.onSurface
+
+    // En caso de aclaración donde answer == question, suprimir el duplicado de texto
+    val isClarificationQuestionDuplicated = remember(msg) {
+        val clar = msg.uiPayload?.clarification
+        clar != null && clar.question.isNotBlank() && (
+            msg.content.trim().equals(clar.question.trim(), ignoreCase = true) ||
+            msg.uiPayload.displayType == "CLARIFICATION"
+        )
+    }
+
     val formattedContent = remember(msg.content, isUser, onSurface) {
         if (isUser) {
             AnnotatedString(msg.content)
@@ -65,7 +84,13 @@ fun ChatBubbleItem(msg: MessageRecord) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
-            if (formattedContent.text.isNotBlank()) {
+            // Insignia de verificación (discreta verde-azulado para verified, sutil advertencia para fallback)
+            if (!isUser && verification != null) {
+                VerificationBadge(verification = verification)
+            }
+
+            // Burbuja de texto (suprimida si es pregunta de aclaración para no duplicar con la tarjeta)
+            if (formattedContent.text.isNotBlank() && !isClarificationQuestionDuplicated) {
                 Box(
                     modifier = Modifier
                         .widthIn(max = 340.dp)
@@ -92,10 +117,21 @@ fun ChatBubbleItem(msg: MessageRecord) {
                 }
             }
 
+            // Visualizador estructurado (tarjetas, comparativas, recomendaciones, aclaraciones, alertas)
             if (!isUser && msg.uiPayload != null) {
                 ProductDataVisualizer(
                     uiPayload = msg.uiPayload,
-                    contextText = msg.content
+                    contextText = msg.content,
+                    onSendQuery = onSendQuery,
+                    onRetry = onRetry
+                )
+            }
+
+            // Chips deterministas de seguimiento (suggested_followups) debajo del último mensaje del asistente
+            if (!isUser && isLastAssistantMessage && msg.uiPayload?.suggestedFollowups?.isNotEmpty() == true) {
+                SuggestedFollowupRow(
+                    followups = msg.uiPayload.suggestedFollowups,
+                    onSelect = onSendQuery
                 )
             }
         }

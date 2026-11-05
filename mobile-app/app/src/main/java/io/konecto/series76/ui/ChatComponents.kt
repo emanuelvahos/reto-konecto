@@ -9,6 +9,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -39,39 +40,29 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.konecto.series76.R
-import io.konecto.series76.data.ActuatorDto
-import io.konecto.series76.data.UIPayload
+import io.konecto.series76.data.*
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 
 @Composable
 fun ProductDataVisualizer(
     uiPayload: UIPayload,
-    contextText: String? = null
+    contextText: String? = null,
+    onSendQuery: (String) -> Unit = {},
+    onRetry: () -> Unit = {}
 ) {
-    val defaultHz = remember(contextText) {
-        if (contextText != null && (
-            contextText.contains("50Hz", ignoreCase = true) ||
-            contextText.contains("50 Hz", ignoreCase = true)
-        )) {
-            50
-        } else {
-            60
-        }
-    }
-    var selectedHz by remember(defaultHz) { mutableStateOf(defaultHz) }
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = Spacing.xs),
         verticalArrangement = Arrangement.spacedBy(Spacing.s)
     ) {
-        // Alertas de Ingeniería con colores semánticos AA
+        // Alertas de Ingeniería
         uiPayload.engineeringWarnings.forEach { warning ->
             Surface(
                 color = KonectoTheme.semantics.warningBg,
@@ -96,18 +87,47 @@ fun ProductDataVisualizer(
             }
         }
 
-        if (uiPayload.actuators.isEmpty()) return@Column
+        // Alertas estructuradas (UIAlerts) con colores por severidad y botón de reintento
+        if (uiPayload.alerts.isNotEmpty()) {
+            UIAlertsView(alerts = uiPayload.alerts, onRetry = onRetry)
+        }
 
-        if (uiPayload.actuators.size == 1) {
-            SingleActuatorSpecCard(
-                actuator = uiPayload.actuators.first()
-            )
-        } else {
-            ActuatorComparisonTable(
-                actuators = uiPayload.actuators,
-                selectedHz = selectedHz,
-                onSelectHz = { selectedHz = it }
-            )
+        // Enrutamiento según display_type
+        when (uiPayload.displayType) {
+            "RECOMMENDATION_LIST" -> {
+                uiPayload.recommendation?.let { rec ->
+                    RecommendationListView(
+                        recommendation = rec,
+                        actuators = uiPayload.actuators
+                    )
+                }
+            }
+            "CLARIFICATION" -> {
+                uiPayload.clarification?.let { clar ->
+                    ClarificationView(
+                        clarification = clar,
+                        onSelectOption = onSendQuery
+                    )
+                }
+            }
+            "COMPARISON_TABLE" -> {
+                if (uiPayload.actuators.isNotEmpty()) {
+                    ActuatorComparisonTable(actuators = uiPayload.actuators)
+                }
+            }
+            "SINGLE_SPEC_CARD" -> {
+                if (uiPayload.actuators.isNotEmpty()) {
+                    SingleActuatorSpecCard(actuator = uiPayload.actuators.first())
+                }
+            }
+            else -> {
+                // TEXT_ONLY o EDGE_CASE_ALERT: si viene 1 actuador se muestra la ficha, si son varios la comparativa
+                if (uiPayload.actuators.size == 1) {
+                    SingleActuatorSpecCard(actuator = uiPayload.actuators.first())
+                } else if (uiPayload.actuators.size > 1) {
+                    ActuatorComparisonTable(actuators = uiPayload.actuators)
+                }
+            }
         }
     }
 }
@@ -821,27 +841,28 @@ fun ShimmerSkeletonCard(
 }
 
 /**
- * Tabla Comparativa Side-by-Side con diseño sobrio y técnico
+ * Tabla Comparativa Side-by-Side con primera columna fija y ambas frecuencias (60 y 50 Hz)
  */
 @Composable
 fun ActuatorComparisonTable(
-    actuators: List<ActuatorDto>,
-    selectedHz: Int = 60,
-    onSelectHz: (Int) -> Unit = {}
+    actuators: List<ActuatorDto>
 ) {
     val scrollState = rememberScrollState()
-    val hasAcModels = actuators.any { it.speed60HzSec != null || it.speed50HzSec != null }
-    val haptic = LocalHapticFeedback.current
+    val hasThreePhase = actuators.any {
+        it.phaseType.contains("3") ||
+        it.singleTorqueNm != null ||
+        (it.modulatingTorqueNm == null && it.onOffTorqueNm != null)
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // Header bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -872,101 +893,830 @@ fun ActuatorComparisonTable(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    if (hasAcModels) {
-                        Surface(
-                            color = KonectoTheme.semantics.accentContainer,
-                            shape = RoundedCornerShape(6.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
-                            modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onSelectHz(if (selectedHz == 60) 50 else 60)
-                            }
-                        ) {
-                            Text(
-                                text = stringResource(R.string.table_hz_toggle, selectedHz),
-                                color = KonectoTheme.semantics.warningText,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-                            )
-                        }
+                    Surface(
+                        color = KonectoTheme.semantics.accentContainer,
+                        shape = RoundedCornerShape(6.dp),
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder)
+                    ) {
+                        Text(
+                            text = "60 Hz | 50 Hz",
+                            color = KonectoTheme.semantics.warningText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
+                }
+            }
+
+            if (hasThreePhase) {
+                Surface(
+                    color = KonectoTheme.semantics.warningBg,
+                    border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.card_single_torque_alert),
+                        color = KonectoTheme.semantics.warningText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = Spacing.m, vertical = 6.dp)
+                    )
                 }
             }
 
             HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
 
-            Column(modifier = Modifier.padding(10.dp)) {
-                Row(modifier = Modifier.horizontalScroll(scrollState)) {
-                    // Columna de etiquetas
-                    Column(
-                        modifier = Modifier
-                            .width(125.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                            .padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
+            // Table content: Fixed Parameter Column on left, Horizontal Scroll on right
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(10.dp)
+            ) {
+                // 1. Columna de etiquetas FIJA
+                Column(
+                    modifier = Modifier
+                        .width(115.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_part), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_enclosure), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_power_supply), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_on_off_torque), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_mod_torque), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_duty), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.card_speed_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.card_fla_label, selectedHz), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.card_lra_label, selectedHz), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                        Text("FLA (60|50Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                        Text("LRA (60|50Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.card_power_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_cert), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                }
 
-                    // Columnas de datos de actuadores
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // 2. Columnas de actuadores con scroll horizontal
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(scrollState),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     actuators.forEach { act ->
-                        val speed = if (selectedHz == 60) act.speed60HzSec ?: act.speedDcOrFixedSec else act.speed50HzSec ?: act.speedDcOrFixedSec
-                        val fla = if (selectedHz == 60) act.fla60HzAmps ?: act.flaDcOrFixedAmps else act.fla50HzAmps ?: act.flaDcOrFixedAmps
-                        val lra = if (selectedHz == 60) act.lra60HzAmps ?: act.lraDcOrFixedAmps else act.lra50HzAmps ?: act.lraDcOrFixedAmps
+                        val isActThreePhase = act.phaseType.contains("3") ||
+                            act.singleTorqueNm != null ||
+                            (act.modulatingTorqueNm == null && act.onOffTorqueNm != null)
+
+                        val speedStr = when {
+                            act.speed60HzSec != null && act.speed50HzSec != null -> "${act.speed60HzSec}s | ${act.speed50HzSec}s"
+                            act.speed60HzSec != null -> "${act.speed60HzSec}s (60Hz)"
+                            act.speed50HzSec != null -> "${act.speed50HzSec}s (50Hz)"
+                            act.speedDcOrFixedSec != null -> "${act.speedDcOrFixedSec}s"
+                            else -> "—"
+                        }
+
+                        val flaStr = when {
+                            act.fla60HzAmps != null && act.fla50HzAmps != null -> "${act.fla60HzAmps} | ${act.fla50HzAmps} A"
+                            act.fla60HzAmps != null -> "${act.fla60HzAmps} A"
+                            act.fla50HzAmps != null -> "${act.fla50HzAmps} A"
+                            act.flaDcOrFixedAmps != null -> "${act.flaDcOrFixedAmps} A"
+                            else -> "—"
+                        }
+
+                        val lraStr = when {
+                            act.lra60HzAmps != null && act.lra50HzAmps != null -> "${act.lra60HzAmps} | ${act.lra50HzAmps} A"
+                            act.lra60HzAmps != null -> "${act.lra60HzAmps} A"
+                            act.lra50HzAmps != null -> "${act.lra50HzAmps} A"
+                            act.lraDcOrFixedAmps != null -> "${act.lraDcOrFixedAmps} A"
+                            else -> "—"
+                        }
 
                         Column(
                             modifier = Modifier
                                 .width(150.dp)
-                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                .padding(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(
+                                    text = act.basePartNumber,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = KonectoTheme.semantics.accentText,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(act.enclosureType, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                            }
+                            Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(act.powerSupply, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, lineHeight = 13.sp)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                val onOff = if (isActThreePhase) {
+                                    "${(act.singleTorqueNm ?: act.onOffTorqueNm)?.toInt()} Nm"
+                                } else {
+                                    if (act.onOffTorqueNm != null) "${act.onOffTorqueNm.toInt()} Nm" else "—"
+                                }
+                                Text(text = onOff, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${act.modulatingTorqueNm.toInt()} Nm" else "—"
+                                Text(text = mod, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                val duty = if (isActThreePhase) "70% (S4)" else "${act.onOffDutyCyclePct ?: "—"}% / ${act.modulatingDutyCyclePct ?: "—"}%"
+                                Text(duty, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(speedStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(flaStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(lraStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(if (act.motorPowerWatts != null) "${act.motorPowerWatts} W" else "—", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(
+                                    text = if (act.csaCertified) "✓ CSA" else "⚠ No CSA",
+                                    fontSize = 11.sp,
+                                    color = if (act.csaCertified) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Vista de Recomendación con Ranking, Pros/Contras, Restricciones y Despliegue de Ficha
+ */
+@Composable
+fun RecommendationListView(
+    recommendation: RecommendationPayload,
+    actuators: List<ActuatorDto> = emptyList()
+) {
+    var expandedPartNumber by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.s)
+    ) {
+        // Banner de restricciones (Hard & Relaxed Constraints)
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(Spacing.m),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                Text(
+                    text = stringResource(R.string.recommendation_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (recommendation.hardConstraints.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.recommendation_hard_constraints),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        recommendation.hardConstraints.forEach { constraint ->
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("🔒", fontSize = 11.sp)
+                                    Text(
+                                        text = constraint,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (recommendation.relaxedConstraints.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.recommendation_relaxed_constraints),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = KonectoTheme.semantics.warningText
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        recommendation.relaxedConstraints.forEach { relaxed ->
+                            Surface(
+                                color = KonectoTheme.semantics.warningBg,
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("⚡", fontSize = 11.sp)
+                                    Text(
+                                        text = relaxed,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = KonectoTheme.semantics.warningText,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Caso NO_MATCH_HARD_CONSTRAINTS (ranking vacío)
+        if (recommendation.ranking.isEmpty()) {
+            Surface(
+                color = KonectoTheme.semantics.errorBg,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.m),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        Text("⚠️", fontSize = 18.sp)
+                        Text(
+                            text = stringResource(R.string.recommendation_no_match),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = KonectoTheme.semantics.errorText,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (recommendation.hardConstraints.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.recommendation_failed_constraints),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = KonectoTheme.semantics.errorText
+                        )
+                        recommendation.hardConstraints.forEach { constraint ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(start = 8.dp)
+                            ) {
+                                Text("✗", color = KonectoTheme.semantics.errorText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text(
+                                    text = constraint,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Lista de candidatos rankeados
+            recommendation.ranking.forEachIndexed { index, item ->
+                val isExpanded = expandedPartNumber == item.partNumber
+                val matchingActuator = actuators.find { it.basePartNumber == item.partNumber }
+
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(
+                        1.dp,
+                        if (index == 0) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(Spacing.m),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.s)
+                    ) {
+                        // Cabecera del candidato
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                            ) {
+                                Surface(
+                                    color = if (index == 0) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, if (index == 0) KonectoTheme.semantics.warningBorder else MaterialTheme.colorScheme.outline)
+                                ) {
+                                    Text(
+                                        text = "#${index + 1}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (index == 0) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Text(
+                                    text = item.partNumber,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            // Score gauge / pill (0 - 100)
+                            val scorePct = (item.score * 100).toInt().coerceIn(0, 100)
+                            Surface(
+                                color = if (scorePct >= 75) KonectoTheme.semantics.successBg else KonectoTheme.semantics.warningBg,
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (scorePct >= 75) KonectoTheme.semantics.successBorder else KonectoTheme.semantics.warningBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "$scorePct%",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = if (scorePct >= 75) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.recommendation_score),
+                                        fontSize = 10.sp,
+                                        color = if (scorePct >= 75) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText
+                                    )
+                                }
+                            }
+                        }
+
+                        // Pros (Why)
+                        if (item.why.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    text = stringResource(R.string.recommendation_why),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = KonectoTheme.semantics.successText
+                                )
+                                item.why.forEach { pro ->
+                                    Row(
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(start = 4.dp)
+                                    ) {
+                                        Text("✓", color = KonectoTheme.semantics.successText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text(
+                                            text = pro,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Cons (Why Not)
+                        if (item.whyNot.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(
+                                    text = stringResource(R.string.recommendation_why_not),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = KonectoTheme.semantics.errorText
+                                )
+                                item.whyNot.forEach { con ->
+                                    Row(
+                                        verticalAlignment = Alignment.Top,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(start = 4.dp)
+                                    ) {
+                                        Text("✗", color = KonectoTheme.semantics.errorText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text(
+                                            text = con,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Botón Desplegar Ficha Técnica
+                        OutlinedButton(
+                            onClick = {
+                                expandedPartNumber = if (isExpanded) null else item.partNumber
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
-                                text = act.basePartNumber,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold,
+                                text = if (isExpanded) stringResource(R.string.recommendation_hide_spec) else stringResource(R.string.recommendation_view_spec),
                                 fontSize = 11.sp,
-                                color = KonectoTheme.semantics.accentText
-                            )
-                            Text(act.enclosureType, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text(act.powerSupply, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
-                            Text(
-                                text = if (act.onOffTorqueNm != null) "${act.onOffTorqueNm.toInt()} Nm" else stringResource(R.string.card_null_placeholder),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (act.modulatingTorqueNm != null) "${act.modulatingTorqueNm.toInt()} Nm" else stringResource(R.string.card_null_placeholder),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                "${act.onOffDutyCyclePct ?: stringResource(R.string.card_null_placeholder)}% / ${act.modulatingDutyCyclePct ?: stringResource(R.string.card_null_placeholder)}%",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(if (speed != null) "$speed s" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(if (fla != null) "$fla A" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(if (lra != null) "$lra A" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                            Text(if (act.motorPowerWatts != null) "${act.motorPowerWatts} W" else stringResource(R.string.card_null_placeholder), fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
-                            Text(
-                                text = if (act.csaCertified) "✓ ${stringResource(R.string.card_csa_certified)}" else "⚠ ${stringResource(R.string.card_csa_not_certified)}",
-                                fontSize = 11.sp,
-                                color = if (act.csaCertified) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
                                 fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        // Ficha técnica desplegable (usando actuators si disponible)
+                        if (isExpanded) {
+                            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+                            if (matchingActuator != null) {
+                                SingleActuatorSpecCard(actuator = matchingActuator)
+                            } else {
+                                Text(
+                                    text = "Modelo: ${item.partNumber}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Vista de Aclaración (CLARIFICATION) con botones tipo chip grandes
+ */
+@Composable
+fun ClarificationView(
+    clarification: ClarificationPayload,
+    onSelectOption: (String) -> Unit
+) {
+    var selectedValue by remember { mutableStateOf<String?>(null) }
+    val haptic = LocalHapticFeedback.current
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.6f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(Spacing.m),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+            ) {
+                Text("💬", fontSize = 16.sp)
+                Text(
+                    text = stringResource(R.string.clarification_title),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = KonectoTheme.semantics.accentText,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+            }
+
+            Text(
+                text = clarification.question,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Opciones interactivas grandes
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                clarification.options.forEach { option ->
+                    val isChosen = selectedValue == option.value
+                    val isDisabled = selectedValue != null && !isChosen
+
+                    Surface(
+                        color = if (isChosen) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isChosen) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable(enabled = selectedValue == null) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                selectedValue = option.value
+                                onSelectOption(option.value)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = Spacing.m, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = option.label,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isChosen) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                        else if (isChosen) KonectoTheme.semantics.accentText
+                                        else MaterialTheme.colorScheme.onSurface
+                            )
+                            if (isChosen) {
+                                Text(
+                                    text = "✓",
+                                    color = KonectoTheme.semantics.accentText,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Fila de Chips de Preguntas Sugeridas (SUGGESTED_FOLLOWUPS)
+ */
+@Composable
+fun SuggestedFollowupRow(
+    followups: List<SuggestedFollowup>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (followups.isEmpty()) return
+    val haptic = LocalHapticFeedback.current
+    val limited = followups.take(3)
+
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(400)) + slideInVertically(
+            initialOffsetY = { 20 },
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy)
+        ),
+        modifier = modifier.padding(top = Spacing.xs)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+        ) {
+            limited.forEach { followup ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.7f)),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSelect(followup.query)
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = followup.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = KonectoTheme.semantics.accentText
+                        )
+                        Text(
+                            text = "↗",
+                            fontSize = 11.sp,
+                            color = KonectoTheme.semantics.accentText,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Insignia de Verificación discreta
+ */
+@Composable
+fun VerificationBadge(
+    verification: Verification?,
+    modifier: Modifier = Modifier
+) {
+    if (verification == null) return
+    when (verification.status) {
+        "verified" -> {
+            Surface(
+                color = KonectoTheme.semantics.successBg,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, KonectoTheme.semantics.successBorder),
+                modifier = modifier.padding(bottom = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "✓",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = KonectoTheme.semantics.successText
+                    )
+                    Text(
+                        text = stringResource(R.string.verification_verified),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = KonectoTheme.semantics.successText
+                    )
+                }
+            }
+        }
+        "fallback_template" -> {
+            Surface(
+                color = KonectoTheme.semantics.warningBg,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                modifier = modifier.padding(bottom = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(text = "⚠️", fontSize = 10.sp)
+                    Text(
+                        text = stringResource(R.string.verification_fallback),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = KonectoTheme.semantics.warningText
+                    )
+                }
+            }
+        }
+        else -> {
+            // "unverified" -> sin insignia
+        }
+    }
+}
+
+/**
+ * Lista de Alertas del Sistema con severidad y botón de reintento
+ */
+@Composable
+fun UIAlertsView(
+    alerts: List<UIAlert>,
+    onRetry: () -> Unit = {}
+) {
+    if (alerts.isEmpty()) return
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+    ) {
+        alerts.forEach { alert ->
+            val isError = alert.severity.equals("error", ignoreCase = true) || alert.code == "LLM_UNAVAILABLE"
+            val isWarning = alert.severity.equals("warning", ignoreCase = true)
+
+            val bgColor = when {
+                isError -> KonectoTheme.semantics.errorBg
+                isWarning -> KonectoTheme.semantics.warningBg
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val borderColor = when {
+                isError -> KonectoTheme.semantics.errorBorder
+                isWarning -> KonectoTheme.semantics.warningBorder
+                else -> MaterialTheme.colorScheme.outline
+            }
+            val textColor = when {
+                isError -> KonectoTheme.semantics.errorText
+                isWarning -> KonectoTheme.semantics.warningText
+                else -> MaterialTheme.colorScheme.onSurface
+            }
+            val icon = when {
+                isError -> "🛑"
+                isWarning -> "⚠️"
+                else -> "ℹ️"
+            }
+
+            Surface(
+                color = bgColor,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, borderColor),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(Spacing.s),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                ) {
+                    Text(text = icon, fontSize = 16.sp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = alert.code,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = textColor
+                        )
+                        Text(
+                            text = alert.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor
+                        )
+                    }
+                    if (isError) {
+                        Button(
+                            onClick = onRetry,
+                            colors = ButtonDefaults.buttonColors(containerColor = textColor),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.retry),
+                                fontSize = 10.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }

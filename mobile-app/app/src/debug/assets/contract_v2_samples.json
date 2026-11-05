@@ -2,7 +2,11 @@
   "single_spec_card": {
     "schema_version": 2,
     "intent": "lookup",
-    "verification": {"status": "verified", "numbers_checked": 4, "ungrounded": []},
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 4,
+      "ungrounded": []
+    },
     "session_id": "00000000-0000-4000-8000-000000000001",
     "answer": "Here are the technical specifications for Base Part Number 763B00-11300000/A.",
     "ui_payload": {
@@ -41,13 +45,29 @@
       "engineering_warnings": [],
       "alerts": [],
       "recommendation": null,
-      "clarification": null
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Compara con el tamaño siguiente",
+          "query": "Compara 763B00-11300000/A con 763C00-11300000/A"
+        },
+        {
+          "label": "Ver valores a 50 Hz",
+          "query": "¿Cuáles son los valores a 50 Hz del 763B00-11300000/A?"
+        },
+        {
+          "label": "Alternativas a 220V",
+          "query": "¿Está disponible en 220V Trifásico?"
+        }
+      ]
     },
     "debug_trace": {
       "model_used": "claude-3-7-sonnet",
       "total_latency_ms": 940.2,
-      "token_usage": {"prompt": 450, "completion": 180},
+      "token_usage": {"prompt": 450, "completion": 180, "llm_retries": 0},
       "active_context_part_numbers": ["763B00-11300000/A"],
+      "session_cost_usd": 0.0035,
+      "language": "es",
       "tool_calls": [
         {
           "tool_name": "lookup_part_number",
@@ -70,72 +90,341 @@
     "intent": "lookup",
     "verification": {"status": "verified", "numbers_checked": 8, "ungrounded": []},
     "session_id": "00000000-0000-4000-8000-000000000002",
-    "answer": "Comparación de dos modelos.",
+    "answer": "Comparativa técnica entre 763B y 763C para la Serie 76.",
     "ui_payload": {
       "display_type": "COMPARISON_TABLE",
       "actuators": [
-        {"base_part_number": "EXAMPLE-PN-1", "frame_size": 1},
-        {"base_part_number": "EXAMPLE-PN-2", "frame_size": 2}
+        {
+          "id": 6,
+          "base_part_number": "763B00-11300000/A",
+          "size_code": "763B",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 500.0,
+          "on_off_torque_in_lbs": 4400.0,
+          "modulating_torque_nm": 380.0,
+          "modulating_torque_in_lbs": 3350.0,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 16,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "fla_60hz_amps": 4.8,
+          "fla_50hz_amps": 4.6,
+          "lra_60hz_amps": 5.0,
+          "lra_50hz_amps": 4.9,
+          "motor_power_watts": 90,
+          "csa_certified": true
+        },
+        {
+          "id": 7,
+          "base_part_number": "763C00-11300000/A",
+          "size_code": "763C",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 800.0,
+          "on_off_torque_in_lbs": 7080.0,
+          "modulating_torque_nm": 600.0,
+          "modulating_torque_in_lbs": 5310.0,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 16,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "fla_60hz_amps": 5.4,
+          "fla_50hz_amps": 5.1,
+          "lra_60hz_amps": 6.2,
+          "lra_50hz_amps": 5.9,
+          "motor_power_watts": 120,
+          "csa_certified": true
+        }
       ],
       "engineering_warnings": [],
-      "alerts": [{"code": "EXAMPLE_ALERT", "severity": "info", "message": "Mensaje de ejemplo."}]
+      "alerts": [
+        {"code": "DUTY_CYCLE_INFO", "severity": "info", "message": "Los actuadores 763B y 763C comparten el tamaño de bastidor 3."}
+      ],
+      "suggested_followups": [
+        {"label": "Ver en 220V", "query": "Muestra las versiones en 220V de estos actuadores"},
+        {"label": "Versión a prueba de explosión", "query": "¿Tienen versión Explosionproof?"}
+      ]
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 2100.0,
-      "active_context_part_numbers": ["EXAMPLE-PN-1", "EXAMPLE-PN-2"],
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 1150.0,
+      "token_usage": {"prompt": 520, "completion": 210, "llm_retries": 0},
+      "active_context_part_numbers": ["763B00-11300000/A", "763C00-11300000/A"],
+      "session_cost_usd": 0.0051,
+      "language": "es",
       "steps": [
-        {"name": "tool:lookup", "start_ms": 5.0, "duration_ms": 20.0},
-        {"name": "tool:lookup", "start_ms": 30.0, "duration_ms": 18.0}
+        {"name": "tool:lookup_part_number", "start_ms": 5.0, "duration_ms": 28.0},
+        {"name": "llm:generation", "start_ms": 40.0, "duration_ms": 1050.0}
       ],
-      "provider": "example"
+      "cost_usd_estimate": 0.0051,
+      "provider": "anthropic"
     }
   },
   "recommendation_with_relaxation": {
     "schema_version": 2,
     "intent": "recommend",
-    "verification": {"status": "fallback_template", "numbers_checked": 5, "ungrounded": ["example-ungrounded-token"]},
+    "verification": {"status": "fallback_template", "numbers_checked": 5, "ungrounded": []},
     "session_id": "00000000-0000-4000-8000-000000000003",
-    "answer": "Recomendación con restricciones relajadas.",
+    "answer": "He analizado el catálogo. Para su requisito de 200 Nm y 24V a prueba de explosión, se presenta el siguiente ranking:",
     "ui_payload": {
       "display_type": "RECOMMENDATION_LIST",
-      "actuators": [{"base_part_number": "EXAMPLE-PN-3", "frame_size": 3}],
-      "engineering_warnings": ["Advertencia de ejemplo."],
-      "alerts": [{"code": "CONSTRAINT_RELAXED", "severity": "warning", "message": "Restricción relajada."}],
+      "actuators": [
+        {
+          "id": 14,
+          "base_part_number": "762B20-11300000/A",
+          "size_code": "762B",
+          "frame_size": 2,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V DC",
+          "voltage_num": 24,
+          "phase_type": "DC",
+          "service_support": "On/Off",
+          "is_available": true,
+          "on_off_torque_nm": 220.0,
+          "on_off_torque_in_lbs": 1950.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 30,
+          "speed_dc_or_fixed_sec": 18.0,
+          "fla_dc_or_fixed_amps": 3.2,
+          "lra_dc_or_fixed_amps": 4.5,
+          "motor_power_watts": 60,
+          "csa_certified": true
+        },
+        {
+          "id": 15,
+          "base_part_number": "763A20-11300000/A",
+          "size_code": "763A",
+          "frame_size": 3,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V DC",
+          "voltage_num": 24,
+          "phase_type": "DC",
+          "service_support": "On/Off",
+          "is_available": true,
+          "on_off_torque_nm": 350.0,
+          "on_off_torque_in_lbs": 3100.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 30,
+          "speed_dc_or_fixed_sec": 22.0,
+          "fla_dc_or_fixed_amps": 4.8,
+          "lra_dc_or_fixed_amps": 6.0,
+          "motor_power_watts": 85,
+          "csa_certified": true
+        }
+      ],
+      "engineering_warnings": [
+        "Se aplicó factor de servicio de seguridad del 10% sobre los 200 Nm requeridos."
+      ],
+      "alerts": [
+        {
+          "code": "HAZARDOUS_NEEDS_EXPLOSIONPROOF",
+          "severity": "warning",
+          "message": "Área clasificada: se seleccionaron exclusivamente envolventes a prueba de explosión (NEMA 7/9)."
+        }
+      ],
       "recommendation": {
         "ranking": [
-          {"part_number": "EXAMPLE-PN-3", "score": 0.92, "why": ["cumple la restricción A"], "why_not": []},
-          {"part_number": "EXAMPLE-PN-4", "score": 0.55, "why": ["cumple la restricción B"], "why_not": ["no cumple la restricción A"]}
+          {
+            "part_number": "762B20-11300000/A",
+            "score": 0.94,
+            "why": [
+              "Torque on/off 220 Nm (+10% margen sobre 200 Nm requeridos)",
+              "Carcasa a prueba de explosión NEMA 7/9",
+              "Certificado CSA para áreas peligrosas"
+            ],
+            "why_not": [
+              "Solo servicio On/Off a 24V DC (sin control proporcional modulante)"
+            ]
+          },
+          {
+            "part_number": "763A20-11300000/A",
+            "score": 0.82,
+            "why": [
+              "Torque on/off 350 Nm (margen elevado de seguridad)",
+              "Alimentación 24V DC nativa"
+            ],
+            "why_not": [
+              "Mayor tamaño de bastidor (Frame 3) y peso adicional"
+            ]
+          }
         ],
-        "hard_constraints": ["restricción dura de ejemplo"],
-        "relaxed_constraints": ["restricción relajada de ejemplo"]
-      }
+        "hard_constraints": [
+          "Torque mínimo: 200 Nm",
+          "Alimentación: 24V DC",
+          "Envolvente: Explosionproof"
+        ],
+        "relaxed_constraints": [
+          "Velocidad operativa de giro"
+        ]
+      },
+      "suggested_followups": [
+        {
+          "label": "Ver ficha completa del 762B20",
+          "query": "Specs for Base Part Number 762B20-11300000/A"
+        },
+        {
+          "label": "Compara las 2 opciones",
+          "query": "Compara 762B20-11300000/A y 763A20-11300000/A"
+        }
+      ]
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 3400.0,
-      "steps": [{"name": "tool:recommend", "start_ms": 12.0, "duration_ms": 80.0}],
-      "cost_usd_estimate": 0.0004,
-      "provider": "example"
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 1820.0,
+      "token_usage": {"prompt": 780, "completion": 340, "llm_retries": 0},
+      "active_context_part_numbers": ["762B20-11300000/A", "763A20-11300000/A"],
+      "session_cost_usd": 0.0084,
+      "language": "es",
+      "steps": [
+        {"name": "tool:recommend_actuator", "start_ms": 15.0, "duration_ms": 65.0},
+        {"name": "llm:generation", "start_ms": 90.0, "duration_ms": 1720.0}
+      ],
+      "cost_usd_estimate": 0.0084,
+      "provider": "anthropic"
     }
   },
   "clarification": {
     "schema_version": 2,
     "intent": "clarify",
-    "verification": {"status": "unverified", "numbers_checked": 0, "ungrounded": []},
+    "verification": {
+      "status": "unverified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
     "session_id": "00000000-0000-4000-8000-000000000004",
-    "answer": "Necesito un dato más.",
+    "answer": "¿Qué tensión de red principal y tipo de fase dispone en la planta?",
     "ui_payload": {
       "display_type": "CLARIFICATION",
       "clarification": {
-        "question": "¿Qué tensión de alimentación necesita?",
+        "question": "¿Qué tensión de red principal y tipo de fase dispone en la planta?",
         "options": [
-          {"label": "Opción A", "value": "option_a"},
-          {"label": "Opción B", "value": "option_b"}
+          {
+            "label": "110V Monofásico (60/50 Hz)",
+            "value": "110V Monofásico"
+          },
+          {
+            "label": "220V Trifásico (S4 70%)",
+            "value": "220V Trifásico"
+          },
+          {
+            "label": "24V DC Corriente Continua",
+            "value": "24V DC"
+          }
         ]
-      }
+      },
+      "suggested_followups": []
     },
-    "debug_trace": {"model_used": "example-model", "total_latency_ms": 800.0, "provider": "example"}
+    "debug_trace": {
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 450.0,
+      "token_usage": {"prompt": 310, "completion": 70, "llm_retries": 0},
+      "active_context_part_numbers": [],
+      "session_cost_usd": 0.0018,
+      "language": "es",
+      "steps": [
+        {"name": "llm:clarify", "start_ms": 10.0, "duration_ms": 440.0}
+      ],
+      "cost_usd_estimate": 0.0018,
+      "provider": "anthropic"
+    }
+  },
+  "no_match_hard_constraints": {
+    "schema_version": 2,
+    "intent": "recommend",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000005",
+    "answer": "No se encontraron actuadores en la Serie 76 que cumplan simultáneamente todas las restricciones estrictas especificadas.",
+    "ui_payload": {
+      "display_type": "RECOMMENDATION_LIST",
+      "recommendation": {
+        "hard_constraints": [
+          "Torque mínimo: 12000 Nm",
+          "Alimentación: 48V DC",
+          "Envolvente: Sumergible IP68"
+        ],
+        "relaxed_constraints": [],
+        "ranking": []
+      },
+      "alerts": [
+        {
+          "severity": "warning",
+          "code": "NO_MATCH_HARD_CONSTRAINTS",
+          "message": "Ningún actuador de la Serie 76 alcanza 12000 Nm a 48V DC. El torque máximo disponible es 10000 Nm."
+        }
+      ],
+      "suggested_followups": [
+        {
+          "label": "Ver actuadores de mayor torque",
+          "query": "¿Cuál es el actuador de mayor torque disponible en Serie 76?"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 320.0,
+      "token_usage": {"prompt": 400, "completion": 60, "llm_retries": 0},
+      "active_context_part_numbers": [],
+      "session_cost_usd": 0.0012,
+      "language": "es",
+      "steps": [
+        {"name": "sql:catalog_query", "start_ms": 10.0, "duration_ms": 35.0}
+      ],
+      "cost_usd_estimate": 0.0012,
+      "provider": "anthropic"
+    }
+  },
+  "llm_unavailable_error": {
+    "schema_version": 2,
+    "intent": "error",
+    "verification": {
+      "status": "unverified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000006",
+    "answer": "El servicio de procesamiento técnico no se encuentra disponible temporalmente. Por favor reintente su consulta.",
+    "ui_payload": {
+      "display_type": "TEXT_ONLY",
+      "alerts": [
+        {
+          "severity": "error",
+          "code": "LLM_UNAVAILABLE",
+          "message": "Error de comunicación con el motor LLM (503 Service Unavailable). Puede reintentar ahora."
+        }
+      ],
+      "suggested_followups": []
+    },
+    "debug_trace": {
+      "model_used": "claude-3-7-sonnet",
+      "total_latency_ms": 150.0,
+      "token_usage": {"prompt": 0, "completion": 0, "llm_retries": 3},
+      "active_context_part_numbers": [],
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "steps": [
+        {"name": "llm:unavailable_retry", "start_ms": 0.0, "duration_ms": 150.0}
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "anthropic"
+    }
   }
 }
-

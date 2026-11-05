@@ -9,7 +9,9 @@ import kotlinx.serialization.json.JsonElement
 @Serializable
 data class HealthResponse(
     val status: String = "",
-    @SerialName("actuators_loaded") val actuatorsLoaded: Int = 0
+    @SerialName("actuators_loaded") val actuatorsLoaded: Int = 0,
+    @SerialName("llm_provider") val llmProvider: String? = null,
+    @SerialName("llm_model") val llmModel: String? = null
 )
 
 @Immutable
@@ -125,6 +127,13 @@ data class ClarificationPayload(
 
 @Immutable
 @Serializable
+data class SuggestedFollowup(
+    val label: String = "",
+    val query: String = ""
+)
+
+@Immutable
+@Serializable
 data class UIPayload(
     // SINGLE_SPEC_CARD | COMPARISON_TABLE | EDGE_CASE_ALERT | TEXT_ONLY | RECOMMENDATION_LIST | CLARIFICATION
     @SerialName("display_type") val displayType: String = "TEXT_ONLY",
@@ -132,7 +141,8 @@ data class UIPayload(
     @SerialName("engineering_warnings") val engineeringWarnings: List<String> = emptyList(),
     val alerts: List<UIAlert> = emptyList(),
     val recommendation: RecommendationPayload? = null,
-    val clarification: ClarificationPayload? = null
+    val clarification: ClarificationPayload? = null,
+    @SerialName("suggested_followups") val suggestedFollowups: List<SuggestedFollowup> = emptyList()
 )
 
 @Immutable
@@ -163,7 +173,9 @@ data class DebugTracePayload(
     @SerialName("tool_calls") val toolCalls: List<ToolCallTrace> = emptyList(),
     val steps: List<TraceStep> = emptyList(),
     @SerialName("cost_usd_estimate") val costUsdEstimate: Double = 0.0,
-    val provider: String = ""
+    val provider: String = "",
+    @SerialName("session_cost_usd") val sessionCostUsd: Double = 0.0,
+    val language: String = ""
 )
 
 @Immutable
@@ -192,6 +204,7 @@ data class SessionSummary(
     @SerialName("session_id") val sessionId: String,
     val title: String,
     @SerialName("short_title") val shortTitle: String? = null,
+    @SerialName("cost_usd_total") val costUsdTotal: Double = 0.0,
     @SerialName("active_part_numbers") val activePartNumbers: List<String> = emptyList(),
     @SerialName("message_count") val messageCount: Int = 0,
     @SerialName("created_at") val createdAt: String = "",

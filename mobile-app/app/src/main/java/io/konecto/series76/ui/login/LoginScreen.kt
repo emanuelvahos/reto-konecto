@@ -354,47 +354,26 @@ fun LoginScreen(vm: MainViewModel) {
                         isPassword = true
                     )
 
-                    // Perfiles demo rápidos compactos
-                    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                    // Botón único para usar cuenta demo (rellena credenciales del perfil Engineer)
+                    OutlinedButton(
+                        onClick = {
+                            email = "engineer@konecto.io"
+                            password = "Konecto2026!"
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = KonectoTheme.semantics.accentText
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(38.dp)
+                    ) {
                         Text(
-                            text = stringResource(R.string.login_quick_profiles),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = stringResource(R.string.login_use_demo),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            listOf(
-                                Triple(stringResource(R.string.login_profile_engineer), "engineer@konecto.io", "Konecto2026!"),
-                                Triple(stringResource(R.string.login_profile_supervisor), "supervisor@konecto.io", "Series76Pass!"),
-                                Triple(stringResource(R.string.login_profile_evaluator), "admin@konecto.io", "AdminKonecto!")
-                            ).forEach { (label, userEmail, userPass) ->
-                                val isSelected = email == userEmail
-                                Surface(
-                                    color = if (isSelected) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = RoundedCornerShape(6.dp),
-                                    border = BorderStroke(
-                                        1.dp,
-                                        if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
-                                    ),
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .clickable {
-                                            email = userEmail
-                                            password = userPass
-                                        }
-                                ) {
-                                    Text(
-                                        text = label,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = Spacing.s, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
                     }
 
                     if (vm.errorMessage != null) {
@@ -448,7 +427,7 @@ fun LoginScreen(vm: MainViewModel) {
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Text(
-                            text = stringResource(R.string.login_single_user),
+                            text = stringResource(R.string.login_continue_no_login),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )

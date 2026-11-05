@@ -13,6 +13,8 @@
     <string name="login_profile_engineer">Engineer</string>
     <string name="login_profile_supervisor">Supervisor</string>
     <string name="login_profile_evaluator">Evaluator</string>
+    <string name="login_use_demo">Use Demo Account</string>
+    <string name="login_continue_no_login">Continue without login</string>
     <string name="login_sign_in">Sign In</string>
     <string name="login_single_user">Continue in Single-User Mode</string>
 
@@ -111,6 +113,10 @@
     <!-- Debug Telemetry -->
     <string name="debug_title">X-Ray Telemetry Inspector</string>
     <string name="debug_subtitle">Tools invoked, parameters, SQL &amp; PostgreSQL output</string>
+    <string name="debug_mock_banner">MOCK DATA • Simulated telemetry from samples</string>
+    <string name="debug_mock_badge">MOCK DATA</string>
+    <string name="debug_session_cost">Session Cost: $%1$s</string>
+    <string name="debug_language">Language: %1$s</string>
     <string name="debug_empty">No agent answers with debug telemetry in this session yet.</string>
     <string name="debug_copy_json">Copy JSON</string>
     <string name="debug_copied">Copied Trace JSON</string>
@@ -125,6 +131,24 @@
     <string name="debug_sql">SQL: %1$s</string>
     <string name="debug_returned_data">Returned Data: %1$s</string>
 
+    <!-- Verification Badges -->
+    <string name="verification_verified">Verified Data</string>
+    <string name="verification_fallback">Generated from catalog</string>
+
+    <!-- Recommendation -->
+    <string name="recommendation_title">RECOMMENDED ACTUATORS</string>
+    <string name="recommendation_hard_constraints">Strict Requirements</string>
+    <string name="recommendation_relaxed_constraints">Relaxed Constraints</string>
+    <string name="recommendation_no_match">No actuator meets all strict constraints</string>
+    <string name="recommendation_failed_constraints">Unsatisfied constraints:</string>
+    <string name="recommendation_score">Fit Score</string>
+    <string name="recommendation_why">Pros &amp; Advantages</string>
+    <string name="recommendation_why_not">Limitations &amp; Constraints</string>
+    <string name="recommendation_view_spec">View Full Datasheet</string>
+    <string name="recommendation_hide_spec">Hide Datasheet</string>
+
+    <!-- Clarification -->
+    <string name="clarification_title">SPECIFICATION CLARIFICATION REQUIRED</string>
 
     <!-- Common -->
     <string name="retry">Retry</string>

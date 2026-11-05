@@ -13,6 +13,8 @@
     <string name="login_profile_engineer">Ingeniero</string>
     <string name="login_profile_supervisor">Supervisor</string>
     <string name="login_profile_evaluator">Evaluador</string>
+    <string name="login_use_demo">Usar cuenta demo</string>
+    <string name="login_continue_no_login">Continuar sin iniciar sesión</string>
     <string name="login_sign_in">Iniciar Sesión</string>
     <string name="login_single_user">Continuar en Modo Usuario Único</string>
 
@@ -111,6 +113,10 @@
     <!-- Debug Telemetry -->
     <string name="debug_title">Inspector de Telemetría X-Ray</string>
     <string name="debug_subtitle">Herramientas invocadas, parámetros, SQL y salida PostgreSQL</string>
+    <string name="debug_mock_banner">MOCK DATA • Telemetría simulada de muestras</string>
+    <string name="debug_mock_badge">DATOS MOCK</string>
+    <string name="debug_session_cost">Coste de Sesión: $%1$s</string>
+    <string name="debug_language">Idioma: %1$s</string>
     <string name="debug_empty">No hay respuestas del agente con telemetría en esta sesión aún.</string>
     <string name="debug_copy_json">Copiar JSON</string>
     <string name="debug_copied">JSON de la traza copiado</string>
@@ -125,6 +131,24 @@
     <string name="debug_sql">SQL: %1$s</string>
     <string name="debug_returned_data">Datos Devueltos: %1$s</string>
 
+    <!-- Verification Badges -->
+    <string name="verification_verified">Datos verificados</string>
+    <string name="verification_fallback">Respuesta generada desde el catálogo</string>
+
+    <!-- Recommendation -->
+    <string name="recommendation_title">ACTUADORES RECOMENDADOS</string>
+    <string name="recommendation_hard_constraints">Requisitos Estrictos</string>
+    <string name="recommendation_relaxed_constraints">Restricciones Flexibilizadas</string>
+    <string name="recommendation_no_match">No encontramos un actuador que cumpla todas las restricciones estrictas</string>
+    <string name="recommendation_failed_constraints">Restricciones no satisfechas:</string>
+    <string name="recommendation_score">Ajuste</string>
+    <string name="recommendation_why">Ventajas y Puntos Fuertes</string>
+    <string name="recommendation_why_not">Limitaciones y Advertencias</string>
+    <string name="recommendation_view_spec">Ver Ficha Completa</string>
+    <string name="recommendation_hide_spec">Ocultar Ficha</string>
+
+    <!-- Clarification -->
+    <string name="clarification_title">ACLARACIÓN DE ESPECIFICACIÓN</string>
 
     <!-- Common -->
     <string name="retry">Reintentar</string>

@@ -49,6 +49,133 @@ class ContractV2SerializationTest {
     }
 
     @Test
+    fun testDeserializeComparisonTableSample() {
+        val json = """
+        {
+          "schema_version": 2,
+          "intent": "lookup",
+          "verification": {"status": "verified", "numbers_checked": 6, "ungrounded": []},
+          "session_id": "00000000-0000-4000-8000-000000000002",
+          "answer": "Comparativa entre dos actuadores.",
+          "ui_payload": {
+            "display_type": "COMPARISON_TABLE",
+            "actuators": [
+              {"base_part_number": "763B00-11300000/A", "frame_size": 3, "on_off_torque_nm": 500.0},
+              {"base_part_number": "763C00-11300000/A", "frame_size": 3, "on_off_torque_nm": 650.0}
+            ],
+            "alerts": [
+              {"code": "SINGLE_TORQUE_RATING", "severity": "info", "message": "Info alert"}
+            ],
+            "suggested_followups": [
+              {"label": "Ver valores a 50 Hz", "query": "50 Hz"}
+            ]
+          },
+          "debug_trace": {
+            "model_used": "claude-3-7-sonnet",
+            "total_latency_ms": 1100.0,
+            "provider": "anthropic"
+          }
+        }
+        """.trimIndent()
+
+        val resp = ApiClient.jsonFormat.decodeFromString(ConversationResponse.serializer(), json)
+        assertEquals("COMPARISON_TABLE", resp.uiPayload.displayType)
+        assertEquals(2, resp.uiPayload.actuators.size)
+        assertEquals(1, resp.uiPayload.alerts.size)
+        assertEquals("SINGLE_TORQUE_RATING", resp.uiPayload.alerts.first().code)
+        assertEquals(1, resp.uiPayload.suggestedFollowups.size)
+        assertEquals("Ver valores a 50 Hz", resp.uiPayload.suggestedFollowups.first().label)
+    }
+
+    @Test
+    fun testDeserializeRecommendationSample() {
+        val json = """
+        {
+          "schema_version": 2,
+          "intent": "recommend",
+          "verification": {"status": "fallback_template", "numbers_checked": 5, "ungrounded": ["token"]},
+          "session_id": "00000000-0000-4000-8000-000000000003",
+          "answer": "Recomendación basada en torque.",
+          "ui_payload": {
+            "display_type": "RECOMMENDATION_LIST",
+            "recommendation": {
+              "ranking": [
+                {
+                  "part_number": "EXAMPLE-PN-3",
+                  "score": 0.94,
+                  "why": ["Torque on/off 6000 Nm"],
+                  "why_not": ["Mayor peso"]
+                }
+              ],
+              "hard_constraints": ["Torque mínimo 5000 Nm", "24V DC"],
+              "relaxed_constraints": ["Velocidad de giro"]
+            },
+            "suggested_followups": [
+              {"label": "Ver ficha", "query": "Specs"}
+            ]
+          },
+          "debug_trace": {
+            "model_used": "claude-3-7-sonnet",
+            "total_latency_ms": 1400.0,
+            "session_cost_usd": 0.0054,
+            "language": "es"
+          }
+        }
+        """.trimIndent()
+
+        val resp = ApiClient.jsonFormat.decodeFromString(ConversationResponse.serializer(), json)
+        assertEquals("RECOMMENDATION_LIST", resp.uiPayload.displayType)
+        assertEquals("fallback_template", resp.verification.status)
+        assertNotNull(resp.uiPayload.recommendation)
+        val rec = resp.uiPayload.recommendation!!
+        assertEquals(1, rec.ranking.size)
+        assertEquals("EXAMPLE-PN-3", rec.ranking.first().partNumber)
+        assertEquals(0.94, rec.ranking.first().score, 0.001)
+        assertEquals("Torque on/off 6000 Nm", rec.ranking.first().why.first())
+        assertEquals("Mayor peso", rec.ranking.first().whyNot.first())
+        assertEquals(2, rec.hardConstraints.size)
+        assertEquals(1, rec.relaxedConstraints.size)
+        assertEquals(0.0054, resp.debugTrace.sessionCostUsd, 0.0001)
+        assertEquals("es", resp.debugTrace.language)
+    }
+
+    @Test
+    fun testDeserializeClarificationSample() {
+        val json = """
+        {
+          "schema_version": 2,
+          "intent": "clarify",
+          "verification": {"status": "unverified", "numbers_checked": 0, "ungrounded": []},
+          "session_id": "00000000-0000-4000-8000-000000000004",
+          "answer": "¿Qué voltaje necesita?",
+          "ui_payload": {
+            "display_type": "CLARIFICATION",
+            "clarification": {
+              "question": "¿Qué voltaje necesita?",
+              "options": [
+                {"label": "110V Monofásico", "value": "110V"},
+                {"label": "220V Trifásico", "value": "220V"}
+              ]
+            }
+          },
+          "debug_trace": {
+            "model_used": "claude-3-7-sonnet",
+            "total_latency_ms": 300.0
+          }
+        }
+        """.trimIndent()
+
+        val resp = ApiClient.jsonFormat.decodeFromString(ConversationResponse.serializer(), json)
+        assertEquals("CLARIFICATION", resp.uiPayload.displayType)
+        assertNotNull(resp.uiPayload.clarification)
+        val clar = resp.uiPayload.clarification!!
+        assertEquals("¿Qué voltaje necesita?", clar.question)
+        assertEquals(2, clar.options.size)
+        assertEquals("110V Monofásico", clar.options[0].label)
+        assertEquals("110V", clar.options[0].value)
+    }
+
+    @Test
     fun testDeserializeWithUnknownKeys() {
         val json = """
         {

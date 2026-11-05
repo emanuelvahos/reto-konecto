@@ -18,7 +18,9 @@ object DebugMockProvider {
         "single_spec_card",
         "comparison_table",
         "recommendation_with_relaxation",
-        "clarification"
+        "clarification",
+        "no_match_hard_constraints",
+        "llm_unavailable_error"
     )
 
     private var cachedSamples: Map<String, ConversationResponse>? = null
@@ -49,9 +51,11 @@ object DebugMockProvider {
         if (!isMockEnabled) return null
         val samples = getAvailableSamples(context)
         val match = when {
+            query.contains("error", ignoreCase = true) || query.contains("llm", ignoreCase = true) -> "llm_unavailable_error"
+            query.contains("no match", ignoreCase = true) || query.contains("12000", ignoreCase = true) -> "no_match_hard_constraints"
             query.contains("compare", ignoreCase = true) || query.contains("compara", ignoreCase = true) -> "comparison_table"
             query.contains("200 Nm", ignoreCase = true) || query.contains("recomiend", ignoreCase = true) || query.contains("recommend", ignoreCase = true) -> "recommendation_with_relaxation"
-            query.contains("aclar", ignoreCase = true) || query.contains("clarif", ignoreCase = true) -> "clarification"
+            query.contains("aclar", ignoreCase = true) || query.contains("clarif", ignoreCase = true) || query.contains("tensión", ignoreCase = true) -> "clarification"
             query.contains("763B", ignoreCase = true) || query.contains("spec", ignoreCase = true) || query.contains("ficha", ignoreCase = true) -> "single_spec_card"
             else -> sampleKeys.firstOrNull { query.contains(it, ignoreCase = true) } ?: selectedSampleKey
         }

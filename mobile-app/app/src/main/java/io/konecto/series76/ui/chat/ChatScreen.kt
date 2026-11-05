@@ -101,6 +101,8 @@ fun ChatScreen(vm: MainViewModel) {
     val activePart = remember(vm.messages) {
         vm.messages.lastOrNull { it.uiPayload?.actuators?.isNotEmpty() == true }
             ?.uiPayload?.actuators?.firstOrNull()?.basePartNumber
+            ?: vm.messages.lastOrNull { it.uiPayload?.recommendation?.ranking?.isNotEmpty() == true }
+                ?.uiPayload?.recommendation?.ranking?.firstOrNull()?.partNumber
     }
 
     val displayTitle = remember(vm.activeSessionTitle, activePart) {
@@ -175,8 +177,8 @@ fun ChatScreen(vm: MainViewModel) {
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                // Mostrar chip solo si no es idéntico ni está contenido en el título
-                                if (activePart != null && !displayTitle.contains(activePart, ignoreCase = true)) {
+                                val isTitleThePartNumber = activePart != null && displayTitle.equals(activePart, ignoreCase = true)
+                                if (activePart != null && !isTitleThePartNumber) {
                                     Surface(
                                         color = KonectoTheme.semantics.accentContainer,
                                         shape = RoundedCornerShape(4.dp),
@@ -330,7 +332,15 @@ fun ChatScreen(vm: MainViewModel) {
                 contentPadding = PaddingValues(vertical = 14.dp)
             ) {
                 items(vm.messages, key = { it.id }) { msg ->
-                    ChatBubbleItem(msg = msg)
+                    val isLastAssistant = (msg == vm.messages.lastOrNull { it.role == "assistant" })
+                    val verification = vm.messageVerifications[msg.id]
+                    ChatBubbleItem(
+                        msg = msg,
+                        verification = verification,
+                        isLastAssistantMessage = isLastAssistant,
+                        onSendQuery = { query -> vm.sendUserMessage(query) },
+                        onRetry = { vm.retryLastMessage() }
+                    )
                 }
                 if (vm.isLoading) {
                     item(key = "loading_indicator") {
