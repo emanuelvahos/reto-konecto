@@ -194,13 +194,83 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 ## App Android
 
 <!-- APP: Gemini -->
-<!-- Datos del backend ya conocidos, para completar esta sección:
-- URL del servidor desde el emulador: http://10.0.2.2:8001/ (por defecto en la app; editable en la pantalla de login)
-- Dispositivo físico por USB: `adb reverse tcp:8001 tcp:8001` y usar http://localhost:8001/ ; por Wi-Fi: http://<IP-de-la-PC>:8001/
-- Directorio del proyecto: mobile-app/ (Android Studio, Gradle). Paquete único io.konecto.series76.
-- Pantalla de depuración: pulsación larga sobre el título de la barra superior del chat.
-- Usuarios demo: ver sección «Pantalla de depuración y credenciales demo».
--->
+La aplicación móvil nativa para Android (`mobile-app/`) fue desarrollada en **Kotlin** con **Jetpack Compose** y **Material 3**, siguiendo un diseño sobrio de «panel de instrumentación industrial» con soporte completo para modo oscuro y claro, internacionalización bilingüe (es/en) y arquitectura reactiva (`MainViewModel` + DataStore + Retrofit 2).
+
+### Compilación y pruebas
+
+- **Requisitos:** JDK 17 o 21 (`JAVA_HOME`), Android SDK 34 (mínimo Android 8.0 Oreo, API 26).
+- **Compilar build de depuración:**
+  ```bash
+  cd mobile-app
+  ./gradlew assembleDebug
+  ```
+- **Ejecutar pruebas unitarias (serialización de contrato v2, normalización de voz, modelos):**
+  ```bash
+  cd mobile-app
+  ./gradlew test
+  ```
+- **Compilar build de release (con código y assets de mock eliminados en compilación):**
+  ```bash
+  cd mobile-app
+  ./gradlew assembleRelease
+  ```
+
+### Instalación en dispositivo o emulador
+
+- **Instalación vía ADB:**
+  ```bash
+  adb install -r mobile-app/app/build/outputs/apk/debug/app-debug.apk
+  ```
+- O bien abrir la carpeta `mobile-app/` en Android Studio y presionar **Run 'app'** (`Shift + F10`).
+
+### Conexión con el servidor backend (FastAPI :8001)
+
+La URL base del backend se puede configurar desde el diálogo de ajustes de red en la pantalla de inicio de sesión o mediante el icono de engranaje:
+
+1. **Emulador Android Oficial:**
+   - URL predeterminada: `http://10.0.2.2:8001/` (alias del localhost del host anfitrión).
+2. **Celular físico por USB (recomendado para baja latencia y pruebas de audio):**
+   - Ejecutar en la terminal del PC:
+     ```bash
+     adb reverse tcp:8001 tcp:8001
+     ```
+   - En la app, seleccionar el botón rápido **Localhost (USB con adb reverse)** o configurar `http://localhost:8001/`.
+3. **Celular físico por Wi-Fi:**
+   - Asegurarse de que PC y celular estén en la misma red local.
+   - Configurar `http://<IP-LOCAL-DE-TU-PC>:8001/`.
+
+### Entrada y salida de voz (STT / TTS) y comportamiento sin Google
+
+- **Permisos requeridos:** `android.permission.RECORD_AUDIO`. Se solicita en tiempo de ejecución con explicación clara de uso en caso de rechazo previo.
+- **Declaración de visibilidad de servicios (`<queries>` en Android 11+):**
+  - Servicio de reconocimiento de voz: `android.speech.RecognitionService` (`com.google.android.googlequicksearchbox`).
+  - Servicio de síntesis de voz (TTS): `android.intent.action.TTS_SERVICE` (`com.google.android.tts`).
+- **Normalización local de dictado técnico (`VoiceNormalizer.kt`):**
+  - Convierte secuencias habladas en español o inglés (ej. «siete seis tres be cero cero guion uno uno...») al número de parte oficial en mayúsculas (`763B00-11300000/A`) en el propio dispositivo antes de enviar la consulta, ahorrando tokens de LLM.
+- **Comportamiento en dispositivos sin Google Play Services / motor de voz:**
+  - La app verifica la disponibilidad en tiempo de ejecución mediante `SpeechRecognizer.isRecognitionAvailable(context)`.
+  - Si el dispositivo carece de motor de voz (ej. ROMs sin GMS, Huawei o emuladores AOSP básicos), la app **no se bloquea ni genera fallos**: muestra un mensaje informativo localizado (*«El reconocimiento de voz no está disponible en este dispositivo»*) y mantiene operativa al 100% la consulta mediante el teclado y entrada de texto estándar.
+
+### Credenciales demo
+
+La app incluye el botón **«Usar cuenta demo»** en la pantalla de inicio de sesión que precarga instantáneamente las credenciales para pruebas rápidas:
+
+- **Plant Engineer (perfil activo por defecto):** `engineer@konecto.io` / `engineer123`
+- **Supervisor:** `supervisor@konecto.io` / `supervisor123`
+- **Evaluator:** `evaluator@konecto.io` / `evaluator123`
+- **Modo monousuario sin login:** Botón **«Continuar sin iniciar sesión»** para interactuar con el asistente técnico de forma anónima sin requerir token JWT.
+
+### Estructura de pantallas (`io.konecto.series76.ui`)
+
+1. **`ui/login/LoginScreen.kt` (Inicio de sesión y configuración):**
+   - Autenticación corporativa con JWT, botón «Usar cuenta demo», acceso sin login y selector flotante de servidor/idioma.
+2. **`ui/sessions/SessionsScreen.kt` (Historial de consultas):**
+   - Lista cronológica de conversaciones con título contextual (resumido o número de parte), eliminación con barra de deshacer temporal (Undo) y botón para iniciar nueva consulta técnica.
+3. **`ui/chat/ChatScreen.kt` (Asistente técnico Serie 76):**
+   - Interfaz conversacional con renderizado de fichas de producto comparables (mini-tabla 60 Hz / 50 Hz para tiempo de giro 90°, FLA, LRA), chips de requisitos técnicos multilínea (`FlowRow`), reconocimiento de voz con retroalimentación visual, lectura por voz (TTS), sugerencias de preguntas y botón para desplegar la **Ficha Técnica Completa** en un modal BottomSheet.
+4. **`ui/debug/DebugScreen.kt` (X-Ray Inspector para desarrolladores):**
+   - Pantalla de telemetría y observabilidad interna exclusiva para desarrollo. Expone la traza de ejecución (`TraceStep`), latencias del router/verificador/LLM, modelo utilizado, alertas internas y el payload JSON crudo.
+   - **Activación:** Se desbloquea manteniendo presionado durante **2 segundos continuos** el título de la barra superior en `ChatScreen` (con respuesta háptica de vibración y aviso Toast). En compilaciones de release (`assembleRelease`), el banner y badge de mock quedan eliminados a nivel de bytecode.
 
 ## Estructura del repositorio
 

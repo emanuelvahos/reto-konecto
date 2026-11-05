@@ -119,7 +119,7 @@ fun DebugScreen(vm: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(Spacing.s),
                 contentPadding = PaddingValues(vertical = 14.dp)
             ) {
-                if (DebugMockProvider.isMockEnabled) {
+                if (DebugMockProvider.isAvailable && DebugMockProvider.isMockEnabled) {
                     item {
                         Surface(
                             color = KonectoTheme.semantics.warningBg,
@@ -188,7 +188,7 @@ fun DebugScreen(vm: MainViewModel) {
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    if (DebugMockProvider.isMockEnabled) {
+                                    if (DebugMockProvider.isAvailable && DebugMockProvider.isMockEnabled) {
                                         Surface(
                                             color = KonectoTheme.semantics.accentContainer,
                                             shape = RoundedCornerShape(4.dp),

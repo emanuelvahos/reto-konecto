@@ -12,7 +12,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -46,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import io.konecto.series76.R
 import io.konecto.series76.data.ActuatorDto
 import io.konecto.series76.data.ServerPreferences
@@ -116,6 +119,7 @@ fun formatChatTitle(title: String, maxLength: Int = 28): String {
 fun ChatScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
     var inputText by remember { mutableStateOf("") }
 
     // Estados para Ficha Técnica Completa y Reconocimiento de Voz
@@ -233,15 +237,21 @@ fun ChatScreen(vm: MainViewModel) {
                     },
                     title = {
                         Column(
-                            modifier = Modifier.combinedClickable(
-                                onClick = {},
-                                onLongClick = {
-                                    vm.isDeveloperModeUnlocked = true
-                                    vm.currentScreen = AppScreen.DEBUG
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    Toast.makeText(context, "🔧 Developer Debug Mode Opened", Toast.LENGTH_SHORT).show()
-                                }
-                            )
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        val job = coroutineScope.launch {
+                                            delay(2000L)
+                                            vm.isDeveloperModeUnlocked = true
+                                            vm.currentScreen = AppScreen.DEBUG
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            Toast.makeText(context, "🔧 Developer Debug Mode Opened", Toast.LENGTH_SHORT).show()
+                                        }
+                                        tryAwaitRelease()
+                                        job.cancel()
+                                    }
+                                )
+                            }
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,

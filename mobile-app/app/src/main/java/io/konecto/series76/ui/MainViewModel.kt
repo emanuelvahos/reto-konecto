@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.konecto.series76.R
 import io.konecto.series76.data.*
 import io.konecto.series76.mock.DebugMockProvider
 import io.konecto.series76.util.LocaleController
@@ -113,7 +114,7 @@ class MainViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             try {
-                if (DebugMockProvider.isMockEnabled) {
+                if (DebugMockProvider.isAvailable && DebugMockProvider.isMockEnabled) {
                     sessions = emptyList()
                 } else {
                     sessions = ApiClient.api.getSessions()
@@ -225,7 +226,7 @@ class MainViewModel : ViewModel() {
             val prefLang = appContext?.let { ServerPreferences.getAppLanguageSync(it) } ?: "auto"
             val localeLang = LocaleController.getEffectiveLanguage(prefLang)
 
-            if (DebugMockProvider.isMockEnabled && appContext != null) {
+            if (DebugMockProvider.isAvailable && DebugMockProvider.isMockEnabled && appContext != null) {
                 val mockResp = DebugMockProvider.getMockResponse(appContext!!, cleanQuery)
                 if (mockResp != null) {
                     val delayMs = if (cleanQuery.contains("loading", ignoreCase = true) || cleanQuery.contains("skeleton", ignoreCase = true)) 10000L else 400L
@@ -297,9 +298,11 @@ class MainViewModel : ViewModel() {
                     rawMsg.contains("Anthropic", ignoreCase = true) ||
                     rawMsg.contains("Claude", ignoreCase = true)
                 errorMessage = if (hasTechnicalCode) {
-                    "El servicio técnico no está disponible temporalmente. Por favor, reintenta en unos momentos."
+                    appContext?.getString(R.string.error_service_unavailable_clean_msg)
+                        ?: "The technical assistant is temporarily unavailable. Please retry your query."
                 } else {
-                    "Error de conexión. Verifica tu conexión de red y reintenta."
+                    appContext?.getString(R.string.error_connection_clean_msg)
+                        ?: "Connection error. Please check your network connection and retry."
                 }
             } finally {
                 isLoading = false

@@ -235,5 +235,6 @@
     <string name="alert_title_safety_factor">Factor de seguridad aplicado</string>
     <string name="alert_title_generic">Aviso de ingeniería</string>
     <string name="error_service_unavailable_clean_msg">El asistente técnico no se encuentra disponible temporalmente. Por favor, reintente su consulta.</string>
+    <string name="error_connection_clean_msg">Error de conexión. Verifica tu conexión de red y reintenta.</string>
 </resources>
 

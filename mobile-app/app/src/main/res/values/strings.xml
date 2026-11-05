@@ -235,5 +235,6 @@
     <string name="alert_title_safety_factor">Safety Factor Applied</string>
     <string name="alert_title_generic">Engineering Notice</string>
     <string name="error_service_unavailable_clean_msg">The technical assistant is temporarily unavailable. Please retry your query.</string>
+    <string name="error_connection_clean_msg">Connection error. Please check your network connection and retry.</string>
 </resources>
 

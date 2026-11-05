@@ -1882,7 +1882,7 @@ fun UIAlertsView(
                 raw.contains("Anthropic", ignoreCase = true) ||
                 raw.contains("Claude", ignoreCase = true) ||
                 raw.contains("HTTP", ignoreCase = true)
-            val displayMessage = if (containsTechnicalArtifacts || (isError && raw.length > 150)) {
+            val displayMessage = if (containsTechnicalArtifacts || (isError && raw.isBlank())) {
                 stringResource(R.string.error_service_unavailable_clean_msg)
             } else {
                 raw
