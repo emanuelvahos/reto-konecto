@@ -51,18 +51,45 @@
     <string name="card_csa_not_certified">Not CSA Certified</string>
     <string name="card_on_off_service">ON/OFF SERVICE</string>
     <string name="card_modulating_service">MODULATING</string>
+    <string name="card_output_torque">Output Torque</string>
+    <string name="card_single_torque_alert">Single output torque rating (three-phase). S4 70% rating applies without modulating distinction.</string>
     <string name="card_duty_cycle">Duty %1$d%%</string>
-    <string name="card_cycles_per_hour">%1$s ciclos/h</string>
-    <string name="card_starts_per_hour">%1$s arranques/h</string>
-    <string name="card_speed_label">Velocidad</string>
+    <string name="card_cycles_per_hour">%1$s cycles/h</string>
+    <string name="card_starts_per_hour">%1$s starts/h</string>
+    <string name="card_speed_label">Speed</string>
     <string name="card_speed_value">%1$s s</string>
     <string name="card_fla_label">FLA (%1$d Hz)</string>
     <string name="card_lra_label">LRA (%1$d Hz)</string>
-    <string name="card_power_label">Potencia</string>
+    <string name="card_power_label">Power</string>
     <string name="card_power_value">%1$d W</string>
     <string name="card_frequency_60hz">60 Hz Grid Frequency</string>
     <string name="card_frequency_50hz">50 Hz Grid Frequency</string>
     <string name="card_null_placeholder">—</string>
+    <string name="card_col_metric">Parameter</string>
+    <string name="card_col_60hz">60 Hz</string>
+    <string name="card_col_50hz">50 Hz</string>
+    <string name="card_copy_action">Copy part number</string>
+    <string name="card_copied_part">Part number copied</string>
+    <string name="card_share_action">Share</string>
+    <string name="card_share_title">Share Series 76 Datasheet</string>
+    <string name="card_speed_metric">Speed 90°</string>
+    <string name="card_fla_metric">FLA Current</string>
+    <string name="card_lra_metric">LRA Current</string>
+    <string name="chat_loading_skeleton">Fetching technical specifications…</string>
+    <string name="chat_error_title">Communication Error</string>
+    <string name="theme_toggle">Toggle Theme</string>
+
+    <!-- Comparison Table -->
+    <string name="table_title">SERIES 76 COMPARISON</string>
+    <string name="table_selected_count">%1$d Actuators Selected</string>
+    <string name="table_hz_toggle">%1$d Hz (Tap to toggle)</string>
+    <string name="table_col_part">Part Number</string>
+    <string name="table_col_enclosure">Enclosure</string>
+    <string name="table_col_power_supply">Power Supply</string>
+    <string name="table_col_on_off_torque">On/Off Torque</string>
+    <string name="table_col_mod_torque">Mod. Torque</string>
+    <string name="table_col_duty">Duty (On/Mod)</string>
+    <string name="table_col_cert">Certification</string>
 
     <!-- Server Dialog -->
     <string name="server_dialog_title">Server Configuration</string>
@@ -89,8 +116,14 @@
     <string name="debug_copied">Copied Trace JSON</string>
     <string name="debug_no_tools">No tools invoked in this turn.</string>
     <string name="debug_active_context">Active Context: %1$s</string>
-    <string name="debug_timeline_title">EXECUTION TIMELINE STEPS</string>
+    <string name="debug_timeline_title">EXECUTION WATERFALL TIMELINE</string>
     <string name="debug_answer_preview">Answer: \"%1$s…\"</string>
+    <string name="debug_metric_summary">Model: %1$s (%2$s) • Latency: %3$d ms • Cost: $%4$s</string>
+    <string name="debug_token_usage">Token Usage: %1$s</string>
+    <string name="debug_tool_header">TOOL #%1$d: %2$s (%3$d ms)</string>
+    <string name="debug_params">Parameters: %1$s</string>
+    <string name="debug_sql">SQL: %1$s</string>
+    <string name="debug_returned_data">Returned Data: %1$s</string>
 
 
     <!-- Common -->

@@ -61,6 +61,8 @@ data class ActuatorDto(
     @SerialName("is_available") val isAvailable: Boolean = true,
     @SerialName("on_off_torque_in_lbs") val onOffTorqueInLbs: Double? = null,
     @SerialName("on_off_torque_nm") val onOffTorqueNm: Double? = null,
+    @SerialName("single_torque_in_lbs") val singleTorqueInLbs: Double? = null,
+    @SerialName("single_torque_nm") val singleTorqueNm: Double? = null,
     @SerialName("on_off_duty_cycle_pct") val onOffDutyCyclePct: Int? = null,
     @SerialName("cycles_per_hour") val cyclesPerHour: Int? = null,
     @SerialName("modulating_torque_in_lbs") val modulatingTorqueInLbs: Double? = null,
@@ -189,6 +191,7 @@ data class ConversationResponse(
 data class SessionSummary(
     @SerialName("session_id") val sessionId: String,
     val title: String,
+    @SerialName("short_title") val shortTitle: String? = null,
     @SerialName("active_part_numbers") val activePartNumbers: List<String> = emptyList(),
     @SerialName("message_count") val messageCount: Int = 0,
     @SerialName("created_at") val createdAt: String = "",

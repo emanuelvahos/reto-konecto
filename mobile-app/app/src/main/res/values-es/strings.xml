@@ -51,10 +51,12 @@
     <string name="card_csa_not_certified">Sin Certificación CSA</string>
     <string name="card_on_off_service">SERVICIO ON/OFF</string>
     <string name="card_modulating_service">MODULANTE</string>
+    <string name="card_output_torque">Torque de salida</string>
+    <string name="card_single_torque_alert">Régimen de torque único (trifásico). Aplica régimen S4 70% sin distinción modulante.</string>
     <string name="card_duty_cycle">Ciclo %1$d%%</string>
     <string name="card_cycles_per_hour">%1$s ciclos/h</string>
     <string name="card_starts_per_hour">%1$s arranques/h</string>
-    <string name="card_speed_label">Velocidad</string>
+    <string name="card_speed_label">Tiempo de giro 90°</string>
     <string name="card_speed_value">%1$s s</string>
     <string name="card_fla_label">FLA (%1$d Hz)</string>
     <string name="card_lra_label">LRA (%1$d Hz)</string>
@@ -63,6 +65,31 @@
     <string name="card_frequency_60hz">Frecuencia de Red 60 Hz</string>
     <string name="card_frequency_50hz">Frecuencia de Red 50 Hz</string>
     <string name="card_null_placeholder">—</string>
+    <string name="card_col_metric">Parámetro</string>
+    <string name="card_col_60hz">60 Hz</string>
+    <string name="card_col_50hz">50 Hz</string>
+    <string name="card_copy_action">Copiar número de parte</string>
+    <string name="card_copied_part">Número de parte copiado</string>
+    <string name="card_share_action">Compartir</string>
+    <string name="card_share_title">Compartir Ficha Serie 76</string>
+    <string name="card_speed_metric">Tiempo de giro 90°</string>
+    <string name="card_fla_metric">Corriente nominal (FLA)</string>
+    <string name="card_lra_metric">Corriente de arranque (LRA)</string>
+    <string name="chat_loading_skeleton">Obteniendo especificaciones técnicas…</string>
+    <string name="chat_error_title">Error de Comunicación</string>
+    <string name="theme_toggle">Cambiar Tema</string>
+
+    <!-- Comparison Table -->
+    <string name="table_title">COMPARATIVA SERIE 76</string>
+    <string name="table_selected_count">%1$d Actuadores Seleccionados</string>
+    <string name="table_hz_toggle">%1$d Hz (Tocar para alternar)</string>
+    <string name="table_col_part">Número de parte</string>
+    <string name="table_col_enclosure">Carcasa</string>
+    <string name="table_col_power_supply">Alimentación</string>
+    <string name="table_col_on_off_torque">Torque On/Off</string>
+    <string name="table_col_mod_torque">Torque Modulante</string>
+    <string name="table_col_duty">Ciclo (On/Mod)</string>
+    <string name="table_col_cert">Certificación</string>
 
     <!-- Server Dialog -->
     <string name="server_dialog_title">Configuración del Servidor</string>
@@ -89,8 +116,14 @@
     <string name="debug_copied">JSON de la traza copiado</string>
     <string name="debug_no_tools">No se invocaron herramientas en este turno.</string>
     <string name="debug_active_context">Contexto Activo: %1$s</string>
-    <string name="debug_timeline_title">PASOS DE LA LÍNEA DE TIEMPO</string>
+    <string name="debug_timeline_title">LÍNEA DE TIEMPO EN CASCADA</string>
     <string name="debug_answer_preview">Respuesta: \"%1$s…\"</string>
+    <string name="debug_metric_summary">Modelo: %1$s (%2$s) • Latencia: %3$d ms • Coste: $%4$s</string>
+    <string name="debug_token_usage">Uso de Tokens: %1$s</string>
+    <string name="debug_tool_header">HERRAMIENTA #%1$d: %2$s (%3$d ms)</string>
+    <string name="debug_params">Parámetros: %1$s</string>
+    <string name="debug_sql">SQL: %1$s</string>
+    <string name="debug_returned_data">Datos Devueltos: %1$s</string>
 
 
     <!-- Common -->

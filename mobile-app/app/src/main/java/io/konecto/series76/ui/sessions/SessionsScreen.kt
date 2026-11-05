@@ -1,7 +1,13 @@
 package io.konecto.series76.ui.sessions
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -106,6 +112,18 @@ fun SessionsScreen(vm: MainViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     var showServerDialog by remember { mutableStateOf(false) }
 
+    val reduceMotion = remember {
+        try {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.TRANSITION_ANIMATION_SCALE,
+                1.0f
+            ) == 0f
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
@@ -148,7 +166,7 @@ fun SessionsScreen(vm: MainViewModel) {
                         IconButton(onClick = { ThemeController.toggleTheme() }) {
                             Icon(
                                 imageVector = if (ThemeController.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "Toggle Theme",
+                                contentDescription = stringResource(R.string.theme_toggle),
                                 tint = KonectoTheme.semantics.accent
                             )
                         }
@@ -310,143 +328,160 @@ fun SessionsScreen(vm: MainViewModel) {
                         items = vm.sessions,
                         key = { _, item -> item.sessionId }
                     ) { index, session ->
-                        // Deslizar para borrar con opción Deshacer (Req 10)
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    val deletedSession = session
-                                    val deletedIdx = index
-                                    vm.sessions = vm.sessions.filterNot { it.sessionId == deletedSession.sessionId }
+                        var itemVisible by remember { mutableStateOf(reduceMotion) }
+                        LaunchedEffect(Unit) {
+                            if (!reduceMotion) {
+                                kotlinx.coroutines.delay((index * 40L).coerceAtMost(320L))
+                                itemVisible = true
+                            }
+                        }
 
-                                    coroutineScope.launch {
-                                        val snackResult = snackbarHostState.showSnackbar(
-                                            message = context.getString(R.string.sessions_deleted),
-                                            actionLabel = context.getString(R.string.sessions_undo),
-                                            duration = SnackbarDuration.Short
-                                        )
-                                        if (snackResult == SnackbarResult.ActionPerformed) {
-                                            vm.undoDeleteSession(deletedSession, deletedIdx)
-                                        } else {
-                                            try {
-                                                ApiClient.api.deleteSession(deletedSession.sessionId)
-                                            } catch (e: Exception) {
-                                                // ignore server delete error if offline
+                        AnimatedVisibility(
+                            visible = itemVisible,
+                            enter = fadeIn(animationSpec = tween(250)) +
+                                    slideInVertically(
+                                        initialOffsetY = { 20 },
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                    )
+                        ) {
+                            // Deslizar para borrar con opción Deshacer (Req 10)
+                            val dismissState = rememberSwipeToDismissBoxState(
+                                confirmValueChange = { dismissValue ->
+                                    if (dismissValue == SwipeToDismissBoxValue.EndToStart || dismissValue == SwipeToDismissBoxValue.StartToEnd) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        val deletedSession = session
+                                        val deletedIdx = index
+                                        vm.sessions = vm.sessions.filterNot { it.sessionId == deletedSession.sessionId }
+
+                                        coroutineScope.launch {
+                                            val snackResult = snackbarHostState.showSnackbar(
+                                                message = context.getString(R.string.sessions_deleted),
+                                                actionLabel = context.getString(R.string.sessions_undo),
+                                                duration = SnackbarDuration.Short
+                                            )
+                                            if (snackResult == SnackbarResult.ActionPerformed) {
+                                                vm.undoDeleteSession(deletedSession, deletedIdx)
+                                            } else {
+                                                try {
+                                                    ApiClient.api.deleteSession(deletedSession.sessionId)
+                                                } catch (e: Exception) {
+                                                    // ignore server delete error if offline
+                                                }
                                             }
                                         }
-                                    }
-                                    true
-                                } else false
-                            }
-                        )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            backgroundContent = {
-                                val color by animateColorAsState(
-                                    targetValue = when (dismissState.targetValue) {
-                                        SwipeToDismissBoxValue.Settled -> Color.Transparent
-                                        else -> KonectoTheme.semantics.errorBg
-                                    },
-                                    label = "dismissBg"
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(color)
-                                        .padding(horizontal = Spacing.l),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = stringResource(R.string.sessions_delete),
-                                        tint = KonectoTheme.semantics.errorText
-                                    )
+                                        true
+                                    } else false
                                 }
-                            }
-                        ) {
-                            Card(
-                                shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-                                    .clickable { vm.openConversation(session) }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .padding(horizontal = Spacing.m, vertical = 14.dp)
-                                        .fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
-                                    ) {
-                                        Text(
-                                            text = session.title,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                            )
 
-                                        if (session.activePartNumbers.isNotEmpty()) {
-                                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
-                                                session.activePartNumbers.forEach { pn ->
-                                                    Surface(
-                                                        color = MaterialTheme.colorScheme.surfaceVariant,
-                                                        shape = RoundedCornerShape(6.dp),
-                                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-                                                    ) {
-                                                        Text(
-                                                            text = pn,
-                                                            fontSize = 10.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = KonectoTheme.semantics.accent,
-                                                            fontFamily = FontFamily.Monospace,
-                                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                                                        )
+                            SwipeToDismissBox(
+                                state = dismissState,
+                                backgroundContent = {
+                                    val color by animateColorAsState(
+                                        targetValue = when (dismissState.targetValue) {
+                                            SwipeToDismissBoxValue.Settled -> Color.Transparent
+                                            else -> KonectoTheme.semantics.errorBg
+                                        },
+                                        label = "dismissBg"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(color)
+                                            .padding(horizontal = Spacing.l),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.sessions_delete),
+                                            tint = KonectoTheme.semantics.errorText
+                                        )
+                                    }
+                                }
+                            ) {
+                                Card(
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
+                                        .clickable { vm.openConversation(session) }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .padding(horizontal = Spacing.m, vertical = 14.dp)
+                                            .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                        ) {
+                                            Text(
+                                                text = session.shortTitle ?: session.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+
+                                            if (session.activePartNumbers.isNotEmpty()) {
+                                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                                                    session.activePartNumbers.forEach { pn ->
+                                                        Surface(
+                                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                                            shape = RoundedCornerShape(6.dp),
+                                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                                                        ) {
+                                                            Text(
+                                                                text = pn,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = KonectoTheme.semantics.accentText,
+                                                                fontFamily = FontFamily.Monospace,
+                                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
+
+                                            Text(
+                                                text = "${stringResource(R.string.sessions_msgs_count, session.messageCount)} • ${session.updatedAt.take(16).replace("T", " ")}",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
 
-                                        Text(
-                                            text = "${stringResource(R.string.sessions_msgs_count, session.messageCount)} • ${session.updatedAt.take(16).replace("T", " ")}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    IconButton(
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            val deletedSession = session
-                                            val deletedIdx = index
-                                            vm.sessions = vm.sessions.filterNot { it.sessionId == deletedSession.sessionId }
-                                            coroutineScope.launch {
-                                                val snackResult = snackbarHostState.showSnackbar(
-                                                    message = context.getString(R.string.sessions_deleted),
-                                                    actionLabel = context.getString(R.string.sessions_undo),
-                                                    duration = SnackbarDuration.Short
-                                                )
-                                                if (snackResult == SnackbarResult.ActionPerformed) {
-                                                    vm.undoDeleteSession(deletedSession, deletedIdx)
-                                                } else {
-                                                    vm.deleteConversation(deletedSession.sessionId)
+                                        IconButton(
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                val deletedSession = session
+                                                val deletedIdx = index
+                                                vm.sessions = vm.sessions.filterNot { it.sessionId == deletedSession.sessionId }
+                                                coroutineScope.launch {
+                                                    val snackResult = snackbarHostState.showSnackbar(
+                                                        message = context.getString(R.string.sessions_deleted),
+                                                        actionLabel = context.getString(R.string.sessions_undo),
+                                                        duration = SnackbarDuration.Short
+                                                    )
+                                                    if (snackResult == SnackbarResult.ActionPerformed) {
+                                                        vm.undoDeleteSession(deletedSession, deletedIdx)
+                                                    } else {
+                                                        vm.deleteConversation(deletedSession.sessionId)
+                                                    }
                                                 }
                                             }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.DeleteOutline,
+                                                contentDescription = stringResource(R.string.sessions_delete),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.DeleteOutline,
-                                            contentDescription = stringResource(R.string.sessions_delete),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
                                     }
                                 }
                             }

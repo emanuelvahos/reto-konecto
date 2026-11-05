@@ -25,6 +25,7 @@ class MainViewModel : ViewModel() {
     var activeSessionId by mutableStateOf<String?>(null)
     var activeSessionTitle by mutableStateOf("New Actuator Consultation")
     var messages by mutableStateOf<List<MessageRecord>>(emptyList())
+    var lastUserQuery by mutableStateOf<String?>(null)
 
     // Modo Desarrollador (Pantalla Debug oculta por Long-Press para evaluadores/devs)
     var isDeveloperModeUnlocked by mutableStateOf(false)
@@ -132,7 +133,7 @@ class MainViewModel : ViewModel() {
             isLoading = true
             errorMessage = null
             activeSessionId = session.sessionId
-            activeSessionTitle = session.title.take(28)
+            activeSessionTitle = session.shortTitle?.take(28) ?: session.title.take(28)
             currentScreen = AppScreen.CHAT
             try {
                 val history = ApiClient.api.getSessionHistory(session.sessionId)
@@ -168,17 +169,30 @@ class MainViewModel : ViewModel() {
         sessions = mutable
     }
 
-    fun sendUserMessage(queryText: String) {
+    fun setSimulatedLoading(enable: Boolean) {
+        isLoading = enable
+    }
+
+    fun retryLastMessage() {
+        val query = lastUserQuery ?: return
+        errorMessage = null
+        sendUserMessage(query, isRetry = true)
+    }
+
+    fun sendUserMessage(queryText: String, isRetry: Boolean = false) {
         val cleanQuery = queryText.trim()
         if (cleanQuery.isEmpty() || isLoading) return
+        lastUserQuery = cleanQuery
 
-        // 1. Añadir el mensaje del usuario de inmediato en la UI
-        val tempUserMsg = MessageRecord(
-            id = (messages.size + 1) * -1,
-            role = "user",
-            content = cleanQuery
-        )
-        messages = messages + tempUserMsg
+        // 1. Añadir el mensaje del usuario solo si no es un reintento
+        if (!isRetry) {
+            val tempUserMsg = MessageRecord(
+                id = (messages.size + 1) * -1,
+                role = "user",
+                content = cleanQuery
+            )
+            messages = messages + tempUserMsg
+        }
 
         // 2. Si está activo el modo mock de depuración, servir respuesta local de contract_v2_samples.json
         viewModelScope.launch {
@@ -188,7 +202,8 @@ class MainViewModel : ViewModel() {
             if (DebugMockProvider.isMockEnabled && appContext != null) {
                 val mockResp = DebugMockProvider.getMockResponse(appContext!!, cleanQuery)
                 if (mockResp != null) {
-                    kotlinx.coroutines.delay(400) // Simular latencia sutil
+                    val delayMs = if (cleanQuery.contains("loading", ignoreCase = true) || cleanQuery.contains("skeleton", ignoreCase = true)) 10000L else 400L
+                    kotlinx.coroutines.delay(delayMs)
                     activeSessionId = mockResp.sessionId
                     if (messages.size <= 1) {
                         activeSessionTitle = cleanQuery.take(28)

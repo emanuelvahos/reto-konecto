@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -30,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import io.konecto.series76.R
 import io.konecto.series76.data.ApiClient
 import io.konecto.series76.data.DebugTracePayload
+import io.konecto.series76.data.TraceStep
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
 import io.konecto.series76.ui.theme.KonectoTheme
@@ -84,7 +86,7 @@ fun DebugScreen(vm: MainViewModel) {
                         IconButton(onClick = { ThemeController.toggleTheme() }) {
                             Icon(
                                 imageVector = if (ThemeController.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "Toggle Theme",
+                                contentDescription = stringResource(R.string.theme_toggle),
                                 tint = KonectoTheme.semantics.accent
                             )
                         }
@@ -164,7 +166,7 @@ fun DebugScreen(vm: MainViewModel) {
                                     Icon(
                                         imageVector = Icons.Default.ContentCopy,
                                         contentDescription = stringResource(R.string.debug_copy_json),
-                                        tint = KonectoTheme.semantics.accent,
+                                        tint = KonectoTheme.semantics.accentText,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -172,8 +174,14 @@ fun DebugScreen(vm: MainViewModel) {
 
                             // Model, Provider & Total Latency
                             Text(
-                                text = "Model: ${trace.modelUsed} (${trace.provider.ifEmpty { "unknown" }}) | Latency: ${trace.totalLatencyMs} ms | Cost: \$${trace.costUsdEstimate}",
-                                color = KonectoTheme.semantics.accent,
+                                text = stringResource(
+                                    R.string.debug_metric_summary,
+                                    trace.modelUsed,
+                                    trace.provider.ifEmpty { "unknown" },
+                                    trace.totalLatencyMs.toInt(),
+                                    trace.costUsdEstimate
+                                ),
+                                color = KonectoTheme.semantics.accentText,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -190,41 +198,20 @@ fun DebugScreen(vm: MainViewModel) {
                             // Token Usage
                             if (trace.tokenUsage != null) {
                                 Text(
-                                    text = "Token Usage: ${trace.tokenUsage}",
+                                    text = stringResource(R.string.debug_token_usage, trace.tokenUsage),
                                     color = KonectoTheme.semantics.warningText,
                                     fontFamily = FontFamily.Monospace,
                                     fontSize = 11.sp
                                 )
                             }
 
-                            // Timeline Steps
+                            // Diagrama de cascada (Waterfall Timeline)
                             if (trace.steps.isNotEmpty()) {
                                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                                Text(
-                                    text = stringResource(R.string.debug_timeline_title),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
+                                WaterfallTimeline(
+                                    steps = trace.steps,
+                                    totalLatencyMs = trace.totalLatencyMs
                                 )
-                                trace.steps.forEach { step ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "• ${step.name}",
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 11.sp
-                                        )
-                                        Text(
-                                            text = "+${step.startMs}ms (${step.durationMs}ms)",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontFamily = FontFamily.Monospace,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
                             }
 
                             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -248,28 +235,28 @@ fun DebugScreen(vm: MainViewModel) {
                                         verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                                     ) {
                                         Text(
-                                            text = "TOOL #${idx + 1}: ${tc.toolName} (${tc.executionTimeMs} ms)",
+                                            text = stringResource(R.string.debug_tool_header, idx + 1, tc.toolName, tc.executionTimeMs.toInt()),
                                             color = KonectoTheme.semantics.successText,
                                             fontFamily = FontFamily.Monospace,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 12.sp
                                         )
                                         Text(
-                                            text = "Parameters: ${tc.arguments}",
+                                            text = stringResource(R.string.debug_params, tc.arguments.toString()),
                                             color = MaterialTheme.colorScheme.onSurface,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
                                         )
                                         if (!tc.sqlExecuted.isNullOrBlank()) {
                                             Text(
-                                                text = "SQL: ${tc.sqlExecuted}",
+                                                text = stringResource(R.string.debug_sql, tc.sqlExecuted),
                                                 color = if (ThemeController.isDarkTheme) Color(0xFF93C5FD) else Color(0xFF1D4ED8),
                                                 fontFamily = FontFamily.Monospace,
                                                 fontSize = 11.sp
                                             )
                                         }
                                         Text(
-                                            text = "Returned Data: ${tc.rawOutput.toString().take(900)}",
+                                            text = stringResource(R.string.debug_returned_data, tc.rawOutput.toString().take(900)),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontFamily = FontFamily.Monospace,
                                             fontSize = 11.sp
@@ -277,6 +264,94 @@ fun DebugScreen(vm: MainViewModel) {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Diagrama de Cascada (Waterfall) para los pasos de ejecución
+ */
+@Composable
+fun WaterfallTimeline(
+    steps: List<TraceStep>,
+    totalLatencyMs: Double,
+    modifier: Modifier = Modifier
+) {
+    val totalTime: Float = if (totalLatencyMs > 0.0) totalLatencyMs.toFloat() else 1.0f
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.debug_timeline_title),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        )
+
+        for (step in steps) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                // Fila de texto: Nombre del paso a la izquierda, duración a la derecha
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "• ${step.name}",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = "+${step.startMs.toInt()}ms (${step.durationMs.toInt()}ms)",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp
+                    )
+                }
+
+                // Barra horizontal proporcional en cascada
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                ) {
+                    val startOffsetFraction: Float = (step.startMs.toFloat() / totalTime).coerceIn(0f, 0.95f)
+                    val widthFraction: Float = (step.durationMs.toFloat() / totalTime).coerceIn(0.04f, 1f - startOffsetFraction)
+
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        if (startOffsetFraction > 0f) {
+                            Spacer(modifier = Modifier.weight(startOffsetFraction))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(widthFraction)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(KonectoTheme.semantics.accent.copy(alpha = 0.85f))
+                        )
+                        val remainingFraction: Float = (1f - startOffsetFraction - widthFraction).coerceAtLeast(0f)
+                        if (remainingFraction > 0f) {
+                            Spacer(modifier = Modifier.weight(remainingFraction))
                         }
                     }
                 }

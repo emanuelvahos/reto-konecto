@@ -11,7 +11,7 @@ import kotlinx.serialization.json.jsonObject
 
 object DebugMockProvider {
     const val isAvailable: Boolean = true
-    var isMockEnabled by mutableStateOf(false)
+    var isMockEnabled by mutableStateOf(true)
     var selectedSampleKey by mutableStateOf("single_spec_card")
 
     val sampleKeys = listOf(

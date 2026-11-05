@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import io.konecto.series76.R
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
+import io.konecto.series76.ui.ShimmerSkeletonCard
 import io.konecto.series76.ui.components.ChatBubbleItem
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
@@ -103,12 +104,13 @@ fun ChatScreen(vm: MainViewModel) {
     }
 
     val displayTitle = remember(vm.activeSessionTitle, activePart) {
-        val title = vm.activeSessionTitle.trim()
-        if (activePart != null && title.contains(activePart, ignoreCase = true)) {
-            // No duplicar el chip si el título ya contiene el part number
-            title.take(28)
+        val raw = vm.activeSessionTitle.trim()
+        if (raw.isNotEmpty() && raw != "Series 76" && raw != "New Actuator Consultation") {
+            raw.take(28)
+        } else if (activePart != null) {
+            activePart
         } else {
-            title.take(28)
+            ""
         }
     }
 
@@ -173,8 +175,8 @@ fun ChatScreen(vm: MainViewModel) {
                                     color = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.weight(1f, fill = false)
                                 )
-                                // Mostrar chip solo si no es idéntico al título
-                                if (activePart != null && !displayTitle.equals(activePart, ignoreCase = true)) {
+                                // Mostrar chip solo si no es idéntico ni está contenido en el título
+                                if (activePart != null && !displayTitle.contains(activePart, ignoreCase = true)) {
                                     Surface(
                                         color = KonectoTheme.semantics.accentContainer,
                                         shape = RoundedCornerShape(4.dp),
@@ -184,7 +186,7 @@ fun ChatScreen(vm: MainViewModel) {
                                             text = activePart,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = KonectoTheme.semantics.accent,
+                                            color = KonectoTheme.semantics.accentText,
                                             fontFamily = FontFamily.Monospace,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
@@ -202,7 +204,7 @@ fun ChatScreen(vm: MainViewModel) {
                         IconButton(onClick = { ThemeController.toggleTheme() }) {
                             Icon(
                                 imageVector = if (ThemeController.isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "Toggle Theme",
+                                contentDescription = stringResource(R.string.theme_toggle),
                                 tint = KonectoTheme.semantics.accent
                             )
                         }
@@ -230,15 +232,40 @@ fun ChatScreen(vm: MainViewModel) {
             if (vm.errorMessage != null) {
                 Surface(
                     color = KonectoTheme.semantics.errorBg,
+                    shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.s, vertical = Spacing.xs)
                 ) {
-                    Text(
-                        text = "⚠️ ${vm.errorMessage}",
-                        color = KonectoTheme.semantics.errorText,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(Spacing.s)
-                    )
+                    Row(
+                        modifier = Modifier.padding(Spacing.s),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.chat_error_title),
+                                color = KonectoTheme.semantics.errorText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = vm.errorMessage!!,
+                                color = KonectoTheme.semantics.errorText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                        TextButton(
+                            onClick = { vm.retryLastMessage() }
+                        ) {
+                            Text(
+                                text = stringResource(R.string.retry),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
 
@@ -307,23 +334,31 @@ fun ChatScreen(vm: MainViewModel) {
                 }
                 if (vm.isLoading) {
                     item(key = "loading_indicator") {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(Spacing.s)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                             ) {
-                                TypingIndicator()
-                                Text(
-                                    text = stringResource(R.string.chat_thinking),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                    modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs)
+                                ) {
+                                    TypingIndicator()
+                                    Text(
+                                        text = stringResource(R.string.chat_thinking),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
+
+                            // Ficha técnica en estado de carga con animación shimmer
+                            ShimmerSkeletonCard()
                         }
                     }
                 }

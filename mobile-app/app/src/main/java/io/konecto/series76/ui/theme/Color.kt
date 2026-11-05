@@ -10,7 +10,8 @@ import androidx.compose.ui.graphics.Color
 
 // Electric Amber Brand & Accent Tokens
 val ElectricAmberDark = Color(0xFFFBBF24)       // Glowing electric amber for dark mode
-val ElectricAmberLight = Color(0xFFD97706)      // High-contrast industrial amber for light mode
+val ElectricAmberLight = Color(0xFFD97706)      // High-contrast industrial amber for light mode controls
+val ElectricAmberLightText = Color(0xFFB45309)  // Deep industrial amber (WCAG AA compliant >= 4.5:1 on light backgrounds)
 val AmberContainerDark = Color(0xFF452205)
 val AmberContainerLight = Color(0xFFFEF3C7)
 val OnAmberDark = Color(0xFF1E1303)
@@ -50,6 +51,7 @@ val LightTextMuted = Color(0xFF94A3B8)
 @Immutable
 data class SemanticColors(
     val accent: Color,
+    val accentText: Color,
     val onAccent: Color,
     val accentContainer: Color,
     val successBg: Color,
@@ -69,6 +71,7 @@ data class SemanticColors(
 
 val DarkSemanticColors = SemanticColors(
     accent = ElectricAmberDark,
+    accentText = ElectricAmberDark,
     onAccent = OnAmberDark,
     accentContainer = AmberContainerDark,
     successBg = TealContainerDark,
@@ -88,6 +91,7 @@ val DarkSemanticColors = SemanticColors(
 
 val LightSemanticColors = SemanticColors(
     accent = ElectricAmberLight,
+    accentText = ElectricAmberLightText,
     onAccent = OnAmberLight,
     accentContainer = AmberContainerLight,
     successBg = TealContainerLight,
