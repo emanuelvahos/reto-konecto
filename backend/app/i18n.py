@@ -171,6 +171,22 @@ def render_degraded_alert(lang: str) -> Dict[str, str]:
             "message": DEGRADED_ALERT["message"].get(lang, DEGRADED_ALERT["message"]["en"])}
 
 
+HTTP_ERRORS: Dict[str, Dict[str, str]] = {
+    "422": {"en": "The request is not valid. Check the data you sent.", "es": "La solicitud no es válida. Revisa los datos enviados."},
+    "404": {"en": "Not found.", "es": "No se encontró lo que buscas."},
+    "401": {"en": "Authentication required or credentials not valid.", "es": "Se requiere autenticación o las credenciales no son válidas."},
+    "403": {"en": "You do not have access to this resource.", "es": "No tienes acceso a este recurso."},
+    "405": {"en": "That operation is not allowed here.", "es": "Esa operación no está permitida aquí."},
+    "500": {"en": "Something went wrong on our side. Please try again in a few seconds.", "es": "Ocurrió un problema de nuestro lado. Inténtalo de nuevo en unos segundos."},
+    "default": {"en": "The request could not be completed.", "es": "No se pudo completar la solicitud."},
+}
+
+
+def render_http_error(status_code: int, lang: str) -> str:
+    entry = HTTP_ERRORS.get(str(status_code)) or HTTP_ERRORS["default"]
+    return entry.get(lang, entry["en"])
+
+
 def render_alert_title(code: str, lang: str) -> str:
     entry = ALERT_TITLES.get(code)
     return code if entry is None else entry.get(lang, entry["en"])

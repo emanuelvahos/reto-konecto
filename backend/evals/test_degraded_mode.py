@@ -89,6 +89,8 @@ def test_compare_two_explicit_part_numbers_names_both(nollm):
     answer, ui, _, _, _, meta = turn(f"compare {PN} with {PN2}", "en")
     assert ui["display_type"] == "COMPARISON_TABLE" and len(ui["actuators"]) == 2
     assert PN in answer and PN2 in answer
+    answer_r, *_ = turn(f"compare {PN2} with {PN}", "en")
+    assert answer.index(PN) < answer.index(PN2) and answer_r.index(PN2) < answer_r.index(PN)   # sigue el orden de la pregunta
     assert meta["verification"]["status"] == "fallback_template"
     assert_informative(ui)
 

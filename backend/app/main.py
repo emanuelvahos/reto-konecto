@@ -4,7 +4,10 @@ import time
 import uuid
 from typing import List, Optional, Dict, Any
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import load_llm_config
@@ -35,6 +38,53 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+async def _request_lang(request: Request) -> str:
+    """Idioma del error: locale del cuerpo JSON > texto de la consulta > Accept-Language > inglés."""
+    from app.i18n import detect_language
+
+    locale, query = None, ""
+    try:
+        body = await request.json()
+        if isinstance(body, dict):
+            locale = body.get("locale") if isinstance(body.get("locale"), str) else None
+            query = body.get("query") if isinstance(body.get("query"), str) else ""
+    except Exception:  # noqa: BLE001  (cuerpo ausente o no JSON)
+        pass
+    if locale not in ("es", "en") and not query.strip():
+        header = (request.headers.get("accept-language") or "").lower()
+        locale = "es" if header.startswith("es") else None
+    return detect_language(query, locale, [])
+
+
+def _http_error(status_code: int, message: str, headers: Optional[Dict[str, str]] = None) -> JSONResponse:
+    # `detail` (compatible con FastAPI) y `message` llevan el mismo texto corto y localizado, sin detalles internos
+    return JSONResponse(status_code=status_code, content={"detail": message, "message": message}, headers=headers)
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_handler(request: Request, exc: RequestValidationError):
+    from app.i18n import render_http_error
+
+    return _http_error(422, render_http_error(422, await _request_lang(request)))
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_handler(request: Request, exc: StarletteHTTPException):
+    from app.i18n import render_http_error
+
+    headers = {"WWW-Authenticate": "Bearer"} if exc.status_code == 401 else None
+    return _http_error(exc.status_code, render_http_error(exc.status_code, await _request_lang(request)), headers)
+
+
+@app.exception_handler(Exception)
+async def _unhandled_handler(request: Request, exc: Exception):
+    import logging
+    from app.i18n import render_http_error
+
+    logging.getLogger("uvicorn.error").error("Unhandled error on %s %s: %s", request.method, request.url.path, type(exc).__name__)
+    return _http_error(500, render_http_error(500, await _request_lang(request)))
 
 
 def is_valid_uuid(val: Optional[str]) -> bool:

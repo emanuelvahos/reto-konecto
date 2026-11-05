@@ -141,7 +141,9 @@ def build_fallback_answer(
 ) -> str:
     groups = tuple(groups or DEFAULT_GROUPS)
     if rows and compare and len(rows) >= 2 and not recommend:   # comparación de números de parte explícitos: una frase por modelo
-        return " ".join(describe_row(lang, r, groups) + "." for r in rows[:3])
+        q = (query or "").upper()
+        ordered = sorted(rows, key=lambda r: q.find(r["base_part_number"]) if r["base_part_number"] in q else 10**6)  # orden de la pregunta
+        return " ".join(describe_row(lang, r, groups) + "." for r in ordered[:3])
     if rows:
         sentence = describe_row(lang, rows[0], groups)
         if recommend:

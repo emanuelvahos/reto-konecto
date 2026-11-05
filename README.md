@@ -31,7 +31,7 @@ Edita `.env` solo si quieres respuestas redactadas por el modelo: pon `LLM_PROVI
 docker compose up --build
 ```
 
-La primera vez tarda por la construcción de la imagen. Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
+La primera vez descarga imágenes base y dependencias (en una prueba de clon limpio, la construcción del backend con `--no-cache` tardó 89 s una vez descargada la imagen de Python; el total depende de tu red). Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
 
 - API: <http://localhost:8001> (Swagger: <http://localhost:8001/docs>). PostgreSQL en el host: puerto `5433`.
 - Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (validando las reglas físicas) y siembra 68 actuadores y 3 usuarios demo; después se inicia Uvicorn.
@@ -125,7 +125,7 @@ El **oráculo** (`golden.json`) es independiente de lo que devuelven las herrami
 Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q    # 506 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
+python -m pytest backend/evals -q    # 514 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
@@ -143,15 +143,18 @@ Los perfiles están en `backend/config/llm_profiles.json` y se eligen con `LLM_P
 | Modelo | `nvidia/nemotron-3.5-lightning-30b-a3b` | `openai/gpt-4o-mini` |
 | Costo | $0 (capa gratuita de NIM) | $0.15 / 1M tokens de entrada, $0.60 / 1M de salida (precio de lista) |
 
-Justificación: NIM permite repetir cientos de corridas de evaluación sin gastar el presupuesto; OpenRouter con `gpt-4o-mini` es el candidato de entrega por su precio. Como no hay embeddings, cambiar de proveedor no exige reingestar ni tocar volúmenes. **Solo se ha medido con NIM** (ver limitaciones).
+Justificación: NIM permite repetir cientos de corridas de evaluación sin gastar el presupuesto; OpenRouter con `gpt-4o-mini` es el candidato de entrega por su precio. Como no hay embeddings, cambiar de proveedor no exige reingestar ni tocar volúmenes. OpenRouter se midió en una pasada corta (ver abajo).
 
-Resultados medidos (todos con NIM; los informes están en `backend/evals/`):
+Resultados medidos el 2026-11-05 en una validación final (los informes de `backend/evals/` pueden ser de corridas anteriores). Latencias por caso (los casos de varios turnos suman los turnos):
 
-| Batería | Resultado |
-| --- | --- |
-| `EVALUATION_REPORT.md` (11 escenarios) | 11/11 |
-| `ADVERSARIAL_REPORT.md` (30 casos) | 30/30 |
-| `HELDOUT_REPORT.md` (40 casos escritos sin acceso al router) | 39/40 en la corrida final; 32/40 en la primera, antes de las correcciones generales |
+| Batería | NIM (`nemotron-3.5-lightning-30b-a3b`) | OpenRouter (`gpt-4o-mini`) |
+| --- | --- | --- |
+| Evals (11 escenarios) | 11/11 | 11/11 (latencia por escenario 2,0–6,8 s) |
+| Adversarial (30 casos) | 30/30; p50 4,5 s, p95 6,4 s; 52 reintentos de transporte | 30/30; p50 2,6 s, p95 5,8 s; 0 reintentos de transporte; 1 reintento del verificador |
+| Ciega (`heldout.json`) | 39/40 (40 casos); p50 4,5 s, p95 8,9 s; 73 reintentos de transporte | 9/10 (muestra de 10 casos); p50 2,4 s, p95 9,6 s |
+| Costo | $0 | ≈ $0,0003 por caso adversarial y ≈ $0,0004 por caso ciego (tokens × precio de lista, calculado por el backend; no es la factura de OpenRouter) |
+
+Con 10–40 casos las diferencias entre proveedores no son estadísticamente concluyentes. Ambos proveedores fallan el mismo caso (HLD-20, ver limitaciones). En la primera corrida de la batería ciega, antes de las correcciones generales, NIM obtuvo 32/40.
 
 ## Pantalla de depuración y credenciales demo
 
@@ -185,7 +188,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 - **HLD-20 y seguimientos ambiguos.** En la batería ciega falla un seguimiento («¿alguno de esos modelos trifásicos pequeños sirve?» tras un N/A): el router lo clasifica `uncertain`, decide el LLM y su respuesta habla de alternativos monofásicos sin decir que los trifásicos no están disponibles. No se corrigió con una regla general.
 - **El router solo cubre español e inglés.** Otro idioma pasa al LLM sin las protecciones previas.
 - **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
-- **Tasas medidas solo con NIM.** Los resultados de arriba corresponden a `nvidia/nemotron-3.5-lightning-30b-a3b`. No hay corrida con OpenRouter todavía; no se afirma latencia ni tasa de acierto para `gpt-4o-mini`.
+- **OpenRouter medido solo en una pasada corta** (evals, adversarial y 10 casos ciegos, una corrida). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado.
 - **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
 - **Modo degradado.** Las respuestas de plantilla son más rígidas que las del LLM y las consultas que el router no clasifica no se pueden contestar sin modelo. Las cifras son las mismas (vienen de la base de datos), no la redacción. Esta ruta se probó con pruebas automáticas, no con una corrida de las baterías sin LLM.
 - La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.

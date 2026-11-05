@@ -93,7 +93,7 @@ There are no embeddings (pgvector was retired in Phase 2A), so provider switchin
 
 ## 5. Mobile-First UI & Developer X-Ray Standards (`mobile-app/`)
 
-- **Single Package Architecture:** All Kotlin sources reside under `io.konecto.series76` (`data/`, `ui/`, `util/`) for immediate navigation in Android Studio.
+- **Single Package Architecture:** All Kotlin sources reside under `io.konecto.series76` (`data/`, `ui/`, `util/`). Final `ui/` layout (confirmed by the app agent): `ui/login/LoginScreen.kt`, `ui/sessions/SessionsScreen.kt`, `ui/chat/ChatScreen.kt`, `ui/debug/DebugScreen.kt`, `ui/components/`, `ui/theme/` and `ui/ChatComponents.kt` (cards, comparison table, alerts).
 - **Interactive Product Cards (`ChatComponents.kt`):**
   - Never display actuator specifications as a wall of raw text.
   - Render `SingleActuatorSpecCard` (for 1 model) or `ActuatorComparisonTable` (for 2+ models) with an interactive **60 Hz / 50 Hz** frequency selector chip.
@@ -101,6 +101,7 @@ There are no embeddings (pgvector was retired in Phase 2A), so provider switchin
   - Strip raw Markdown bold asterisks (`**`) in `ChatBubbleItem` via `formatMarkdownBold(text): AnnotatedString`.
 - **Zero-Cost On-Device Voice Normalization (`VoiceNormalizer.kt`):**
   - Transforms spoken phonetic strings in English or Spanish (*"seven six three B zero zero dash one one three zero zero zero zero zero slash A"*) into canonical part numbers (`763B00-11300000/A`) on-device at **$0.00 USD** LLM cost.
-- **Hidden Developer X-Ray Debug Screen (`Screens.kt`):**
-  - Unlocked by **Long-Pressing (2 seconds)** the top navigation bar title, exposing full tool traces, SQL queries, latency metrics, and active session entities.
+- **Hidden Developer X-Ray Debug Screen (`ui/debug/DebugScreen.kt`):**
+  - Opened by **Long-Pressing (2 seconds)** the top bar title, with haptic feedback and a toast; exposes full tool traces, SQL queries, latency metrics, and active session entities.
+- **Mock data is debug-only:** the mock provider and `contract_v2_samples.json` live in the `debug` sourceSet and are isolated from the release build.
 
