@@ -2,6 +2,13 @@
 
 Asistente conversacional para consultar, comparar y recomendar los actuadores eléctricos Series 76 (catálogo de 68 modelos extraído de `docs/series_76_electric_data.pdf`). Backend FastAPI + PostgreSQL 16 y una app Android.
 
+## Capturas
+
+<table>
+<tr><td align="center"><img src="docs/screenshots/01-login.png" width="200" alt="Pantalla de inicio de sesión con el botón «Usar cuenta demo»"><br><sub>Pantalla de inicio de sesión con el botón «Usar cuenta demo»</sub></td><td align="center"><img src="docs/screenshots/02-sesiones.png" width="200" alt="Lista de conversaciones guardadas"><br><sub>Lista de conversaciones guardadas</sub></td><td align="center"><img src="docs/screenshots/03-ficha-actuador.png" width="200" alt="Ficha de un actuador con selector 60 Hz / 50 Hz"><br><sub>Ficha de un actuador con selector 60 Hz / 50 Hz</sub></td><td align="center"><img src="docs/screenshots/04-comparacion.png" width="200" alt="Tabla comparativa de dos actuadores"><br><sub>Tabla comparativa de dos actuadores</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/05-ficha-completa.png" width="200" alt="Ficha técnica completa en un panel inferior"><br><sub>Ficha técnica completa en un panel inferior</sub></td><td align="center"><img src="docs/screenshots/06-voz-escuchando.png" width="200" alt="Dictado por voz en curso"><br><sub>Dictado por voz en curso</sub></td><td align="center"><img src="docs/screenshots/07-alerta.png" width="200" alt="Alerta del sistema en una respuesta"><br><sub>Alerta del sistema en una respuesta</sub></td><td align="center"><img src="docs/screenshots/08-modo-claro.png" width="200" alt="Tema claro"><br><sub>Tema claro</sub></td></tr>
+</table>
+
 ## Qué es y cómo funciona
 
 1. Cada mensaje pasa primero por un **router determinista** (es/en, sin LLM) que recorta intentos de inyección, responde lo que está fuera de alcance (precio, plazos, stock) y decide qué herramienta usar.
@@ -259,19 +266,19 @@ La aplicación móvil (`mobile-app/`) está escrita en **Kotlin** con **Jetpack 
 
 ### Conexión con el servidor backend (FastAPI :8001)
 
-La URL base del backend se puede configurar desde el diálogo de ajustes de red en la pantalla de inicio de sesión o mediante el icono de engranaje:
+La URL se cambia en los ajustes de servidor de la app (pantalla de inicio de sesión, icono de engranaje); lo que se guarda ahí tiene prioridad sobre el valor por defecto. Sin ajuste guardado, la app elige la URL por defecto así (`ServerPreferences.DEFAULT_SERVER_URL`): si detecta un emulador (huella `generic`/`unknown`, modelo con `google_sdk`, `Emulator` o `Android SDK built for x86`, fabricante Genymotion, o hardware `goldfish`/`ranchu`) usa `http://10.0.2.2:8001/`; en cualquier otro dispositivo usa `http://localhost:8001/`. La app admite HTTP sin cifrar (`usesCleartextTraffic`), necesario para estas URLs.
 
-1. **Emulador Android Oficial:**
-   - URL predeterminada: `http://10.0.2.2:8001/` (alias del localhost del host anfitrión).
-2. **Celular físico por USB (recomendado para baja latencia y pruebas de audio):**
-   - Ejecutar en la terminal del PC:
-     ```bash
-     adb reverse tcp:8001 tcp:8001
-     ```
-   - En la app, seleccionar el botón rápido **Localhost (USB con adb reverse)** o configurar `http://localhost:8001/`.
-3. **Celular físico por Wi-Fi:**
-   - Asegurarse de que PC y celular estén en la misma red local.
-   - Configurar `http://<IP-LOCAL-DE-TU-PC>:8001/`.
+1. **Emulador:** no hay que hacer nada; `10.0.2.2` es el alias del `localhost` del PC.
+2. **Celular físico con cable USB:** `http://localhost:8001/` (el valor por defecto en un dispositivo real) solo funciona si ejecutas en el PC, con el celular conectado y la depuración USB activa:
+   ```bash
+   adb reverse tcp:8001 tcp:8001
+   ```
+   El diálogo de ajustes tiene el botón **Localhost** para este caso.
+3. **Celular físico sin cable (Wi-Fi):** `localhost` no sirve, porque apunta al propio celular. En los ajustes de la app hay que escribir la IP del PC en la red local, por ejemplo `http://192.168.1.50:8001/` (en Windows, `ipconfig`), con PC y celular en la misma red. Windows Firewall suele bloquear la conexión entrante: crea una regla para el puerto 8001 (PowerShell como administrador):
+   ```powershell
+   New-NetFirewallRule -DisplayName "Konecto API 8001" -Direction Inbound -Protocol TCP -LocalPort 8001 -Action Allow
+   ```
+   Con USB no hace falta ni la IP ni la regla de firewall.
 
 ### Entrada y salida de voz (STT / TTS) y comportamiento sin Google
 
@@ -311,7 +318,7 @@ El botón **«Usar cuenta demo»** de la pantalla de inicio de sesión precarga 
 │   ├── db/init.sql        # esquema (actuators, users, chat_sessions, chat_messages)
 │   ├── scripts/           # extract_from_pdf.py, build_catalog.py, ingest.py, build_contract_samples.py
 │   └── evals/             # pruebas, runners, oráculo, informes
-├── docs/                  # PDFs de origen
+├── docs/                  # PDFs de origen y capturas de la app (screenshots/)
 ├── mobile-app/            # App Android (Kotlin + Jetpack Compose)
 ├── docker-compose.yml
 └── .env.example
