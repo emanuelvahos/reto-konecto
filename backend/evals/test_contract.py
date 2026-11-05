@@ -14,8 +14,8 @@ from app.schemas import ConversationRequest, ConversationResponse  # noqa: E402
 SAMPLES = json.loads((Path(__file__).parent / "fixtures" / "contract_v2_samples.json").read_text(encoding="utf-8"))
 
 
-def test_fixture_has_four_samples():
-    assert set(SAMPLES) == {"single_spec_card", "comparison_table", "recommendation_with_relaxation", "clarification"}
+def test_fixture_has_the_four_original_samples_plus_the_real_ones():
+    assert {"single_spec_card", "comparison_table", "recommendation_with_relaxation", "clarification"} <= set(SAMPLES) and len(SAMPLES) == 11
 
 
 @pytest.mark.parametrize("name", sorted(SAMPLES))
@@ -82,3 +82,14 @@ def test_out_of_scope_alert_and_step_detail_are_additive():
         assert alert["severity"] == "info" and UIAlert.model_validate(alert).code == "OUT_OF_SCOPE"
     assert TraceStep(name="router", start_ms=0, duration_ms=1).detail is None   # ausente = None (compatible)
     assert TraceStep(name="router", start_ms=0, duration_ms=1, detail="part_number").detail == "part_number"
+
+
+def test_new_2d_fields_are_additive_and_present_in_real_samples():
+    from app.schemas import UIAlert
+
+    assert UIAlert(code="X", severity="info", message="m").title == ""                      # ausente = vacío (compatible)
+    for name, sample in SAMPLES.items():
+        r = ConversationResponse.model_validate(sample)
+        for a in r.ui_payload.actuators:
+            assert isinstance(a["source_page"], int) and a["source_method"]
+        assert all(al.title for al in r.ui_payload.alerts), name

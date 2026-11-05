@@ -4,17 +4,48 @@
     "intent": "lookup",
     "verification": {
       "status": "verified",
-      "numbers_checked": 3,
+      "numbers_checked": 6,
       "ungrounded": []
     },
-    "session_id": "00000000-0000-4000-8000-000000000001",
-    "answer": "Ficha del modelo solicitado.",
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "763B00-11300000/A: torque on/off 500 Nm (4400 in-lbs), torque modulante 380 Nm (3350 in-lbs), potencia del motor 90 W.",
     "ui_payload": {
       "display_type": "SINGLE_SPEC_CARD",
       "actuators": [
         {
-          "base_part_number": "EXAMPLE-PN-1",
-          "frame_size": 1
+          "id": 6,
+          "base_part_number": "763B00-11300000/A",
+          "size_code": "763B",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 500.0,
+          "on_off_torque_in_lbs": 4400.0,
+          "modulating_torque_nm": 380.0,
+          "modulating_torque_in_lbs": 3350.0,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 16,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 4.8,
+          "fla_50hz_amps": 4.6,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 5.0,
+          "lra_50hz_amps": 4.9,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 90,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
         }
       ],
       "engineering_warnings": [],
@@ -24,35 +55,98 @@
       "suggested_followups": [
         {
           "label": "Compara con el tamaño siguiente",
-          "query": "Compara EXAMPLE-PN-1 con EXAMPLE-PN-2"
+          "query": "Compara 763B00-11300000/A con 763C00-11300000/A"
         },
         {
           "label": "Ver valores a 50 Hz",
-          "query": "¿Cuáles son los valores a 50 Hz del EXAMPLE-PN-1?"
+          "query": "¿Cuáles son los valores a 50 Hz del 763B00-11300000/A?"
         },
         {
           "label": "Alternativas del mismo voltaje",
-          "query": "Muestra alternativas al EXAMPLE-PN-1 con el mismo voltaje (110V)"
+          "query": "Muestra alternativas al 763B00-11300000/A con el mismo voltaje (110V)"
         }
       ]
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 1200.5,
-      "token_usage": {},
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 736.24,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0
+      },
       "active_context_part_numbers": [
-        "EXAMPLE-PN-1"
+        "763B00-11300000/A"
       ],
-      "tool_calls": [],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "763B00-11300000/A",
+            "focus": [
+              "torque",
+              "power"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "763B00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 500,
+                "on_off_torque_in_lbs": 4400,
+                "modulating_torque_nm": 380,
+                "modulating_torque_in_lbs": 3350,
+                "motor_power_watts": 90
+              }
+            ]
+          },
+          "execution_time_ms": 68.52
+        }
+      ],
       "steps": [
         {
-          "name": "tool:lookup",
-          "start_ms": 10.0,
-          "duration_ms": 25.5
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 42.41,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 43.2,
+          "duration_ms": 63.54,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 341.42,
+          "duration_ms": 76.32,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 478.76,
+          "duration_ms": 94.21,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 572.98,
+          "duration_ms": 89.24,
+          "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "example"
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
     }
   },
   "comparison_table": {
@@ -60,58 +154,213 @@
     "intent": "lookup",
     "verification": {
       "status": "verified",
-      "numbers_checked": 8,
+      "numbers_checked": 6,
       "ungrounded": []
     },
-    "session_id": "00000000-0000-4000-8000-000000000002",
-    "answer": "Comparación de dos modelos.",
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "763B00-11300000/A: tiempo de giro de 90° 26 s a 60 Hz, 32 s a 50 Hz. (+1 más en la ficha)",
     "ui_payload": {
       "display_type": "COMPARISON_TABLE",
       "actuators": [
         {
-          "base_part_number": "EXAMPLE-PN-1",
-          "frame_size": 1
+          "id": 6,
+          "base_part_number": "763B00-11300000/A",
+          "size_code": "763B",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 500.0,
+          "on_off_torque_in_lbs": 4400.0,
+          "modulating_torque_nm": 380.0,
+          "modulating_torque_in_lbs": 3350.0,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 16,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 4.8,
+          "fla_50hz_amps": 4.6,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 5.0,
+          "lra_50hz_amps": 4.9,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 90,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
         },
         {
-          "base_part_number": "EXAMPLE-PN-2",
-          "frame_size": 2
+          "id": 5,
+          "base_part_number": "763A00-11300000/A",
+          "size_code": "763A",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 300.0,
+          "on_off_torque_in_lbs": 2650.0,
+          "modulating_torque_nm": 220.0,
+          "modulating_torque_in_lbs": 1950.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 29,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 25.0,
+          "speed_50hz_sec": 31.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 2.6,
+          "fla_50hz_amps": 2.5,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 2.9,
+          "lra_50hz_amps": 3.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
         }
       ],
       "engineering_warnings": [],
-      "alerts": [
-        {
-          "code": "EXAMPLE_ALERT",
-          "severity": "info",
-          "message": "Mensaje de ejemplo."
-        }
-      ],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
       "suggested_followups": [
         {
+          "label": "Compara con el tamaño siguiente",
+          "query": "Compara 763B00-11300000/A con 763C00-11300000/A"
+        },
+        {
           "label": "Ver valores a 50 Hz",
-          "query": "¿Cuáles son los valores a 50 Hz del EXAMPLE-PN-1?"
+          "query": "¿Cuáles son los valores a 50 Hz del 763B00-11300000/A?"
+        },
+        {
+          "label": "Alternativas del mismo voltaje",
+          "query": "Muestra alternativas al 763B00-11300000/A con el mismo voltaje (110V)"
         }
       ]
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 2100.0,
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 791.61,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0
+      },
       "active_context_part_numbers": [
-        "EXAMPLE-PN-1",
-        "EXAMPLE-PN-2"
+        "763B00-11300000/A",
+        "763A00-11300000/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "763B00-11300000/A",
+            "focus": [
+              "speed"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "763B00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "speed_60hz_sec": 26,
+                "speed_50hz_sec": 32,
+                "motor_power_watts": 90
+              }
+            ]
+          },
+          "execution_time_ms": 215.06
+        },
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "763A00-11300000/A",
+            "focus": [
+              "speed"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "763A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "speed_60hz_sec": 25,
+                "speed_50hz_sec": 31,
+                "motor_power_watts": 40
+              }
+            ]
+          },
+          "execution_time_ms": 225.95
+        }
       ],
       "steps": [
         {
-          "name": "tool:lookup",
-          "start_ms": 5.0,
-          "duration_ms": 20.0
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 169.91,
+          "detail": null
         },
         {
-          "name": "tool:lookup",
-          "start_ms": 30.0,
-          "duration_ms": 18.0
+          "name": "router",
+          "start_ms": 170.6,
+          "duration_ms": 70.37,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 286.25,
+          "duration_ms": 220.82,
+          "detail": null
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 316.97,
+          "duration_ms": 228.54,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 585.96,
+          "duration_ms": 52.29,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 638.27,
+          "duration_ms": 59.47,
+          "detail": null
         }
       ],
-      "provider": "example"
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
     }
   },
   "recommendation_with_relaxation": {
@@ -121,115 +370,1805 @@
       "status": "fallback_template",
       "numbers_checked": 5,
       "ungrounded": [
-        "example-ungrounded-token"
+        "4"
       ]
     },
-    "session_id": "00000000-0000-4000-8000-000000000003",
-    "answer": "Recomendación con restricciones relajadas.",
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Mejor opción: 761X30-11380000/A: torque on/off 70 Nm (620 in-lbs), tiempo de giro de 90° 17 s (fija). (+4 más en la ficha) Ningún modelo cumple todas las restricciones a la vez; se listan las alternativas más cercanas.",
     "ui_payload": {
       "display_type": "RECOMMENDATION_LIST",
       "actuators": [
         {
-          "base_part_number": "EXAMPLE-PN-3",
-          "frame_size": 3
+          "id": 39,
+          "base_part_number": "761X30-11380000/A",
+          "size_code": "761X",
+          "frame_size": 1,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V AC/DC",
+          "voltage_num": 24,
+          "phase_type": "AC/DC",
+          "service_support": "On/Off Only",
+          "is_available": true,
+          "on_off_torque_nm": 70.0,
+          "on_off_torque_in_lbs": 620.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 350,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": null,
+          "speed_60hz_sec": null,
+          "speed_50hz_sec": null,
+          "speed_dc_or_fixed_sec": 17.0,
+          "fla_60hz_amps": null,
+          "fla_50hz_amps": null,
+          "fla_dc_or_fixed_amps": 5.0,
+          "lra_60hz_amps": null,
+          "lra_50hz_amps": null,
+          "lra_dc_or_fixed_amps": 12.8,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 3,
+          "source_method": "A=B"
+        },
+        {
+          "id": 40,
+          "base_part_number": "761Y30-11380000/A",
+          "size_code": "761Y",
+          "frame_size": 1,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V AC/DC",
+          "voltage_num": 24,
+          "phase_type": "AC/DC",
+          "service_support": "On/Off Only",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 700.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 30,
+          "cycles_per_hour": 300,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": null,
+          "speed_60hz_sec": null,
+          "speed_50hz_sec": null,
+          "speed_dc_or_fixed_sec": 20.0,
+          "fla_60hz_amps": null,
+          "fla_50hz_amps": null,
+          "fla_dc_or_fixed_amps": 6.3,
+          "lra_60hz_amps": null,
+          "lra_50hz_amps": null,
+          "lra_dc_or_fixed_amps": 12.8,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 3,
+          "source_method": "A=B"
+        },
+        {
+          "id": 41,
+          "base_part_number": "762X30-11380000/A",
+          "size_code": "762X",
+          "frame_size": 2,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V AC/DC",
+          "voltage_num": 24,
+          "phase_type": "AC/DC",
+          "service_support": "On/Off Only",
+          "is_available": true,
+          "on_off_torque_nm": 150.0,
+          "on_off_torque_in_lbs": 1350.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 200,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": null,
+          "speed_60hz_sec": null,
+          "speed_50hz_sec": null,
+          "speed_dc_or_fixed_sec": 22.0,
+          "fla_60hz_amps": null,
+          "fla_50hz_amps": null,
+          "fla_dc_or_fixed_amps": 6.0,
+          "lra_60hz_amps": null,
+          "lra_50hz_amps": null,
+          "lra_dc_or_fixed_amps": 16.9,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 3,
+          "source_method": "A=B"
+        },
+        {
+          "id": 42,
+          "base_part_number": "762Y30-11380000/A",
+          "size_code": "762Y",
+          "frame_size": 2,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V AC/DC",
+          "voltage_num": 24,
+          "phase_type": "AC/DC",
+          "service_support": "On/Off Only",
+          "is_available": true,
+          "on_off_torque_nm": 160.0,
+          "on_off_torque_in_lbs": 1410.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 200,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": null,
+          "speed_60hz_sec": null,
+          "speed_50hz_sec": null,
+          "speed_dc_or_fixed_sec": 22.0,
+          "fla_60hz_amps": null,
+          "fla_50hz_amps": null,
+          "fla_dc_or_fixed_amps": 7.4,
+          "lra_60hz_amps": null,
+          "lra_50hz_amps": null,
+          "lra_dc_or_fixed_amps": 16.9,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 3,
+          "source_method": "A=B"
+        },
+        {
+          "id": 43,
+          "base_part_number": "763X30-11380000/A",
+          "size_code": "763X",
+          "frame_size": 3,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "24V AC/DC",
+          "voltage_num": 24,
+          "phase_type": "AC/DC",
+          "service_support": "On/Off Only",
+          "is_available": true,
+          "on_off_torque_nm": 240.0,
+          "on_off_torque_in_lbs": 2120.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 35,
+          "cycles_per_hour": 160,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": null,
+          "speed_60hz_sec": null,
+          "speed_50hz_sec": null,
+          "speed_dc_or_fixed_sec": 32.0,
+          "fla_60hz_amps": null,
+          "fla_50hz_amps": null,
+          "fla_dc_or_fixed_amps": 8.9,
+          "lra_60hz_amps": null,
+          "lra_50hz_amps": null,
+          "lra_dc_or_fixed_amps": 30.8,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 3,
+          "source_method": "A=B"
         }
       ],
       "engineering_warnings": [
-        "Advertencia de ejemplo."
+        "Ningún modelo cumple todas las restricciones a la vez; se listan las alternativas más cercanas."
       ],
       "alerts": [
         {
           "code": "CONSTRAINT_RELAXED",
           "severity": "warning",
-          "message": "Restricción relajada."
+          "title": "Alternativas más cercanas",
+          "message": "Ningún modelo cumple todas las restricciones a la vez; se listan las alternativas más cercanas."
         }
       ],
       "recommendation": {
         "ranking": [
           {
-            "part_number": "EXAMPLE-PN-3",
-            "score": 0.64,
+            "part_number": "761X30-11380000/A",
+            "score": 0.611,
             "why": [
-              "Torque on/off 6000 Nm frente a 6000 Nm requeridos (+0%)"
+              "Torque on/off 70 Nm frente a 50 Nm requeridos (+40%)"
             ],
             "why_not": [
-              "Sin certificación CSA (tamaño 7)"
+              "Giro de 90° en 17 s: 750% más lento que el límite de 2 s"
             ]
           },
           {
-            "part_number": "EXAMPLE-PN-4",
-            "score": 0.63,
+            "part_number": "761Y30-11380000/A",
+            "score": 0.603,
             "why": [
-              "Certificado CSA"
+              "Torque on/off 80 Nm frente a 50 Nm requeridos (+60%)"
             ],
             "why_not": [
-              "Torque on/off 3000 Nm: 50% por debajo de los 6000 Nm requeridos"
+              "Giro de 90° en 20 s: 900% más lento que el límite de 2 s"
+            ]
+          },
+          {
+            "part_number": "762X30-11380000/A",
+            "score": 0.573,
+            "why": [
+              "Torque on/off 150 Nm frente a 50 Nm requeridos (+200%)"
+            ],
+            "why_not": [
+              "Giro de 90° en 22 s: 1000% más lento que el límite de 2 s",
+              "El torque supera el requisito en 200%"
+            ]
+          },
+          {
+            "part_number": "762Y30-11380000/A",
+            "score": 0.571,
+            "why": [
+              "Torque on/off 160 Nm frente a 50 Nm requeridos (+220%)"
+            ],
+            "why_not": [
+              "Giro de 90° en 22 s: 1000% más lento que el límite de 2 s",
+              "El torque supera el requisito en 220%"
+            ]
+          },
+          {
+            "part_number": "763X30-11380000/A",
+            "score": 0.561,
+            "why": [
+              "Torque on/off 240 Nm frente a 50 Nm requeridos (+380%)"
+            ],
+            "why_not": [
+              "Giro de 90° en 32 s: 1500% más lento que el límite de 2 s",
+              "El torque supera el requisito en 380%"
             ]
           }
         ],
         "hard_constraints": [
-          "Voltaje 220 V"
+          "Voltaje 24 V",
+          "Carcasa Explosionproof (antiexplosión)"
         ],
         "relaxed_constraints": [
-          "Certificación CSA"
+          "Tiempo de giro de 90° máximo 2 s"
         ]
       },
+      "clarification": null,
       "suggested_followups": [
         {
-          "label": "Relajar: Certificación CSA",
-          "query": "Relaja el requisito \"Certificación CSA\" y recomienda de nuevo"
+          "label": "Relajar: Tiempo de giro de 90° máximo 2 s",
+          "query": "Relaja el requisito \"Tiempo de giro de 90° máximo 2 s\" y recomienda de nuevo"
         },
         {
           "label": "Compara las 2 primeras",
-          "query": "Compara EXAMPLE-PN-3 con EXAMPLE-PN-4"
+          "query": "Compara 761X30-11380000/A con 761Y30-11380000/A"
         }
       ]
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 3400.0,
-      "steps": [
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 1285.96,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 1,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [
+        "761X30-11380000/A",
+        "761Y30-11380000/A",
+        "762X30-11380000/A",
+        "762Y30-11380000/A",
+        "763X30-11380000/A"
+      ],
+      "tool_calls": [
         {
-          "name": "tool:recommend",
-          "start_ms": 12.0,
-          "duration_ms": 80.0
+          "tool_name": "recommend_actuators",
+          "arguments": {
+            "min_torque_nm": 50.0,
+            "application_type": "On/Off",
+            "enclosure_type": "Explosionproof",
+            "voltage_num": 24,
+            "max_speed_sec": 2.0
+          },
+          "sql_executed": "SELECT * FROM actuators WHERE is_available = TRUE;  -- restricciones duras, filtros blandos y score: app.recommend",
+          "raw_output": {
+            "status": "NO_EXACT_MATCH_CONSTRAINT_RELAXATION",
+            "count": 0,
+            "diagnostics": [
+              "No single model satisfies all constraints together; closest alternatives are listed."
+            ],
+            "closest_alternative_actuators": [
+              {
+                "base_part_number": "761X30-11380000/A",
+                "power_supply": "24V AC/DC",
+                "enclosure_type": "Explosionproof",
+                "on_off_torque_nm": 70,
+                "on_off_torque_in_lbs": 620,
+                "motor_power_watts": 40,
+                "speed_dc_or_fixed_sec": 17
+              },
+              {
+                "base_part_number": "761Y30-11380000/A",
+                "power_supply": "24V AC/DC",
+                "enclosure_type": "Explosionproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "motor_power_watts": 40,
+                "speed_dc_or_fixed_sec": 20
+              },
+              {
+                "base_part_number": "762X30-11380000/A",
+                "power_supply": "24V AC/DC",
+                "enclosure_type": "Explosionproof",
+                "on_off_torque_nm": 150,
+                "on_off_torque_in_lbs": 1350,
+                "motor_power_watts": 40,
+                "speed_dc_or_fixed_sec": 22
+              }
+            ],
+            "ranking": [
+              {
+                "part_number": "761X30-11380000/A",
+                "score": 0.611,
+                "torque_margin_pct": 40.0
+              },
+              {
+                "part_number": "761Y30-11380000/A",
+                "score": 0.603,
+                "torque_margin_pct": 60.0
+              },
+              {
+                "part_number": "762X30-11380000/A",
+                "score": 0.573,
+                "torque_margin_pct": 200.0
+              }
+            ],
+            "unmet_constraints": [
+              "speed"
+            ]
+          },
+          "execution_time_ms": 53.22
         }
       ],
-      "cost_usd_estimate": 0.0004,
-      "provider": "example"
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 58.4,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 59.15,
+          "duration_ms": 57.85,
+          "detail": "selection_criteria"
+        },
+        {
+          "name": "tool:recommend_actuators",
+          "start_ms": 130.34,
+          "duration_ms": 55.16,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 662.91,
+          "duration_ms": 99.38,
+          "detail": null
+        },
+        {
+          "name": "verifier_retry",
+          "start_ms": 762.31,
+          "duration_ms": 178.82,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 941.13,
+          "duration_ms": 344.47,
+          "detail": null
+        },
+        {
+          "name": "fallback_template",
+          "start_ms": 1285.63,
+          "duration_ms": 0.18,
+          "detail": "ungrounded"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
     }
   },
   "clarification": {
     "schema_version": 2,
     "intent": "clarify",
     "verification": {
-      "status": "unverified",
+      "status": "verified",
       "numbers_checked": 0,
       "ungrounded": []
     },
-    "session_id": "00000000-0000-4000-8000-000000000004",
+    "session_id": "00000000-0000-4000-8000-000000000076",
     "answer": "¿Qué voltaje de alimentación necesita el actuador?",
     "ui_payload": {
       "display_type": "CLARIFICATION",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
       "clarification": {
         "question": "¿Qué voltaje de alimentación necesita el actuador?",
         "options": [
           {
-            "label": "110 V",
-            "value": "110V"
+            "label": "110 V monofásico",
+            "value": "110V monofásico"
           },
           {
-            "label": "220 V",
-            "value": "220V"
+            "label": "220 V trifásico",
+            "value": "220V trifásico"
+          },
+          {
+            "label": "220 V monofásico",
+            "value": "220V monofásico"
           }
         ]
       },
       "suggested_followups": []
     },
     "debug_trace": {
-      "model_used": "example-model",
-      "total_latency_ms": 800.0,
-      "provider": "example"
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 751.93,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 1
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [
+        {
+          "tool_name": "recommend_actuators",
+          "arguments": {
+            "min_torque_nm": 450.0
+          },
+          "sql_executed": "SELECT * FROM actuators WHERE is_available = TRUE;  -- restricciones duras, filtros blandos y score: app.recommend",
+          "raw_output": {
+            "status": "NEEDS_CLARIFICATION",
+            "missing": "voltage",
+            "instruction": "The app now asks the user this question with buttons. Do not recommend or state any figure; reply with one short neutral sentence."
+          },
+          "execution_time_ms": 107.94
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 357.3,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 357.9,
+          "duration_ms": 255.07,
+          "detail": "selection_criteria"
+        },
+        {
+          "name": "tool:recommend_actuators",
+          "start_ms": 626.49,
+          "duration_ms": 116.73,
+          "detail": null
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "comparison_table_3": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {
+      "status": "fallback_template",
+      "numbers_checked": 6,
+      "ungrounded": [
+        "2"
+      ]
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "763A00-11300000/A: on/off torque 300 Nm (2650 in-lbs), modulating torque 220 Nm (1950 in-lbs). (+2 more in the card)",
+    "ui_payload": {
+      "display_type": "COMPARISON_TABLE",
+      "actuators": [
+        {
+          "id": 5,
+          "base_part_number": "763A00-11300000/A",
+          "size_code": "763A",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 300.0,
+          "on_off_torque_in_lbs": 2650.0,
+          "modulating_torque_nm": 220.0,
+          "modulating_torque_in_lbs": 1950.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 29,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 25.0,
+          "speed_50hz_sec": 31.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 2.6,
+          "fla_50hz_amps": 2.5,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 2.9,
+          "lra_50hz_amps": 3.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
+        },
+        {
+          "id": 1,
+          "base_part_number": "761A00-11300000/A",
+          "size_code": "761A",
+          "frame_size": 1,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 700.0,
+          "modulating_torque_nm": 65.0,
+          "modulating_torque_in_lbs": 580.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 36,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 17.0,
+          "speed_50hz_sec": 20.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.2,
+          "fla_50hz_amps": 1.1,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        },
+        {
+          "id": 3,
+          "base_part_number": "762A00-11300000/A",
+          "size_code": "762A",
+          "frame_size": 2,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 150.0,
+          "on_off_torque_in_lbs": 1330.0,
+          "modulating_torque_nm": 130.0,
+          "modulating_torque_in_lbs": 1150.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 42,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 18.0,
+          "speed_50hz_sec": 21.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 2.3,
+          "fla_50hz_amps": 2.3,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 2.5,
+          "lra_50hz_amps": 2.4,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        }
+      ],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Compare with the next size",
+          "query": "Compare 763A00-11300000/A with 763B00-11300000/A"
+        },
+        {
+          "label": "Show 50 Hz values",
+          "query": "What are the 50 Hz values of 763A00-11300000/A?"
+        },
+        {
+          "label": "Alternatives with the same voltage",
+          "query": "Show alternatives to 763A00-11300000/A with the same voltage (110V)"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 646.07,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 1,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [
+        "763A00-11300000/A",
+        "761A00-11300000/A",
+        "762A00-11300000/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "763A00-11300000/A",
+            "focus": [
+              "torque"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "763A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 300,
+                "on_off_torque_in_lbs": 2650,
+                "modulating_torque_nm": 220,
+                "modulating_torque_in_lbs": 1950,
+                "motor_power_watts": 40
+              }
+            ]
+          },
+          "execution_time_ms": 52.17
+        },
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "761A00-11300000/A",
+            "focus": [
+              "torque"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "761A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "motor_power_watts": 15
+              }
+            ]
+          },
+          "execution_time_ms": 74.68
+        },
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "762A00-11300000/A",
+            "focus": [
+              "torque"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "762A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 150,
+                "on_off_torque_in_lbs": 1330,
+                "modulating_torque_nm": 130,
+                "modulating_torque_in_lbs": 1150,
+                "motor_power_watts": 40
+              }
+            ]
+          },
+          "execution_time_ms": 117.37
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 69.85,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 70.49,
+          "duration_ms": 45.88,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 131.51,
+          "duration_ms": 100.31,
+          "detail": null
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 138.56,
+          "duration_ms": 120.37,
+          "detail": null
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 147.64,
+          "duration_ms": 54.98,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 378.26,
+          "duration_ms": 48.39,
+          "detail": null
+        },
+        {
+          "name": "verifier_retry",
+          "start_ms": 426.68,
+          "duration_ms": 42.98,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 469.67,
+          "duration_ms": 107.83,
+          "detail": null
+        },
+        {
+          "name": "fallback_template",
+          "start_ms": 577.52,
+          "duration_ms": 0.09,
+          "detail": "ungrounded"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "en",
+      "error": null
+    }
+  },
+  "three_phase_single_torque": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 3,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "763A00-11330C00/A: torque de salida único 300 Nm (2650 in-lbs). La hoja de datos da un único torque de salida para trifásico, sin distinguir on/off y modulante.",
+    "ui_payload": {
+      "display_type": "SINGLE_SPEC_CARD",
+      "actuators": [
+        {
+          "id": 32,
+          "base_part_number": "763A00-11330C00/A",
+          "size_code": "763A",
+          "frame_size": 3,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V 3 Phase",
+          "voltage_num": 220,
+          "phase_type": "3 Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 300.0,
+          "on_off_torque_in_lbs": 2650.0,
+          "modulating_torque_nm": null,
+          "modulating_torque_in_lbs": null,
+          "on_off_duty_cycle_pct": 70,
+          "cycles_per_hour": 39,
+          "modulating_duty_cycle_pct": null,
+          "starts_per_hour": 1200,
+          "speed_60hz_sec": 26.0,
+          "speed_50hz_sec": 32.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.0,
+          "fla_50hz_amps": 1.0,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.2,
+          "lra_50hz_amps": 1.2,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 40,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 2,
+          "source_method": "A+B+humano"
+        }
+      ],
+      "engineering_warnings": [
+        "La hoja de datos da un único torque de salida para trifásico, sin distinguir on/off y modulante."
+      ],
+      "alerts": [
+        {
+          "code": "SINGLE_TORQUE_RATING",
+          "severity": "warning",
+          "title": "Torque de salida único",
+          "message": "La hoja de datos da un único torque de salida para trifásico, sin distinguir on/off y modulante."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Compara con el tamaño siguiente",
+          "query": "Compara 763A00-11330C00/A con 763B00-11330C00/A"
+        },
+        {
+          "label": "Ver valores a 50 Hz",
+          "query": "¿Cuáles son los valores a 50 Hz del 763A00-11330C00/A?"
+        },
+        {
+          "label": "Alternativas del mismo voltaje",
+          "query": "Muestra alternativas al 763A00-11330C00/A con el mismo voltaje (220V)"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 810.47,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [
+        "763A00-11330C00/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "763A00-11330C00/A",
+            "focus": [
+              "torque"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "763A00-11330C00/A",
+                "power_supply": "220V 3 Phase",
+                "enclosure_type": "Weatherproof",
+                "single_torque_nm": 300,
+                "single_torque_in_lbs": 2650,
+                "motor_power_watts": 40,
+                "alert": "SINGLE_TORQUE_RATING"
+              }
+            ],
+            "alerts": [
+              {
+                "code": "SINGLE_TORQUE_RATING",
+                "message": "The datasheet gives a single output torque for three-phase, without distinguishing on/off from modulating."
+              }
+            ]
+          },
+          "execution_time_ms": 227.21
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 65.19,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 70.81,
+          "duration_ms": 78.49,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 169.47,
+          "duration_ms": 246.54,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 480.55,
+          "duration_ms": 54.33,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 534.89,
+          "duration_ms": 74.31,
+          "detail": null
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "model_listed_as_na": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {
+      "status": "fallback_template",
+      "numbers_checked": 10,
+      "ungrounded": [
+        "1"
+      ]
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "761A00-11300000/A: torque on/off 80 Nm (700 in-lbs), torque modulante 65 Nm (580 in-lbs), potencia del motor 15 W. (+1 más en la ficha) 761A00-11330C00/A figura como N/D en la tabla 220V 3 Phase. Se muestran alternativas disponibles del tamaño 761A.",
+    "ui_payload": {
+      "display_type": "COMPARISON_TABLE",
+      "actuators": [
+        {
+          "id": 1,
+          "base_part_number": "761A00-11300000/A",
+          "size_code": "761A",
+          "frame_size": 1,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 700.0,
+          "modulating_torque_nm": 65.0,
+          "modulating_torque_in_lbs": 580.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 36,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 17.0,
+          "speed_50hz_sec": 20.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.2,
+          "fla_50hz_amps": 1.1,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        },
+        {
+          "id": 12,
+          "base_part_number": "761A00-11320000/A",
+          "size_code": "761A",
+          "frame_size": 1,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V Single Phase",
+          "voltage_num": 220,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 700.0,
+          "modulating_torque_nm": 65.0,
+          "modulating_torque_in_lbs": 580.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 36,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 17.0,
+          "speed_50hz_sec": 20.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 0.7,
+          "fla_50hz_amps": 0.7,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 0.7,
+          "lra_50hz_amps": 0.7,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        }
+      ],
+      "engineering_warnings": [
+        "761A00-11330C00/A figura como N/D en la tabla 220V 3 Phase. Se muestran alternativas disponibles del tamaño 761A."
+      ],
+      "alerts": [
+        {
+          "code": "MODEL_LISTED_AS_NA",
+          "severity": "warning",
+          "title": "No disponible en esta tabla",
+          "message": "761A00-11330C00/A figura como N/D en la tabla 220V 3 Phase. Se muestran alternativas disponibles del tamaño 761A."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Compara con el tamaño siguiente",
+          "query": "Compara 761A00-11300000/A con 761B00-11300000/A"
+        },
+        {
+          "label": "Ver valores a 50 Hz",
+          "query": "¿Cuáles son los valores a 50 Hz del 761A00-11300000/A?"
+        },
+        {
+          "label": "Alternativas del mismo voltaje",
+          "query": "Muestra alternativas al 761A00-11300000/A con el mismo voltaje (110V)"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 819.35,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 1,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [
+        "761A00-11300000/A",
+        "761A00-11320000/A",
+        "761A00-11330C00/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "761A00-11330C00/A"
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "MODEL_LISTED_AS_NA",
+            "queried_part_number": "761A00-11330C00/A",
+            "na_part_number": "761A00-11330C00/A",
+            "na_power_supply": "220V 3 Phase",
+            "available_alternatives_same_size": [
+              {
+                "base_part_number": "761A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 36,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 17,
+                "speed_50hz_sec": 20,
+                "fla_60hz_amps": 1.2,
+                "fla_50hz_amps": 1.1,
+                "lra_60hz_amps": 1.4,
+                "lra_50hz_amps": 1.3,
+                "motor_power_watts": 15
+              },
+              {
+                "base_part_number": "761A00-11320000/A",
+                "power_supply": "220V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 36,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 17,
+                "speed_50hz_sec": 20,
+                "fla_60hz_amps": 0.7,
+                "fla_50hz_amps": 0.7,
+                "lra_60hz_amps": 0.7,
+                "lra_50hz_amps": 0.7,
+                "motor_power_watts": 15
+              }
+            ],
+            "alerts": [
+              {
+                "code": "MODEL_LISTED_AS_NA",
+                "message": "761A00-11330C00/A is listed as N/A in the 220V 3 Phase table. Available alternatives of size 761A are shown."
+              }
+            ]
+          },
+          "execution_time_ms": 73.08
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 58.74,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 59.37,
+          "duration_ms": 66.88,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 189.5,
+          "duration_ms": 76.46,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 546.88,
+          "duration_ms": 81.48,
+          "detail": null
+        },
+        {
+          "name": "verifier_retry",
+          "start_ms": 628.38,
+          "duration_ms": 62.74,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 691.12,
+          "duration_ms": 60.97,
+          "detail": null
+        },
+        {
+          "name": "fallback_template",
+          "start_ms": 752.11,
+          "duration_ms": 0.12,
+          "detail": "ungrounded"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "recommendation_no_match": {
+    "schema_version": 2,
+    "intent": "recommend",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 3,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "No existen modelos de 24V Weatherproof en la Serie 76; 24V solo se ofrece como Explosionproof.",
+    "ui_payload": {
+      "display_type": "EDGE_CASE_ALERT",
+      "actuators": [],
+      "engineering_warnings": [
+        "No existen modelos de 24V Weatherproof en la Serie 76; 24V solo se ofrece como Explosionproof."
+      ],
+      "alerts": [
+        {
+          "code": "VOLTAGE_ENCLOSURE_UNAVAILABLE",
+          "severity": "warning",
+          "title": "Combinación no ofrecida",
+          "message": "No existen modelos de 24V Weatherproof en la Serie 76; 24V solo se ofrece como Explosionproof."
+        }
+      ],
+      "recommendation": {
+        "ranking": [],
+        "hard_constraints": [
+          "Voltaje 24 V",
+          "Carcasa Weatherproof (intemperie)"
+        ],
+        "relaxed_constraints": []
+      },
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Modelos Explosionproof",
+          "query": "Muestra los modelos Explosionproof disponibles de 24V"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 227.54,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [
+        {
+          "tool_name": "recommend_actuators",
+          "arguments": {
+            "enclosure_type": "Weatherproof",
+            "voltage_num": 24
+          },
+          "sql_executed": "SELECT * FROM actuators WHERE is_available = TRUE;  -- restricciones duras, filtros blandos y score: app.recommend",
+          "raw_output": {
+            "status": "NO_MATCH_HARD_CONSTRAINTS",
+            "count": 0,
+            "diagnostics": [
+              "There are no 24V Weatherproof models in Series 76; 24V is only offered as Explosionproof."
+            ]
+          },
+          "execution_time_ms": 38.4
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 81.5,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 82.21,
+          "duration_ms": 50.93,
+          "detail": "selection_criteria"
+        },
+        {
+          "name": "tool:recommend_actuators",
+          "start_ms": 145.03,
+          "duration_ms": 41.57,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 189.6,
+          "duration_ms": 37.77,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 227.38,
+          "duration_ms": 0.07,
+          "detail": null
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "out_of_scope": {
+    "schema_version": 2,
+    "intent": "knowledge",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas.",
+    "ui_payload": {
+      "display_type": "EDGE_CASE_ALERT",
+      "actuators": [],
+      "engineering_warnings": [
+        "Fuera del catálogo técnico: aquí no hay precios, plazos de entrega, stock, garantía ni otras marcas."
+      ],
+      "alerts": [
+        {
+          "code": "OUT_OF_SCOPE",
+          "severity": "info",
+          "title": "Fuera del catálogo técnico",
+          "message": "Fuera del catálogo técnico: aquí no hay precios, plazos de entrega, stock, garantía ni otras marcas."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Certificaciones de área peligrosa",
+          "query": "¿Qué certificaciones de área peligrosa tienen los modelos Explosionproof?"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 102.39,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 49.06,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 49.75,
+          "duration_ms": 52.56,
+          "detail": "out_of_scope"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "llm_error": {
+    "schema_version": 2,
+    "intent": "error",
+    "verification": {
+      "status": "fallback_template",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos.",
+    "ui_payload": {
+      "display_type": "EDGE_CASE_ALERT",
+      "actuators": [],
+      "engineering_warnings": [
+        "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos."
+      ],
+      "alerts": [
+        {
+          "code": "LLM_UNAVAILABLE",
+          "severity": "error",
+          "title": "No se pudo completar la consulta",
+          "message": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": []
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 154.94,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 2
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 83.55,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 84.28,
+          "duration_ms": 56.91,
+          "detail": "uncertain"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": "ConnectionError: simulated outage"
+    }
+  },
+  "typo_correction": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {
+      "status": "fallback_template",
+      "numbers_checked": 10,
+      "ungrounded": [
+        "3"
+      ]
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "761B00-11300000/A: on/off torque 100 Nm (880 in-lbs), modulating torque 70 Nm (620 in-lbs), motor power 15 W. (+3 more in the card) Part number '761800-11300000/A' does not exist; close matches are shown (likely a typo such as 8 vs B or 0 vs C).",
+    "ui_payload": {
+      "display_type": "COMPARISON_TABLE",
+      "actuators": [
+        {
+          "id": 2,
+          "base_part_number": "761B00-11300000/A",
+          "size_code": "761B",
+          "frame_size": 1,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 100.0,
+          "on_off_torque_in_lbs": 880.0,
+          "modulating_torque_nm": 70.0,
+          "modulating_torque_in_lbs": 620.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 31,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 19.0,
+          "speed_50hz_sec": 23.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.3,
+          "fla_50hz_amps": 1.2,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        },
+        {
+          "id": 1,
+          "base_part_number": "761A00-11300000/A",
+          "size_code": "761A",
+          "frame_size": 1,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 700.0,
+          "modulating_torque_nm": 65.0,
+          "modulating_torque_in_lbs": 580.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 36,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 17.0,
+          "speed_50hz_sec": 20.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.2,
+          "fla_50hz_amps": 1.1,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        },
+        {
+          "id": 49,
+          "base_part_number": "761X30-11300000/A",
+          "size_code": "761X",
+          "frame_size": 1,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 80.0,
+          "on_off_torque_in_lbs": 690.0,
+          "modulating_torque_nm": 65.0,
+          "modulating_torque_in_lbs": 550.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 190,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 20.0,
+          "speed_50hz_sec": 23.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.2,
+          "fla_50hz_amps": 1.1,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 4,
+          "source_method": "A+B+humano"
+        },
+        {
+          "id": 50,
+          "base_part_number": "761Y30-11300000/A",
+          "size_code": "761Y",
+          "frame_size": 1,
+          "enclosure_type": "Explosionproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 100.0,
+          "on_off_torque_in_lbs": 860.0,
+          "modulating_torque_nm": 80.0,
+          "modulating_torque_in_lbs": 680.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 190,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 20.0,
+          "speed_50hz_sec": 23.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 1.2,
+          "fla_50hz_amps": 1.1,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 1.4,
+          "lra_50hz_amps": 1.3,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": false,
+          "hazardous_classification": "Class I, Division 1, Groups C, D, T4 | Ex d IIB T4 Gb | Class I, Zone 1, AEx d IIB T4 Gb",
+          "source_page": 4,
+          "source_method": "A+B+humano"
+        }
+      ],
+      "engineering_warnings": [
+        "Part number '761800-11300000/A' does not exist; close matches are shown (likely a typo such as 8 vs B or 0 vs C)."
+      ],
+      "alerts": [
+        {
+          "code": "TYPO_OR_CLOSEST_MATCH_FOUND",
+          "severity": "warning",
+          "title": "Part number corrected",
+          "message": "Part number '761800-11300000/A' does not exist; close matches are shown (likely a typo such as 8 vs B or 0 vs C)."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Compare with the next size",
+          "query": "Compare 761B00-11300000/A with 762A00-11300000/A"
+        },
+        {
+          "label": "Show 50 Hz values",
+          "query": "What are the 50 Hz values of 761B00-11300000/A?"
+        },
+        {
+          "label": "Alternatives with the same voltage",
+          "query": "Show alternatives to 761B00-11300000/A with the same voltage (110V)"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "total_latency_ms": 558.54,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 1,
+        "llm_retries": 0
+      },
+      "active_context_part_numbers": [
+        "761B00-11300000/A",
+        "761A00-11300000/A",
+        "761X30-11300000/A",
+        "761Y30-11300000/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "761800-11300000/A"
+          },
+          "sql_executed": "SELECT *, similarity(base_part_number, %s) AS sim_score\n            FROM actuators\n            WHERE similarity(base_part_number, %s) > 0.42\n            ORDER BY sim_score DESC, is_available DESC\n            LIMIT 4;",
+          "raw_output": {
+            "status": "TYPO_OR_CLOSEST_MATCH_FOUND",
+            "queried_part_number": "761800-11300000/A",
+            "suggested_actuators": [
+              {
+                "base_part_number": "761B00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 100,
+                "on_off_torque_in_lbs": 880,
+                "modulating_torque_nm": 70,
+                "modulating_torque_in_lbs": 620,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 31,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 19,
+                "speed_50hz_sec": 23,
+                "fla_60hz_amps": 1.3,
+                "fla_50hz_amps": 1.2,
+                "lra_60hz_amps": 1.4,
+                "lra_50hz_amps": 1.3,
+                "motor_power_watts": 15
+              },
+              {
+                "base_part_number": "761A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 36,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 17,
+                "speed_50hz_sec": 20,
+                "fla_60hz_amps": 1.2,
+                "fla_50hz_amps": 1.1,
+                "lra_60hz_amps": 1.4,
+                "lra_50hz_amps": 1.3,
+                "motor_power_watts": 15
+              },
+              {
+                "base_part_number": "761X30-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Explosionproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 690,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 550,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 190,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 20,
+                "speed_50hz_sec": 23,
+                "fla_60hz_amps": 1.2,
+                "fla_50hz_amps": 1.1,
+                "lra_60hz_amps": 1.4,
+                "lra_50hz_amps": 1.3,
+                "motor_power_watts": 15
+              },
+              {
+                "base_part_number": "761Y30-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Explosionproof",
+                "on_off_torque_nm": 100,
+                "on_off_torque_in_lbs": 860,
+                "modulating_torque_nm": 80,
+                "modulating_torque_in_lbs": 680,
+                "on_off_duty_cycle_pct": 40,
+                "cycles_per_hour": 190,
+                "modulating_duty_cycle_pct": 40,
+                "starts_per_hour": 960,
+                "speed_60hz_sec": 20,
+                "speed_50hz_sec": 23,
+                "fla_60hz_amps": 1.2,
+                "fla_50hz_amps": 1.1,
+                "lra_60hz_amps": 1.4,
+                "lra_50hz_amps": 1.3,
+                "motor_power_watts": 15
+              }
+            ],
+            "alerts": [
+              {
+                "code": "TYPO_OR_CLOSEST_MATCH_FOUND",
+                "message": "Part number '761800-11300000/A' does not exist; close matches are shown (likely a typo such as 8 vs B or 0 vs C)."
+              }
+            ]
+          },
+          "execution_time_ms": 61.22
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 136.67,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 137.43,
+          "duration_ms": 75.48,
+          "detail": "part_number"
+        },
+        {
+          "name": "tool:lookup_actuator_by_part_number",
+          "start_ms": 227.21,
+          "duration_ms": 62.83,
+          "detail": null
+        },
+        {
+          "name": "verifier",
+          "start_ms": 339.89,
+          "duration_ms": 39.85,
+          "detail": null
+        },
+        {
+          "name": "verifier_retry",
+          "start_ms": 379.76,
+          "duration_ms": 60.37,
+          "detail": null
+        },
+        {
+          "name": "ui_payload",
+          "start_ms": 440.14,
+          "duration_ms": 66.81,
+          "detail": null
+        },
+        {
+          "name": "fallback_template",
+          "start_ms": 506.98,
+          "duration_ms": 0.24,
+          "detail": "ungrounded"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "nim",
+      "session_cost_usd": 0.0,
+      "language": "en",
+      "error": null
     }
   }
 }
