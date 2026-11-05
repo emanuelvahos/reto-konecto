@@ -81,6 +81,11 @@ ALERTS: Dict[str, Dict[str, str]] = {
         "en": "24V models are DC/AC-DC with a fixed speed and current: they have no separate 50 Hz / 60 Hz values.",
         "es": "Los modelos de 24V son DC/AC-DC con velocidad y corriente fijas: no tienen valores separados a 50 Hz / 60 Hz.",
     },
+    "OUT_OF_SCOPE": {
+        "severity": "info",
+        "en": "Outside the technical catalog: prices, lead times, stock, warranty and other brands are not available here.",
+        "es": "Fuera del catálogo técnico: aquí no hay precios, plazos de entrega, stock, garantía ni otras marcas.",
+    },
     "LLM_UNAVAILABLE": {
         "severity": "error",
         "en": "The language model is temporarily unavailable. Please try again in a moment.",
@@ -124,6 +129,29 @@ def render_alert(alert: Dict[str, Any], lang: str) -> Dict[str, str]:
         "severity": alert_severity(code),
         "message": render_alert_message(code, alert.get("params"), lang),
     }
+
+
+# ---------------------------------------------------------------------------------------------------
+# Respuestas deterministas del router (fuera de alcance / inyección); sin cifras
+# ---------------------------------------------------------------------------------------------------
+ROUTER_TEXT: Dict[str, Dict[str, str]] = {
+    "out_of_scope": {
+        "en": "That is not in the technical catalog: I have no prices, lead times, stock, warranty or other brands. I can help with specifications, selection and technical rules.",
+        "es": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas.",
+    },
+    "injection": {
+        "en": "I can't skip my rules or share my instructions: every figure I give comes from the technical catalog. Ask me about a part number or your requirements.",
+        "es": "No puedo saltarme mis reglas ni mostrar mis instrucciones: cada cifra que doy sale del catálogo técnico. Pregúntame por un número de parte o por tus requisitos.",
+    },
+    "oos_note": {
+        "en": "Prices, lead times and stock are not in the technical catalog.",
+        "es": "Los precios, plazos de entrega y stock no están en el catálogo técnico.",
+    },
+}
+
+
+def t_router(lang: str, key: str) -> str:
+    return ROUTER_TEXT[key].get(lang, ROUTER_TEXT[key]["en"])
 
 
 # ---------------------------------------------------------------------------------------------------
