@@ -2,55 +2,74 @@ package io.konecto.series76.util
 
 object VoiceNormalizer {
     private val wordToSymbol = mapOf(
-        // Números en inglés y español
-        "zero" to "0", "cero" to "0", "oh" to "0",
-        "one" to "1", "uno" to "1", "una" to "1",
-        "two" to "2", "dos" to "2",
-        "three" to "3", "tres" to "3",
-        "four" to "4", "cuatro" to "4",
-        "five" to "5", "cinco" to "5",
-        "six" to "6", "seis" to "6",
-        "seven" to "7", "siete" to "7",
-        "eight" to "8", "ocho" to "8",
-        "nine" to "9", "nueve" to "9",
+        // Dígitos en español e inglés
+        "cero" to "0", "zero" to "0", "oh" to "0",
+        "uno" to "1", "una" to "1", "un" to "1", "one" to "1",
+        "dos" to "2", "two" to "2",
+        "tres" to "3", "three" to "3",
+        "cuatro" to "4", "four" to "4",
+        "cinco" to "5", "five" to "5",
+        "seis" to "6", "six" to "6",
+        "siete" to "7", "seven" to "7",
+        "ocho" to "8", "eight" to "8",
+        "nueve" to "9", "nine" to "9",
 
-        // Letras fonéticas comunes
-        "bee" to "B", "be" to "B",
-        "see" to "C", "sea" to "C", "ce" to "C",
-        "ex" to "X", "equis" to "X",
-        "why" to "Y", "ye" to "Y",
+        // Letras fonéticas en dictado técnico
+        "be" to "B", "bee" to "B",
+        "ce" to "C", "see" to "C", "sea" to "C",
+        "dee" to "D",
+        "equis" to "X", "ex" to "X",
+        "ye" to "Y", "why" to "Y",
 
-        // Separadores y signos
+        // Separadores técnicos
         "dash" to "-", "hyphen" to "-", "minus" to "-", "guion" to "-", "guión" to "-", "menos" to "-",
         "slash" to "/", "stroke" to "/", "barra" to "/", "diagonal" to "/"
     )
 
-    // Patrón robusto para detectar secuencias de Series 76 habladas (con o sin espacios intermedios)
+    // Regex para capturar la estructura de un número de parte Serie 76 en habla continua:
+    // Prefijo: 7 6 [1-7] [A-E|X|Y] (opcional 00 o 30)
+    // Separador: guion opcional
+    // Código intermedio: 1 1 3 [0-9A-Z] ...
+    // Sufijo: slash [A-Z]
     private val partRegex = Regex(
-        """\b(7\s*6\s*[1-7]\s*[ABCXYabcxy]\s*(?:0\s*0|3\s*0)?)\s*[-–—]?\s*(1\s*1\s*3\s*[02378]\s*(?:0\s*){3,6})(?:\s*[/]?\s*([Aa]))?\b"""
+        """\b(7\s*6\s*[1-7]\s*[ABCXYabcxy]\s*(?:0\s*0|3\s*0)?)\s*[-–—]?\s*(1\s*1\s*3\s*(?:[0-9A-Za-z]\s*){4,8})(?:\s*[/]\s*([A-Za-z]))?\b"""
     )
 
     fun normalizeSpokenTechnicalQuery(rawTranscript: String): String {
         if (rawTranscript.isBlank()) return rawTranscript
 
-        // 1. Mapeo palabra por palabra de números y símbolos hablados
+        // 1. Mapeo token por token de símbolos técnicos
         val tokens = rawTranscript.split(Regex("""\s+"""))
-        val mapped = tokens.joinToString(" ") { token ->
-            val clean = token.lowercase().trim(',', '.', '!', '?')
+        val mappedTokens = tokens.map { token ->
+            val clean = token.lowercase().trim(',', '.', '!', '?', ';', ':')
             wordToSymbol[clean] ?: token
         }
+        val mappedText = mappedTokens.joinToString(" ")
 
-        // 2. Compactar y normalizar secuencias de Part Numbers al formato técnico canónico
-        return partRegex.replace(mapped) { match ->
+        // 2. Detección y reconstrucción canónica del número de parte
+        return partRegex.replace(mappedText) { match ->
             var prefix = match.groupValues[1].replace(Regex("""\s+"""), "").uppercase()
             if (prefix.length == 4) {
                 val sizeLetter = prefix[3]
                 prefix += if (sizeLetter == 'X' || sizeLetter == 'Y') "30" else "00"
             }
-            val rawCode = match.groupValues[2].replace(Regex("""\s+"""), "").uppercase()
-            val voltageDigit = rawCode.getOrNull(3) ?: '0'
-            val cleanCode = "113${voltageDigit}0000"
-            "$prefix-$cleanCode/A"
+
+            var midCode = match.groupValues[2].replace(Regex("""\s+"""), "").uppercase()
+            // Asegurar longitud estándar de 8 caracteres si se trata de 113X...
+            if (midCode.startsWith("113")) {
+                val voltageChar = midCode.getOrNull(3) ?: '0'
+                val rest = midCode.substring(4)
+                if (rest.contains("C00")) {
+                    midCode = "113${voltageChar}0C00"
+                } else if (midCode.length < 8) {
+                    midCode = midCode.padEnd(8, '0')
+                } else if (midCode.length > 8) {
+                    midCode = midCode.substring(0, 8)
+                }
+            }
+
+            val suffixLetter = match.groupValues[3].ifEmpty { "A" }.uppercase()
+            "$prefix-$midCode/$suffixLetter"
         }
     }
 }

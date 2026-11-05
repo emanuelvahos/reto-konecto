@@ -1,8 +1,8 @@
 package io.konecto.series76.ui.chat
 
+import android.Manifest
 import android.app.Activity
-import android.content.Intent
-import android.speech.RecognizerIntent
+import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,7 +32,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -41,10 +40,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.konecto.series76.R
+import io.konecto.series76.data.ActuatorDto
+import io.konecto.series76.data.ServerPreferences
+import io.konecto.series76.ui.ActuatorFullDatasheetSheet
 import io.konecto.series76.ui.AppScreen
 import io.konecto.series76.ui.MainViewModel
 import io.konecto.series76.ui.ShimmerSkeletonCard
@@ -52,8 +57,10 @@ import io.konecto.series76.ui.components.ChatBubbleItem
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 import io.konecto.series76.ui.theme.ThemeController
+import io.konecto.series76.util.LocaleController
 import io.konecto.series76.util.VoiceNormalizer
-import java.util.Locale
+import io.konecto.series76.util.VoiceRecognitionManager
+import io.konecto.series76.util.VoiceState
 
 @Composable
 fun TypingIndicator(modifier: Modifier = Modifier) {
@@ -96,7 +103,20 @@ fun ChatScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     var inputText by remember { mutableStateOf("") }
-    var showVoiceSimulationDialog by remember { mutableStateOf(false) }
+
+    // Estados para Ficha Técnica Completa y Reconocimiento de Voz
+    var selectedActuatorForDatasheet by remember { mutableStateOf<ActuatorDto?>(null) }
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    var showVoiceListeningDialog by remember { mutableStateOf(false) }
+    var voiceTextToConfirm by remember { mutableStateOf<String?>(null) }
+
+    val voiceManager = remember { VoiceRecognitionManager(context) }
+    DisposableEffect(Unit) {
+        onDispose {
+            voiceManager.destroy()
+            vm.stopTts()
+        }
+    }
 
     val activePart = remember(vm.messages) {
         vm.messages.lastOrNull { it.uiPayload?.actuators?.isNotEmpty() == true }
@@ -116,17 +136,60 @@ fun ChatScreen(vm: MainViewModel) {
         }
     }
 
-    val voiceLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!spoken.isNullOrBlank()) {
-                val normalized = VoiceNormalizer.normalizeSpokenTechnicalQuery(spoken)
-                Toast.makeText(context, "🎙️ Recognized: $normalized", Toast.LENGTH_SHORT).show()
-                inputText = ""
+    val appLangPref by ServerPreferences.getAppLanguage(context).collectAsState(initial = ServerPreferences.LANG_AUTO)
+    val effectiveLang = remember(appLangPref) { LocaleController.getEffectiveLanguage(appLangPref) }
+    val speechTag = if (effectiveLang == "es") "es-CO" else "en-US"
+
+    val recordAudioLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            voiceManager.startListening(speechTag)
+            showVoiceListeningDialog = true
+        } else {
+            Toast.makeText(context, context.getString(R.string.voice_permission_denied), Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Observar estados del VoiceRecognitionManager
+    LaunchedEffect(voiceManager.state) {
+        when (val state = voiceManager.state) {
+            is VoiceState.Success -> {
                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                vm.sendUserMessage(normalized)
+                showVoiceListeningDialog = false
+                val normalized = VoiceNormalizer.normalizeSpokenTechnicalQuery(state.text)
+                voiceTextToConfirm = normalized
+                voiceManager.reset()
+            }
+            is VoiceState.Error -> {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            else -> {}
+        }
+    }
+
+    fun startVoiceFlow() {
+        vm.stopTts()
+        if (!voiceManager.isAvailable()) {
+            Toast.makeText(context, context.getString(R.string.voice_unavailable), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            voiceManager.startListening(speechTag)
+            showVoiceListeningDialog = true
+        } else {
+            val activity = context as? Activity
+            if (activity != null && ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)) {
+                showPermissionRationale = true
+            } else {
+                recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         }
     }
@@ -142,6 +205,7 @@ fun ChatScreen(vm: MainViewModel) {
                     ),
                     navigationIcon = {
                         IconButton(onClick = {
+                            vm.stopTts()
                             vm.currentScreen = AppScreen.SESSIONS
                             vm.loadSessions()
                         }) {
@@ -258,13 +322,20 @@ fun ChatScreen(vm: MainViewModel) {
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
-                        TextButton(
-                            onClick = { vm.retryLastMessage() }
+                        Button(
+                            onClick = { vm.retryLastMessage() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.retry),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
+                                color = MaterialTheme.colorScheme.onError,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
                             )
                         }
                     }
@@ -339,7 +410,8 @@ fun ChatScreen(vm: MainViewModel) {
                         verification = verification,
                         isLastAssistantMessage = isLastAssistant,
                         onSendQuery = { query -> vm.sendUserMessage(query) },
-                        onRetry = { vm.retryLastMessage() }
+                        onRetry = { vm.retryLastMessage() },
+                        onOpenFullDatasheet = { act -> selectedActuatorForDatasheet = act }
                     )
                 }
                 if (vm.isLoading) {
@@ -388,27 +460,14 @@ fun ChatScreen(vm: MainViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
+                    // Botón de Voz
                     Box(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                            .combinedClickable(
-                                onClick = {
-                                    try {
-                                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US)
-                                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak Series 76 Part Number...")
-                                        }
-                                        voiceLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        showVoiceSimulationDialog = true
-                                    }
-                                },
-                                onLongClick = { showVoiceSimulationDialog = true }
-                            ),
+                            .clickable { startVoiceFlow() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -474,115 +533,268 @@ fun ChatScreen(vm: MainViewModel) {
         }
     }
 
-    if (showVoiceSimulationDialog) {
-        VoiceSimulationDialog(
-            onDismiss = { showVoiceSimulationDialog = false },
-            onSendNormalizedQuery = { query ->
-                showVoiceSimulationDialog = false
-                val normalized = VoiceNormalizer.normalizeSpokenTechnicalQuery(query)
-                Toast.makeText(context, "🎙️ Voice Normalized: $normalized", Toast.LENGTH_SHORT).show()
-                vm.sendUserMessage(normalized)
+    // ModalBottomSheet: Ficha Técnica Completa
+    if (selectedActuatorForDatasheet != null) {
+        ActuatorFullDatasheetSheet(
+            actuator = selectedActuatorForDatasheet!!,
+            onDismiss = { selectedActuatorForDatasheet = null }
+        )
+    }
+
+    // Dialogo: Escuchando Audio con medidor RMS y parcial en tiempo real
+    if (showVoiceListeningDialog) {
+        VoiceListeningDialog(
+            voiceManager = voiceManager,
+            onDismiss = {
+                showVoiceListeningDialog = false
+                voiceManager.cancel()
+            },
+            onStopListening = {
+                voiceManager.stopListening()
+            }
+        )
+    }
+
+    // Dialogo: Confirmación y edición de consulta reconocida antes de enviar
+    if (voiceTextToConfirm != null) {
+        VoiceConfirmationDialog(
+            initialText = voiceTextToConfirm!!,
+            onDismiss = { voiceTextToConfirm = null },
+            onConfirm = { confirmedText ->
+                voiceTextToConfirm = null
+                vm.sendUserMessage(confirmedText, inputMode = "voice")
+            }
+        )
+    }
+
+    // Dialogo: Explicación de Permiso de Micrófono (Rationale)
+    if (showPermissionRationale) {
+        VoicePermissionRationaleDialog(
+            onDismiss = { showPermissionRationale = false },
+            onGrant = {
+                showPermissionRationale = false
+                recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
             }
         )
     }
 }
 
 @Composable
-fun VoiceSimulationDialog(
+fun VoiceListeningDialog(
+    voiceManager: VoiceRecognitionManager,
     onDismiss: () -> Unit,
-    onSendNormalizedQuery: (String) -> Unit
+    onStopListening: () -> Unit
 ) {
-    var customText by remember { mutableStateOf("seven six three B zero zero dash one one three zero zero zero zero zero slash A") }
-    val normalizedPreview = remember(customText) { VoiceNormalizer.normalizeSpokenTechnicalQuery(customText) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                text = stringResource(R.string.voice_listening_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing.s),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(Spacing.m)
+            ) {
+                // Indicador visual RMS dinámico
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                        .clip(CircleShape)
+                        .background(KonectoTheme.semantics.accentContainer)
+                        .border(
+                            width = (3 + (voiceManager.rmsLevel * 7)).dp,
+                            color = KonectoTheme.semantics.accent,
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = KonectoTheme.semantics.accentText,
+                        modifier = Modifier.size(38.dp)
+                    )
+                }
+
+                Text(
+                    text = stringResource(R.string.voice_listening_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                // Transcripción en vivo de resultados parciales
+                if (voiceManager.partialResult.isNotBlank()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "“${voiceManager.partialResult}”",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+
+                if (voiceManager.state is VoiceState.Error) {
+                    val err = (voiceManager.state as VoiceState.Error).message
+                    Text(
+                        text = "⚠️ $err",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = KonectoTheme.semantics.errorText
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onStopListening,
+                colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.voice_stop),
+                    color = KonectoTheme.semantics.onAccent,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.voice_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun VoiceConfirmationDialog(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var editableText by remember(initialText) { mutableStateOf(initialText) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
-                text = "🎙️ Voice & Technical Normalizer",
+                text = stringResource(R.string.voice_confirm_title),
                 style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Spacing.s)
+            ) {
                 Text(
-                    text = "Select or type spoken English/Spanish words. VoiceNormalizer will deterministically resolve exact Series 76 codes:",
+                    text = stringResource(R.string.voice_confirm_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                listOf(
-                    "seven six three B zero zero dash one one three zero zero zero zero zero slash A",
-                    "siete seis tres be cero cero guion uno uno tres cero cero cero cero cero barra A"
-                ).forEach { sample ->
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { customText = sample }
-                    ) {
-                        Text(
-                            text = sample,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(Spacing.xs)
-                        )
-                    }
-                }
-
-                TextField(
-                    value = customText,
-                    onValueChange = { customText = it },
-                    label = { Text("Spoken Technical Input") },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
+                OutlinedTextField(
+                    value = editableText,
+                    onValueChange = { editableText = it },
+                    label = { Text("Query") },
+                    shape = RoundedCornerShape(10.dp),
+                    textStyle = TextStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4
                 )
-
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                    modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxs)
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            text = "NORMALIZED PART NUMBER OUTPUT",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = normalizedPreview,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = KonectoTheme.semantics.accent,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
             }
         },
         confirmButton = {
             Button(
-                onClick = { onSendNormalizedQuery(customText) },
+                onClick = { onConfirm(editableText) },
+                enabled = editableText.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Normalize & Send", color = KonectoTheme.semantics.onAccent, fontWeight = FontWeight.Bold)
+                Text(
+                    text = stringResource(R.string.voice_confirm_send),
+                    color = KonectoTheme.semantics.onAccent,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.server_dialog_cancel), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = stringResource(R.string.voice_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun VoicePermissionRationaleDialog(
+    onDismiss: () -> Unit,
+    onGrant: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text(
+                text = stringResource(R.string.voice_permission_rationale_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.voice_permission_rationale_msg),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onGrant,
+                colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.voice_permission_grant),
+                    color = KonectoTheme.semantics.onAccent,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = stringResource(R.string.voice_cancel),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     )

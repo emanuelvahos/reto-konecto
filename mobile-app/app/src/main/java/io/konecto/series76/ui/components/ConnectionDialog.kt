@@ -1,10 +1,13 @@
 package io.konecto.series76.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
@@ -26,6 +29,7 @@ import io.konecto.series76.data.ServerPreferences
 import io.konecto.series76.mock.DebugMockProvider
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
+import io.konecto.series76.util.LocaleController
 import kotlinx.coroutines.launch
 
 @Composable
@@ -45,6 +49,15 @@ fun ConnectionDialog(
     var isMockEnabled by remember { mutableStateOf(DebugMockProvider.isMockEnabled) }
     var selectedMockKey by remember { mutableStateOf(DebugMockProvider.selectedSampleKey) }
 
+    // Language & TTS settings
+    var currentLang by remember { mutableStateOf(ServerPreferences.LANG_AUTO) }
+    var isTtsEnabled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        currentLang = ServerPreferences.getAppLanguageSync(context)
+        isTtsEnabled = ServerPreferences.isTtsEnabledSync(context)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(16.dp),
@@ -52,7 +65,7 @@ fun ConnectionDialog(
         title = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(
-                    text = stringResource(R.string.server_dialog_title),
+                    text = stringResource(R.string.settings_dialog_title),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -67,9 +80,100 @@ fun ConnectionDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(vertical = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.s)
             ) {
+                // 1. SELECTOR DE IDIOMA
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                    Text(
+                        text = stringResource(R.string.settings_lang_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        val languages = listOf(
+                            ServerPreferences.LANG_AUTO to stringResource(R.string.settings_lang_auto),
+                            ServerPreferences.LANG_ES to stringResource(R.string.settings_lang_es),
+                            ServerPreferences.LANG_EN to stringResource(R.string.settings_lang_en)
+                        )
+                        languages.forEach { (code, label) ->
+                            val isSelected = currentLang == code
+                            Surface(
+                                color = if (isSelected) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        currentLang = code
+                                        coroutineScope.launch {
+                                            ServerPreferences.setAppLanguage(context, code)
+                                            LocaleController.setLanguage(context, code)
+                                        }
+                                    }
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(vertical = Spacing.xs, horizontal = 4.dp),
+                                    maxLines = 1,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+
+                // 2. LECTURA EN VOZ ALTA (TTS)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_tts_title),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_tts_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = isTtsEnabled,
+                        onCheckedChange = { checked ->
+                            isTtsEnabled = checked
+                            coroutineScope.launch {
+                                ServerPreferences.setTtsEnabled(context, checked)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = KonectoTheme.semantics.onAccent,
+                            checkedTrackColor = KonectoTheme.semantics.accent
+                        )
+                    )
+                }
+
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+
+                // 3. URL DEL SERVIDOR
                 CleanInputField(
                     label = stringResource(R.string.server_dialog_url_label),
                     value = urlText,
@@ -187,7 +291,7 @@ fun ConnectionDialog(
                     }
                 }
 
-                // Debug Mock Switch
+                // 4. MOCK DE DEPURACIÓN
                 if (DebugMockProvider.isAvailable) {
                     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
                     Row(
@@ -199,6 +303,7 @@ fun ConnectionDialog(
                             Text(
                                 text = stringResource(R.string.server_dialog_mock_title),
                                 style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
@@ -232,7 +337,7 @@ fun ConnectionDialog(
                                 Surface(
                                     color = if (isSelected) KonectoTheme.semantics.accentContainer else MaterialTheme.colorScheme.surfaceVariant,
                                     shape = RoundedCornerShape(6.dp),
-                                    border = androidx.compose.foundation.BorderStroke(
+                                    border = BorderStroke(
                                         1.dp,
                                         if (isSelected) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.outline
                                     ),
@@ -265,6 +370,9 @@ fun ConnectionDialog(
                     val normalized = ServerPreferences.normalizeUrl(urlText)
                     coroutineScope.launch {
                         ServerPreferences.setServerUrl(context, normalized)
+                        ServerPreferences.setAppLanguage(context, currentLang)
+                        ServerPreferences.setTtsEnabled(context, isTtsEnabled)
+                        LocaleController.setLanguage(context, currentLang)
                         onSaved(normalized)
                     }
                 },

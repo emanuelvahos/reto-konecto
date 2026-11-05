@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.konecto.series76.data.ActuatorDto
 import io.konecto.series76.data.MessageRecord
 import io.konecto.series76.data.Verification
 import io.konecto.series76.ui.ProductDataVisualizer
@@ -32,7 +33,8 @@ fun ChatBubbleItem(
     verification: Verification? = null,
     isLastAssistantMessage: Boolean = false,
     onSendQuery: (String) -> Unit = {},
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onOpenFullDatasheet: (ActuatorDto) -> Unit = {}
 ) {
     val isUser = msg.role == "user"
     val bubbleShape = if (isUser) {
@@ -123,7 +125,8 @@ fun ChatBubbleItem(
                     uiPayload = msg.uiPayload,
                     contextText = msg.content,
                     onSendQuery = onSendQuery,
-                    onRetry = onRetry
+                    onRetry = onRetry,
+                    onOpenFullDatasheet = onOpenFullDatasheet
                 )
             }
 

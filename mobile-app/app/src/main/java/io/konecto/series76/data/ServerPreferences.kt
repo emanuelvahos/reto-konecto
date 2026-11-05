@@ -3,6 +3,7 @@ package io.konecto.series76.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -17,8 +18,13 @@ object ServerPreferences {
     private val KEY_AUTH_TOKEN = stringPreferencesKey("auth_token")
     private val KEY_USER_EMAIL = stringPreferencesKey("user_email")
     private val KEY_USER_NAME = stringPreferencesKey("user_name")
+    private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
+    private val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
 
     const val DEFAULT_SERVER_URL = "http://10.0.2.2:8001/"
+    const val LANG_AUTO = "auto"
+    const val LANG_ES = "es"
+    const val LANG_EN = "en"
 
     fun getServerUrl(context: Context): Flow<String> {
         return context.dataStore.data.map { prefs ->
@@ -63,6 +69,38 @@ object ServerPreferences {
             prefs.remove(KEY_USER_NAME)
         }
         ApiClient.authToken = null
+    }
+
+    fun getAppLanguage(context: Context): Flow<String> {
+        return context.dataStore.data.map { prefs ->
+            prefs[KEY_APP_LANGUAGE] ?: LANG_AUTO
+        }
+    }
+
+    suspend fun getAppLanguageSync(context: Context): String {
+        return context.dataStore.data.first()[KEY_APP_LANGUAGE] ?: LANG_AUTO
+    }
+
+    suspend fun setAppLanguage(context: Context, lang: String) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_APP_LANGUAGE] = lang
+        }
+    }
+
+    fun isTtsEnabled(context: Context): Flow<Boolean> {
+        return context.dataStore.data.map { prefs ->
+            prefs[KEY_TTS_ENABLED] ?: false
+        }
+    }
+
+    suspend fun isTtsEnabledSync(context: Context): Boolean {
+        return context.dataStore.data.first()[KEY_TTS_ENABLED] ?: false
+    }
+
+    suspend fun setTtsEnabled(context: Context, enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[KEY_TTS_ENABLED] = enabled
+        }
     }
 
     fun normalizeUrl(input: String): String {

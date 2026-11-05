@@ -152,5 +152,51 @@
 
     <!-- Common -->
     <string name="retry">Retry</string>
+
+    <!-- Alert Titles -->
+    <string name="alert_title_duty_cycle">Duty Cycle Information</string>
+    <string name="alert_title_hazardous">Hazardous Location / Explosion-Proof</string>
+    <string name="alert_title_service_unavailable">Service Unavailable</string>
+    <string name="alert_title_no_match">No Exact Matches Found</string>
+    <string name="alert_title_single_torque">Three-Phase Torque Rating</string>
+    <string name="alert_title_generic">Engineering Notice</string>
+    <string name="error_service_unavailable_clean_msg">The technical assistant is temporarily unavailable. Please retry your query.</string>
+
+    <!-- Comparison Table Enhancements -->
+    <string name="comparison_best_legend">★ Best parameter value</string>
+    <string name="comparison_copy_btn">Copy Comparison</string>
+    <string name="comparison_copied_toast">Comparison copied to clipboard</string>
+
+    <!-- Full Datasheet Sheet -->
+    <string name="datasheet_sheet_title">Series 76 Technical Datasheet</string>
+    <string name="datasheet_group_mechanical">Mechanical Specifications</string>
+    <string name="datasheet_group_electrical">Electrical Specifications</string>
+    <string name="datasheet_group_certifications">Standards &amp; Certifications</string>
+    <string name="datasheet_source_page">Source: Series 76 electric data, p. %1$d</string>
+    <string name="datasheet_copied_toast">Technical datasheet copied to clipboard</string>
+
+    <!-- Settings Dialog: Language & TTS -->
+    <string name="settings_dialog_title">Settings &amp; Server</string>
+    <string name="settings_lang_title">Application Language</string>
+    <string name="settings_lang_auto">Automatic (System)</string>
+    <string name="settings_lang_es">Español</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_tts_title">Read answers aloud</string>
+    <string name="settings_tts_desc">Automatically speak assistant response with system TTS</string>
+
+    <!-- Voice Input and Confirmation -->
+    <string name="voice_listening_title">Listening for technical query…</string>
+    <string name="voice_listening_desc">Dictate part numbers or questions in English or Spanish</string>
+    <string name="voice_processing">Processing audio…</string>
+    <string name="voice_permission_rationale_title">Microphone Access Required</string>
+    <string name="voice_permission_rationale_msg">Voice dictation requires microphone permission to recognize Series 76 actuator codes directly on your device.</string>
+    <string name="voice_permission_grant">Allow Access</string>
+    <string name="voice_permission_denied">Microphone permission is denied. You can enable it in system settings.</string>
+    <string name="voice_confirm_title">Confirm Technical Query</string>
+    <string name="voice_confirm_desc">Review and edit the recognized query before sending:</string>
+    <string name="voice_confirm_send">Confirm &amp; Send</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="voice_stop">Stop Listening</string>
+    <string name="voice_unavailable">Speech recognition is not available on this device</string>
 </resources>
 

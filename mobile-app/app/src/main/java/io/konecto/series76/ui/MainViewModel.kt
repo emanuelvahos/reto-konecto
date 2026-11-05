@@ -8,6 +8,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.konecto.series76.data.*
 import io.konecto.series76.mock.DebugMockProvider
+import io.konecto.series76.util.LocaleController
+import io.konecto.series76.util.TtsManager
 import kotlinx.coroutines.launch
 
 enum class AppScreen {
@@ -32,9 +34,11 @@ class MainViewModel : ViewModel() {
     var isDeveloperModeUnlocked by mutableStateOf(false)
 
     private var appContext: Context? = null
+    private var ttsManager: TtsManager? = null
 
     fun initPrefs(context: Context) {
         appContext = context.applicationContext
+        ttsManager = TtsManager(context.applicationContext)
         viewModelScope.launch {
             val savedUrl = ServerPreferences.getServerUrlSync(context)
             ApiClient.baseUrl = savedUrl
@@ -47,6 +51,15 @@ class MainViewModel : ViewModel() {
                 loadSessions()
             }
         }
+    }
+
+    fun stopTts() {
+        ttsManager?.stop()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ttsManager?.shutdown()
     }
 
     fun updateServerUrl(context: Context, newUrl: String) {
@@ -83,6 +96,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun logout(context: Context) {
+        stopTts()
         viewModelScope.launch {
             ServerPreferences.clearAuth(context)
             currentUser = null
@@ -113,6 +127,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun startNewConversation() {
+        stopTts()
         activeSessionId = null
         activeSessionTitle = "Series 76"
         messages = emptyList()
@@ -122,6 +137,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun startNewConversationWithQuery(query: String) {
+        stopTts()
         val clean = query.trim()
         activeSessionId = null
         activeSessionTitle = clean.take(28)
@@ -133,6 +149,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun openConversation(session: SessionSummary) {
+        stopTts()
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
@@ -151,6 +168,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun deleteConversation(sessionId: String) {
+        stopTts()
         viewModelScope.launch {
             try {
                 ApiClient.api.deleteSession(sessionId)
@@ -183,9 +201,10 @@ class MainViewModel : ViewModel() {
         sendUserMessage(query, isRetry = true)
     }
 
-    fun sendUserMessage(queryText: String, isRetry: Boolean = false) {
+    fun sendUserMessage(queryText: String, isRetry: Boolean = false, inputMode: String = "text") {
         val cleanQuery = queryText.trim()
         if (cleanQuery.isEmpty() || isLoading) return
+        stopTts()
         lastUserQuery = cleanQuery
 
         // 1. Añadir el mensaje del usuario solo si no es un reintento
@@ -202,6 +221,9 @@ class MainViewModel : ViewModel() {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
+
+            val prefLang = appContext?.let { ServerPreferences.getAppLanguageSync(it) } ?: "auto"
+            val localeLang = LocaleController.getEffectiveLanguage(prefLang)
 
             if (DebugMockProvider.isMockEnabled && appContext != null) {
                 val mockResp = DebugMockProvider.getMockResponse(appContext!!, cleanQuery)
@@ -224,19 +246,23 @@ class MainViewModel : ViewModel() {
                     messageVerifications[assistantMsg.id] = mockResp.verification
                     messages = messages + assistantMsg
                     isLoading = false
+
+                    // TTS automático si está activado
+                    if (ServerPreferences.isTtsEnabledSync(appContext!!)) {
+                        ttsManager?.speak(assistantMsg.content, localeLang)
+                    }
                     return@launch
                 }
             }
 
             // Flujo normal contra backend FastAPI
             try {
-                val localeLang = if (java.util.Locale.getDefault().language.startsWith("es")) "es" else "en"
                 val resp = ApiClient.api.sendMessage(
                     ConversationRequest(
                         sessionId = activeSessionId,
                         query = cleanQuery,
                         locale = localeLang,
-                        inputMode = "text"
+                        inputMode = inputMode
                     )
                 )
                 activeSessionId = resp.sessionId
@@ -254,8 +280,27 @@ class MainViewModel : ViewModel() {
                 )
                 messageVerifications[assistantMsg.id] = resp.verification
                 messages = messages + assistantMsg
+
+                // TTS automático si está activado
+                appContext?.let { ctx ->
+                    if (ServerPreferences.isTtsEnabledSync(ctx)) {
+                        ttsManager?.speak(assistantMsg.content, localeLang)
+                    }
+                }
             } catch (e: Exception) {
-                errorMessage = "Backend error or timeout: ${e.localizedMessage ?: e.javaClass.simpleName}"
+                val rawMsg = e.localizedMessage ?: e.javaClass.simpleName
+                val hasTechnicalCode = rawMsg.contains("503") ||
+                    rawMsg.contains("500") ||
+                    rawMsg.contains("502") ||
+                    rawMsg.contains("LLM", ignoreCase = true) ||
+                    rawMsg.contains("OpenRouter", ignoreCase = true) ||
+                    rawMsg.contains("Anthropic", ignoreCase = true) ||
+                    rawMsg.contains("Claude", ignoreCase = true)
+                errorMessage = if (hasTechnicalCode) {
+                    "El servicio técnico no está disponible temporalmente. Por favor, reintenta en unos momentos."
+                } else {
+                    "Error de conexión. Verifica tu conexión de red y reintenta."
+                }
             } finally {
                 isLoading = false
             }

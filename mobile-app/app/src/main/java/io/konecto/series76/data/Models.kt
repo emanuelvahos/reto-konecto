@@ -83,7 +83,8 @@ data class ActuatorDto(
     @SerialName("motor_power_watts") val motorPowerWatts: Int? = null,
     @SerialName("csa_certified") val csaCertified: Boolean = true,
     @SerialName("ce_ukca_certified") val ceUkcaCertified: Boolean = false,
-    @SerialName("hazardous_classification") val hazardousClassification: String? = null
+    @SerialName("hazardous_classification") val hazardousClassification: String? = null,
+    @SerialName("source_page") val sourcePage: Int? = null
 )
 
 @Immutable
@@ -91,6 +92,7 @@ data class ActuatorDto(
 data class UIAlert(
     val code: String = "",
     val severity: String = "",
+    val title: String = "",
     val message: String = ""
 )
 

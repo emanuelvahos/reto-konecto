@@ -152,5 +152,51 @@
 
     <!-- Common -->
     <string name="retry">Reintentar</string>
+
+    <!-- Alert Titles -->
+    <string name="alert_title_duty_cycle">Información de ciclo de trabajo</string>
+    <string name="alert_title_hazardous">Área clasificada / A prueba de explosión</string>
+    <string name="alert_title_service_unavailable">Servicio no disponible</string>
+    <string name="alert_title_no_match">Sin coincidencias exactas</string>
+    <string name="alert_title_single_torque">Especificación de torque trifásico</string>
+    <string name="alert_title_generic">Aviso de ingeniería</string>
+    <string name="error_service_unavailable_clean_msg">El asistente técnico no se encuentra disponible temporalmente. Por favor, reintente su consulta.</string>
+
+    <!-- Comparison Table Enhancements -->
+    <string name="comparison_best_legend">★ Mejor valor en el parámetro</string>
+    <string name="comparison_copy_btn">Copiar comparativa</string>
+    <string name="comparison_copied_toast">Comparativa copiada al portapapeles</string>
+
+    <!-- Full Datasheet Sheet -->
+    <string name="datasheet_sheet_title">Ficha Técnica Serie 76</string>
+    <string name="datasheet_group_mechanical">Especificaciones Mecánicas</string>
+    <string name="datasheet_group_electrical">Especificaciones Eléctricas</string>
+    <string name="datasheet_group_certifications">Normativas y Certificaciones</string>
+    <string name="datasheet_source_page">Fuente: Series 76 electric data, pág. %1$d</string>
+    <string name="datasheet_copied_toast">Ficha técnica copiada al portapapeles</string>
+
+    <!-- Settings Dialog: Language & TTS -->
+    <string name="settings_dialog_title">Ajustes y Servidor</string>
+    <string name="settings_lang_title">Idioma de la aplicación</string>
+    <string name="settings_lang_auto">Automático (Sistema)</string>
+    <string name="settings_lang_es">Español</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_tts_title">Lectura en voz alta</string>
+    <string name="settings_tts_desc">Leer automáticamente la respuesta técnica con voz del sistema</string>
+
+    <!-- Voice Input and Confirmation -->
+    <string name="voice_listening_title">Escuchando consulta técnica…</string>
+    <string name="voice_listening_desc">Dicte números de parte o consultas en español o inglés</string>
+    <string name="voice_processing">Procesando audio…</string>
+    <string name="voice_permission_rationale_title">Acceso al micrófono requerido</string>
+    <string name="voice_permission_rationale_msg">El dictado por voz requiere acceso al micrófono para reconocer códigos de actuadores Serie 76 directamente en su dispositivo.</string>
+    <string name="voice_permission_grant">Permitir acceso</string>
+    <string name="voice_permission_denied">Permiso de micrófono denegado. Puede habilitarlo en los ajustes del sistema.</string>
+    <string name="voice_confirm_title">Confirmar consulta técnica</string>
+    <string name="voice_confirm_desc">Revise y edite la consulta reconocida antes de enviar:</string>
+    <string name="voice_confirm_send">Confirmar y Enviar</string>
+    <string name="voice_cancel">Cancelar</string>
+    <string name="voice_stop">Detener</string>
+    <string name="voice_unavailable">El reconocimiento de voz no está disponible en este dispositivo</string>
 </resources>
 

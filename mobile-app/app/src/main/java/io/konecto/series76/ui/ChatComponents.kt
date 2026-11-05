@@ -18,10 +18,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,7 +57,8 @@ fun ProductDataVisualizer(
     uiPayload: UIPayload,
     contextText: String? = null,
     onSendQuery: (String) -> Unit = {},
-    onRetry: () -> Unit = {}
+    onRetry: () -> Unit = {},
+    onOpenFullDatasheet: (ActuatorDto) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -98,7 +102,8 @@ fun ProductDataVisualizer(
                 uiPayload.recommendation?.let { rec ->
                     RecommendationListView(
                         recommendation = rec,
-                        actuators = uiPayload.actuators
+                        actuators = uiPayload.actuators,
+                        onOpenFullDatasheet = onOpenFullDatasheet
                     )
                 }
             }
@@ -117,13 +122,19 @@ fun ProductDataVisualizer(
             }
             "SINGLE_SPEC_CARD" -> {
                 if (uiPayload.actuators.isNotEmpty()) {
-                    SingleActuatorSpecCard(actuator = uiPayload.actuators.first())
+                    SingleActuatorSpecCard(
+                        actuator = uiPayload.actuators.first(),
+                        onOpenFullDatasheet = onOpenFullDatasheet
+                    )
                 }
             }
             else -> {
                 // TEXT_ONLY o EDGE_CASE_ALERT: si viene 1 actuador se muestra la ficha, si son varios la comparativa
                 if (uiPayload.actuators.size == 1) {
-                    SingleActuatorSpecCard(actuator = uiPayload.actuators.first())
+                    SingleActuatorSpecCard(
+                        actuator = uiPayload.actuators.first(),
+                        onOpenFullDatasheet = onOpenFullDatasheet
+                    )
                 } else if (uiPayload.actuators.size > 1) {
                     ActuatorComparisonTable(actuators = uiPayload.actuators)
                 }
@@ -240,7 +251,8 @@ fun AnimatedTorqueValue(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SingleActuatorSpecCard(
-    actuator: ActuatorDto
+    actuator: ActuatorDto,
+    onOpenFullDatasheet: ((ActuatorDto) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -527,6 +539,32 @@ fun SingleActuatorSpecCard(
 
                 // 2. Mini Tabla de Frecuencias Side-by-Side (60 Hz | 50 Hz a la vez)
                 FrequencySpecMiniTable(actuator = actuator)
+
+                // 3. Acción para desplegar Ficha Técnica Completa (ModalBottomSheet)
+                if (onOpenFullDatasheet != null) {
+                    OutlinedButton(
+                        onClick = { onOpenFullDatasheet(actuator) },
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = KonectoTheme.semantics.accent
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.datasheet_sheet_title),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }
@@ -840,6 +878,31 @@ fun ShimmerSkeletonCard(
     }
 }
 
+private fun copyComparisonTableToClipboard(context: Context, actuators: List<ActuatorDto>) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val sb = StringBuilder()
+    sb.appendLine("KONECTO SERIES 76 - ACTUATOR COMPARISON")
+    sb.appendLine("Actuadores: " + actuators.joinToString(", ") { it.basePartNumber })
+    sb.appendLine("=".repeat(50))
+    actuators.forEach { act ->
+        val isThreePhase = act.phaseType.contains("3") || act.singleTorqueNm != null
+        val t = act.singleTorqueNm ?: act.onOffTorqueNm
+        sb.appendLine("• ${act.basePartNumber}:")
+        sb.appendLine("  Enclosure: ${act.enclosureType} | Power: ${act.powerSupply}")
+        if (isThreePhase) {
+            sb.appendLine("  Torque: ${t?.toInt() ?: "—"} Nm (S4 70%)")
+        } else {
+            sb.appendLine("  On/Off Torque: ${act.onOffTorqueNm?.toInt() ?: "—"} Nm (${act.onOffDutyCyclePct ?: "—"}%)")
+            sb.appendLine("  Modulating Torque: ${act.modulatingTorqueNm?.toInt() ?: "—"} Nm (${act.modulatingDutyCyclePct ?: "—"}%)")
+        }
+        sb.appendLine("  Velocidad 90°: 60Hz = ${act.speed60HzSec ?: act.speedDcOrFixedSec ?: "—"}s | 50Hz = ${act.speed50HzSec ?: "—"}s")
+        sb.appendLine("  FLA: 60Hz = ${act.fla60HzAmps ?: act.flaDcOrFixedAmps ?: "—"}A | 50Hz = ${act.fla50HzAmps ?: "—"}A")
+        sb.appendLine("  CSA: ${if (act.csaCertified) "Certificado" else "No certificado"}")
+    }
+    clipboard.setPrimaryClip(ClipData.newPlainText("Series 76 Comparison", sb.toString()))
+    Toast.makeText(context, context.getString(R.string.comparison_copied_toast), Toast.LENGTH_SHORT).show()
+}
+
 /**
  * Tabla Comparativa Side-by-Side con primera columna fija y ambas frecuencias (60 y 50 Hz)
  */
@@ -847,12 +910,18 @@ fun ShimmerSkeletonCard(
 fun ActuatorComparisonTable(
     actuators: List<ActuatorDto>
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
     val hasThreePhase = actuators.any {
         it.phaseType.contains("3") ||
         it.singleTorqueNm != null ||
         (it.modulatingTorqueNm == null && it.onOffTorqueNm != null)
     }
+
+    val bestOnOffTorque = if (actuators.size > 1) actuators.mapNotNull { it.singleTorqueNm ?: it.onOffTorqueNm }.maxOrNull() else null
+    val bestModTorque = if (actuators.size > 1) actuators.mapNotNull { it.modulatingTorqueNm }.maxOrNull() else null
+    val bestSpeed60 = if (actuators.size > 1) actuators.mapNotNull { it.speed60HzSec ?: it.speedDcOrFixedSec }.minOrNull() else null
+    val bestSpeed50 = if (actuators.size > 1) actuators.mapNotNull { it.speed50HzSec }.minOrNull() else null
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1041,23 +1110,44 @@ fun ActuatorComparisonTable(
                                 Text(act.powerSupply, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, lineHeight = 13.sp)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                                val rawTorque = (act.singleTorqueNm ?: act.onOffTorqueNm)
+                                val isBest = bestOnOffTorque != null && rawTorque != null && rawTorque == bestOnOffTorque
                                 val onOff = if (isActThreePhase) {
-                                    "${(act.singleTorqueNm ?: act.onOffTorqueNm)?.toInt()} Nm"
+                                    if (rawTorque != null) "${if (isBest) "★ " else ""}${rawTorque.toInt()} Nm" else "—"
                                 } else {
-                                    if (act.onOffTorqueNm != null) "${act.onOffTorqueNm.toInt()} Nm" else "—"
+                                    if (act.onOffTorqueNm != null) "${if (isBest) "★ " else ""}${act.onOffTorqueNm.toInt()} Nm" else "—"
                                 }
-                                Text(text = onOff, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(
+                                    text = onOff,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isBest) FontWeight.ExtraBold else FontWeight.Bold,
+                                    color = if (isBest) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${act.modulatingTorqueNm.toInt()} Nm" else "—"
-                                Text(text = mod, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                val isBest = bestModTorque != null && act.modulatingTorqueNm != null && act.modulatingTorqueNm == bestModTorque
+                                val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${if (isBest) "★ " else ""}${act.modulatingTorqueNm.toInt()} Nm" else "—"
+                                Text(
+                                    text = mod,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isBest) FontWeight.ExtraBold else FontWeight.Bold,
+                                    color = if (isBest) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val duty = if (isActThreePhase) "70% (S4)" else "${act.onOffDutyCyclePct ?: "—"}% / ${act.modulatingDutyCyclePct ?: "—"}%"
                                 Text(duty, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(speedStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                val isBestSpeed = (bestSpeed60 != null && (act.speed60HzSec == bestSpeed60 || act.speedDcOrFixedSec == bestSpeed60)) ||
+                                    (bestSpeed50 != null && act.speed50HzSec == bestSpeed50)
+                                Text(
+                                    text = if (isBestSpeed) "★ $speedStr" else speedStr,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = if (isBestSpeed) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isBestSpeed) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 Text(flaStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
@@ -1080,6 +1170,42 @@ fun ActuatorComparisonTable(
                     }
                 }
             }
+
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+
+            // Pie de tabla con leyenda de mejor valor y botón de copiado
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.m, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.comparison_best_legend),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = { copyComparisonTableToClipboard(context, actuators) },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = stringResource(R.string.comparison_copy_btn),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
@@ -1087,10 +1213,12 @@ fun ActuatorComparisonTable(
 /**
  * Vista de Recomendación con Ranking, Pros/Contras, Restricciones y Despliegue de Ficha
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RecommendationListView(
     recommendation: RecommendationPayload,
-    actuators: List<ActuatorDto> = emptyList()
+    actuators: List<ActuatorDto> = emptyList(),
+    onOpenFullDatasheet: (ActuatorDto) -> Unit = {}
 ) {
     var expandedPartNumber by remember { mutableStateOf<String?>(null) }
 
@@ -1124,11 +1252,10 @@ fun RecommendationListView(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         recommendation.hardConstraints.forEach { constraint ->
                             Surface(
@@ -1160,11 +1287,10 @@ fun RecommendationListView(
                         fontWeight = FontWeight.Bold,
                         color = KonectoTheme.semantics.warningText
                     )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         recommendation.relaxedConstraints.forEach { relaxed ->
                             Surface(
@@ -1394,10 +1520,13 @@ fun RecommendationListView(
                         if (isExpanded) {
                             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
                             if (matchingActuator != null) {
-                                SingleActuatorSpecCard(actuator = matchingActuator)
+                                SingleActuatorSpecCard(
+                                    actuator = matchingActuator,
+                                    onOpenFullDatasheet = onOpenFullDatasheet
+                                )
                             } else {
                                 Text(
-                                    text = "Modelo: ${item.partNumber}",
+                                    text = "${stringResource(R.string.table_col_part)}: ${item.partNumber}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1643,6 +1772,10 @@ fun VerificationBadge(
 
 /**
  * Lista de Alertas del Sistema con severidad y botón de reintento
+ * - Códigos internos (DUTY_CYCLE_INFO, HAZARDOUS_..., LLM_UNAVAILABLE) NUNCA se muestran al usuario
+ * - Muestra alert.title o fallback legible por código desde strings es/en
+ * - Errores sanitizados sin códigos HTTP, LLM ni nombres de proveedores
+ * - Botón de reintento con contraste AA certificado en modo oscuro y claro
  */
 @Composable
 fun UIAlertsView(
@@ -1679,6 +1812,33 @@ fun UIAlertsView(
                 else -> "ℹ️"
             }
 
+            // Título amigable para el usuario: NUNCA mostrar códigos técnicos internos
+            val titleText = when {
+                alert.title.isNotBlank() -> alert.title
+                alert.code.equals("DUTY_CYCLE_INFO", ignoreCase = true) -> stringResource(R.string.alert_title_duty_cycle)
+                alert.code.equals("HAZARDOUS_NEEDS_EXPLOSIONPROOF", ignoreCase = true) -> stringResource(R.string.alert_title_hazardous)
+                alert.code.equals("LLM_UNAVAILABLE", ignoreCase = true) || alert.code.contains("UNAVAILABLE", ignoreCase = true) -> stringResource(R.string.alert_title_service_unavailable)
+                alert.code.equals("NO_MATCH_HARD_CONSTRAINTS", ignoreCase = true) -> stringResource(R.string.alert_title_no_match)
+                alert.code.equals("SINGLE_TORQUE_RATING", ignoreCase = true) -> stringResource(R.string.alert_title_single_torque)
+                else -> stringResource(R.string.alert_title_generic)
+            }
+
+            // Mensaje limpio: el usuario nunca debe ver códigos HTTP (503, 500), nombre del proveedor ni "LLM"
+            val raw = alert.message
+            val containsTechnicalArtifacts = raw.contains("503") ||
+                raw.contains("500") ||
+                raw.contains("502") ||
+                raw.contains("LLM", ignoreCase = true) ||
+                raw.contains("OpenRouter", ignoreCase = true) ||
+                raw.contains("Anthropic", ignoreCase = true) ||
+                raw.contains("Claude", ignoreCase = true) ||
+                raw.contains("HTTP", ignoreCase = true)
+            val displayMessage = if (containsTechnicalArtifacts || (isError && raw.length > 150)) {
+                stringResource(R.string.error_service_unavailable_clean_msg)
+            } else {
+                raw
+            }
+
             Surface(
                 color = bgColor,
                 shape = RoundedCornerShape(10.dp),
@@ -1693,14 +1853,13 @@ fun UIAlertsView(
                     Text(text = icon, fontSize = 16.sp)
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = alert.code,
-                            fontSize = 10.sp,
+                            text = titleText,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
                             color = textColor
                         )
                         Text(
-                            text = alert.message,
+                            text = displayMessage,
                             style = MaterialTheme.typography.bodySmall,
                             color = textColor
                         )
@@ -1708,14 +1867,17 @@ fun UIAlertsView(
                     if (isError) {
                         Button(
                             onClick = onRetry,
-                            colors = ButtonDefaults.buttonColors(containerColor = textColor),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
                             shape = RoundedCornerShape(6.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = stringResource(R.string.retry),
-                                fontSize = 10.sp,
-                                color = Color.White,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onError,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -1723,5 +1885,280 @@ fun UIAlertsView(
                 }
             }
         }
+    }
+}
+
+/**
+ * Ficha Técnica Completa desplegada en ModalBottomSheet
+ * - Agrupa especificaciones mecánicas, eléctricas (60 y 50 Hz) y certificaciones
+ * - Fuente: Series 76 electric data, pág. N si sourcePage != null
+ * - Acciones de Copiar y Compartir completas
+ * - La app nunca inventa ni calcula valores faltantes (muestra "—")
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ActuatorFullDatasheetSheet(
+    actuator: ActuatorDto,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+
+    val isThreePhase = remember(actuator) {
+        actuator.phaseType.contains("3") ||
+        actuator.singleTorqueNm != null ||
+        (actuator.modulatingTorqueNm == null && actuator.onOffTorqueNm != null)
+    }
+
+    fun buildFullDatasheetText(): String {
+        val sb = StringBuilder()
+        sb.appendLine("KONECTO SERIES 76 - FULL TECHNICAL DATASHEET")
+        sb.appendLine("Part Number: ${actuator.basePartNumber}")
+        sb.appendLine("Frame Size: ${actuator.frameSize}")
+        sb.appendLine("Enclosure: ${actuator.enclosureType}")
+        sb.appendLine("Phase Type: ${actuator.phaseType}")
+        sb.appendLine("Power Supply: ${actuator.powerSupply}")
+        if (isThreePhase) {
+            val torque = actuator.singleTorqueNm ?: actuator.onOffTorqueNm
+            val torqueInLbs = actuator.singleTorqueInLbs ?: actuator.onOffTorqueInLbs
+            sb.appendLine("Output Torque: ${torque?.toInt() ?: "—"} Nm (${torqueInLbs?.toInt() ?: "—"} in-lbs)")
+            sb.appendLine("Duty Rating: S4 70%")
+        } else {
+            sb.appendLine("On/Off Torque: ${actuator.onOffTorqueNm?.toInt() ?: "—"} Nm (${actuator.onOffTorqueInLbs?.toInt() ?: "—"} in-lbs)")
+            sb.appendLine("Modulating Torque: ${actuator.modulatingTorqueNm?.toInt() ?: "—"} Nm (${actuator.modulatingTorqueInLbs?.toInt() ?: "—"} in-lbs)")
+            sb.appendLine("On/Off Duty Cycle: ${actuator.onOffDutyCyclePct ?: "—"}%")
+            sb.appendLine("Modulating Duty Cycle: ${actuator.modulatingDutyCyclePct ?: "—"}%")
+        }
+        sb.appendLine("Cycles / Hour: ${actuator.cyclesPerHour ?: "—"}")
+        sb.appendLine("Starts / Hour: ${actuator.startsPerHour ?: "—"}")
+        sb.appendLine("Speed 90°: 60Hz = ${actuator.speed60HzSec ?: actuator.speedDcOrFixedSec ?: "—"}s | 50Hz = ${actuator.speed50HzSec ?: "—"}s")
+        sb.appendLine("FLA: 60Hz = ${actuator.fla60HzAmps ?: actuator.flaDcOrFixedAmps ?: "—"}A | 50Hz = ${actuator.fla50HzAmps ?: "—"}A")
+        sb.appendLine("LRA: 60Hz = ${actuator.lra60HzAmps ?: actuator.lraDcOrFixedAmps ?: "—"}A | 50Hz = ${actuator.lra50HzAmps ?: "—"}A")
+        sb.appendLine("Motor Power: ${actuator.motorPowerWatts ?: "—"} W")
+        sb.appendLine("Certification: ${if (actuator.csaCertified) "CSA Certified (UL 429 / CSA C22.2 No. 139)" else "Non-CSA"}")
+        if (actuator.sourcePage != null) {
+            sb.appendLine("Source: Series 76 electric data, p. ${actuator.sourcePage}")
+        }
+        return sb.toString()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.m)
+                .padding(bottom = Spacing.l)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.datasheet_sheet_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = actuator.basePartNumber,
+                        fontFamily = FontFamily.Monospace,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = KonectoTheme.semantics.accentText,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Series 76 Datasheet", buildFullDatasheetText()))
+                            Toast.makeText(context, context.getString(R.string.datasheet_copied_toast), Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.card_copy_action),
+                            tint = KonectoTheme.semantics.accent
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, "Series 76 - ${actuator.basePartNumber} Datasheet")
+                                putExtra(Intent.EXTRA_TEXT, buildFullDatasheetText())
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.card_share_title)))
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = stringResource(R.string.card_share_action),
+                            tint = KonectoTheme.semantics.accent
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+
+            // Grupo 1: Especificaciones Mecánicas
+            Text(
+                text = stringResource(R.string.datasheet_group_mechanical),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.s),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    DatasheetMetricRow("Frame Size", "Frame ${actuator.frameSize}")
+                    DatasheetMetricRow("Enclosure Type", actuator.enclosureType)
+                    DatasheetMetricRow("Phase", actuator.phaseType)
+                    if (isThreePhase) {
+                        val tNm = actuator.singleTorqueNm ?: actuator.onOffTorqueNm
+                        val tLbs = actuator.singleTorqueInLbs ?: actuator.onOffTorqueInLbs
+                        DatasheetMetricRow(
+                            "Output Torque",
+                            if (tNm != null) "${tNm.toInt()} Nm (${tLbs?.toInt() ?: "—"} in-lbs)" else "—"
+                        )
+                        DatasheetMetricRow("Duty Rating", "70% (S4)")
+                    } else {
+                        DatasheetMetricRow(
+                            "On/Off Torque",
+                            if (actuator.onOffTorqueNm != null) "${actuator.onOffTorqueNm.toInt()} Nm (${actuator.onOffTorqueInLbs?.toInt() ?: "—"} in-lbs)" else "—"
+                        )
+                        DatasheetMetricRow(
+                            "Modulating Torque",
+                            if (actuator.modulatingTorqueNm != null) "${actuator.modulatingTorqueNm.toInt()} Nm (${actuator.modulatingTorqueInLbs?.toInt() ?: "—"} in-lbs)" else "—"
+                        )
+                        DatasheetMetricRow("On/Off Duty Cycle", if (actuator.onOffDutyCyclePct != null) "${actuator.onOffDutyCyclePct}%" else "—")
+                        DatasheetMetricRow("Modulating Duty Cycle", if (actuator.modulatingDutyCyclePct != null) "${actuator.modulatingDutyCyclePct}%" else "—")
+                    }
+                    DatasheetMetricRow("Cycles / Hour", if (actuator.cyclesPerHour != null) "${actuator.cyclesPerHour} ciclos/h" else "—")
+                    DatasheetMetricRow("Starts / Hour", if (actuator.startsPerHour != null) "${actuator.startsPerHour} arranques/h" else "—")
+                }
+            }
+
+            // Grupo 2: Especificaciones Eléctricas (Side-by-Side 60 Hz | 50 Hz)
+            Text(
+                text = stringResource(R.string.datasheet_group_electrical),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.s),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    DatasheetMetricRow("Power Supply", actuator.powerSupply)
+                    DatasheetMetricRow("Motor Power", if (actuator.motorPowerWatts != null) "${actuator.motorPowerWatts} W" else "—")
+                    DatasheetMetricRow(
+                        "Operating Speed 90°",
+                        "60Hz: ${actuator.speed60HzSec ?: actuator.speedDcOrFixedSec ?: "—"}s | 50Hz: ${actuator.speed50HzSec ?: "—"}s"
+                    )
+                    DatasheetMetricRow(
+                        "Full Load Amps (FLA)",
+                        "60Hz: ${actuator.fla60HzAmps ?: actuator.flaDcOrFixedAmps ?: "—"}A | 50Hz: ${actuator.fla50HzAmps ?: "—"}A"
+                    )
+                    DatasheetMetricRow(
+                        "Locked Rotor Amps (LRA)",
+                        "60Hz: ${actuator.lra60HzAmps ?: actuator.lraDcOrFixedAmps ?: "—"}A | 50Hz: ${actuator.lra50HzAmps ?: "—"}A"
+                    )
+                }
+            }
+
+            // Grupo 3: Normativas y Certificaciones
+            Text(
+                text = stringResource(R.string.datasheet_group_certifications),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(Spacing.s),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    DatasheetMetricRow(
+                        "CSA Certified",
+                        if (actuator.csaCertified) "✓ Certified (UL 429 / CSA C22.2 No. 139)" else "Non-CSA"
+                    )
+                    DatasheetMetricRow("Enclosure Rating", actuator.enclosureType)
+                }
+            }
+
+            // Fuente oficial
+            Surface(
+                color = KonectoTheme.semantics.accentContainer.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (actuator.sourcePage != null) {
+                        stringResource(R.string.datasheet_source_page, actuator.sourcePage)
+                    } else {
+                        "Fuente: Series 76 electric data"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = KonectoTheme.semantics.accentText,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(Spacing.s)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DatasheetMetricRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
