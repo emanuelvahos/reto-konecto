@@ -179,7 +179,7 @@ Resultados medidos el 2026-11-05 en una validación final (los informes de `back
 | Ciega (`heldout.json`) | 39/40 (40 casos); p50 4,5 s, p95 8,9 s; 73 reintentos de transporte | 9/10 (muestra de 10 casos); p50 2,4 s, p95 9,6 s |
 | Costo | $0 | ≈ $0,0003 por caso adversarial y ≈ $0,0004 por caso ciego (tokens × precio de lista, calculado por el backend; no es la factura de OpenRouter) |
 
-Con 10–40 casos las diferencias entre proveedores no son estadísticamente concluyentes. Ambos proveedores fallan el mismo caso (HLD-20, ver limitaciones). En la primera corrida de la batería ciega, antes de las correcciones generales, NIM obtuvo 32/40.
+Detalle por caso, reintentos, latencias y costos de estas corridas: [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md). Con 10–40 casos las diferencias entre proveedores no son estadísticamente concluyentes. Ambos proveedores fallan el mismo caso (HLD-20, ver limitaciones). En la primera corrida de la batería ciega, antes de las correcciones generales, NIM obtuvo 32/40.
 
 ## Pantalla de depuración y credenciales demo 
 
@@ -213,7 +213,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 - **HLD-20 y seguimientos ambiguos.** En la batería ciega falla un seguimiento («¿alguno de esos modelos trifásicos pequeños sirve?» tras un N/A): el router lo clasifica `uncertain`, decide el LLM y su respuesta habla de alternativos monofásicos sin decir que los trifásicos no están disponibles. No se corrigió con una regla general.
 - **El router solo cubre español e inglés.** Otro idioma pasa al LLM sin las protecciones previas.
 - **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
-- **OpenRouter medido solo en una pasada corta** (una corrida: 11/11 evals, 30/30 adversarial y 9/10 en una muestra de 10 casos ciegos). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado.
+- **OpenRouter medido solo en una pasada corta** (una corrida: 11/11 evals, 30/30 adversarial y 9/10 en una muestra de 10 casos ciegos). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado. Datos completos en [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md).
 - **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
 - **Modo degradado.** Las respuestas de plantilla son más rígidas que las del LLM y las consultas que el router no clasifica no se pueden contestar sin modelo. Las cifras son las mismas (vienen de la base de datos), no la redacción. Esta ruta se probó con pruebas automáticas, no con una corrida de las baterías sin LLM.
 - La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.

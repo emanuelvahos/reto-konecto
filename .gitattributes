@@ -1,0 +1,13 @@
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.kt text eol=lf
+# Gradle wrapper: el script sin extension se ejecuta en Linux/macOS
+gradlew text eol=lf
+*.bat text eol=crlf
+*.png binary
+*.pdf binary
+*.apk binary

@@ -84,8 +84,8 @@ Provider profiles live in `backend/config/llm_profiles.json`, selected with `LLM
 
 | Stage | `LLM_PROVIDER` | Env vars | Cost |
 | :--- | :--- | :--- | :--- |
-| **Development & Stress Testing** | `nim` | `LLM_BASE_URL_NIM`, `LLM_CHAT_MODEL_NIM`, `LLM_API_KEY_NIM` | $0.00 (free tier) |
-| **Final Delivery** | `openrouter` | `LLM_BASE_URL`, `LLM_CHAT_MODEL` (`openai/gpt-4o-mini`), `LLM_API_KEY` | single final run only |
+| **Development & Stress Testing (alternative)** | `nim` | `LLM_BASE_URL_NIM`, `LLM_CHAT_MODEL_NIM`, `LLM_API_KEY_NIM` | $0.00 (free tier) |
+| **Default / Final Delivery** | `openrouter` (default when `LLM_PROVIDER` is unset) | `LLM_BASE_URL`, `LLM_CHAT_MODEL` (`openai/gpt-4o-mini`), `LLM_API_KEY` | list price $0.15 / $0.60 per 1M tokens (in/out) |
 
 There are no embeddings (pgvector was retired in Phase 2A), so provider switching needs no re-ingest or volume change.
 
