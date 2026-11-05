@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -16,6 +17,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -120,13 +123,32 @@ fun ChatScreen(vm: MainViewModel) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    var inputText by remember { mutableStateOf("") }
+    var inputText by rememberSaveable { mutableStateOf("") }
 
     // Estados para Ficha Técnica Completa y Reconocimiento de Voz
+    var selectedActuatorPartNumber by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedActuatorForDatasheet by remember { mutableStateOf<ActuatorDto?>(null) }
     var showPermissionRationale by remember { mutableStateOf(false) }
     var showVoiceListeningDialog by remember { mutableStateOf(false) }
     var voiceTextToConfirm by remember { mutableStateOf<String?>(null) }
+
+    val listState = rememberLazyListState()
+
+    // Manejo coherente de botón atrás para cerrar el bottom sheet de ficha técnica si está abierto
+    BackHandler(enabled = selectedActuatorForDatasheet != null) {
+        selectedActuatorForDatasheet = null
+        selectedActuatorPartNumber = null
+    }
+
+    LaunchedEffect(selectedActuatorPartNumber, vm.messages) {
+        if (selectedActuatorForDatasheet == null && selectedActuatorPartNumber != null) {
+            val found = vm.messages.mapNotNull { it.uiPayload?.actuators }.flatten()
+                .firstOrNull { it.basePartNumber == selectedActuatorPartNumber }
+            if (found != null) {
+                selectedActuatorForDatasheet = found
+            }
+        }
+    }
 
     val voiceManager = remember { VoiceRecognitionManager(context) }
     DisposableEffect(Unit) {
@@ -419,7 +441,15 @@ fun ChatScreen(vm: MainViewModel) {
                 }
             }
 
+            LaunchedEffect(vm.messages.size, vm.isLoading) {
+                if (vm.messages.isNotEmpty()) {
+                    val target = if (vm.isLoading) vm.messages.size else vm.messages.size - 1
+                    listState.animateScrollToItem(target.coerceAtLeast(0))
+                }
+            }
+
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = Spacing.s),
@@ -435,7 +465,10 @@ fun ChatScreen(vm: MainViewModel) {
                         isLastAssistantMessage = isLastAssistant,
                         onSendQuery = { query -> vm.sendUserMessage(query) },
                         onRetry = { vm.retryLastMessage() },
-                        onOpenFullDatasheet = { act -> selectedActuatorForDatasheet = act }
+                        onOpenFullDatasheet = { act ->
+                            selectedActuatorForDatasheet = act
+                            selectedActuatorPartNumber = act.basePartNumber
+                        }
                     )
                 }
                 if (vm.isLoading) {
@@ -576,7 +609,10 @@ fun ChatScreen(vm: MainViewModel) {
     if (selectedActuatorForDatasheet != null) {
         ActuatorFullDatasheetSheet(
             actuator = selectedActuatorForDatasheet!!,
-            onDismiss = { selectedActuatorForDatasheet = null }
+            onDismiss = {
+                selectedActuatorForDatasheet = null
+                selectedActuatorPartNumber = null
+            }
         )
     }
 
@@ -845,7 +881,7 @@ fun VoiceConfirmationDialog(
                 OutlinedTextField(
                     value = editableText,
                     onValueChange = { editableText = it },
-                    label = { Text("Query") },
+                    label = { Text(stringResource(R.string.voice_confirm_query_label)) },
                     shape = RoundedCornerShape(10.dp),
                     textStyle = TextStyle(
                         fontFamily = FontFamily.Monospace,

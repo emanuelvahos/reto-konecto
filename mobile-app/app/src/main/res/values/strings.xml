@@ -70,6 +70,7 @@
     <string name="card_col_metric">Parameter</string>
     <string name="card_col_60hz">60 Hz</string>
     <string name="card_col_50hz">50 Hz</string>
+    <string name="card_spec_semantics">Technical datasheet for actuator %1$s</string>
     <string name="card_copy_action">Copy part number</string>
     <string name="card_copied_part">Part number copied</string>
     <string name="card_share_action">Share</string>
@@ -92,6 +93,8 @@
     <string name="table_col_mod_torque">Mod. Torque</string>
     <string name="table_col_duty">Duty (On/Mod)</string>
     <string name="table_col_cert">Certification</string>
+    <string name="table_col_fla_freq">FLA (60|50Hz)</string>
+    <string name="table_col_lra_freq">LRA (60|50Hz)</string>
 
     <!-- Server Dialog -->
     <string name="server_dialog_title">Server Configuration</string>
@@ -211,6 +214,7 @@
     <string name="voice_permission_grant">Allow Access</string>
     <string name="voice_permission_denied">Microphone permission is denied. You can enable it in system settings.</string>
     <string name="voice_confirm_title">Confirm Technical Query</string>
+    <string name="voice_confirm_query_label">Query</string>
     <string name="voice_confirm_desc">Review and edit the recognized query before sending:</string>
     <string name="voice_confirm_send">Confirm &amp; Send</string>
     <string name="voice_cancel">Cancel</string>

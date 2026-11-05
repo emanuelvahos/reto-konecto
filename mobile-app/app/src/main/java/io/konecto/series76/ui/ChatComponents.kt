@@ -40,6 +40,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -320,6 +322,9 @@ fun SingleActuatorSpecCard(
         modifier = Modifier
             .fillMaxWidth()
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
+            .semantics {
+                contentDescription = context.getString(R.string.card_spec_semantics, actuator.basePartNumber)
+            }
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // Cabecera con degradado sutil y acciones
@@ -551,7 +556,12 @@ fun SingleActuatorSpecCard(
                         ),
                         border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.5f)),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .semantics {
+                                contentDescription = context.getString(R.string.btn_view_full_datasheet)
+                            }
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
@@ -1066,10 +1076,10 @@ fun ActuatorComparisonTable(
                         Text(stringResource(R.string.card_speed_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text("FLA (60|50Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_fla_freq), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text("LRA (60|50Hz)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_lra_freq), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.card_power_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)

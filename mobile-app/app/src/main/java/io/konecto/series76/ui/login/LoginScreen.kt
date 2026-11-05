@@ -7,7 +7,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
@@ -176,9 +178,9 @@ fun ActuatorGaugeEmblem(
 @Composable
 fun LoginScreen(vm: MainViewModel) {
     val context = LocalContext.current
-    var email by remember { mutableStateOf("engineer@konecto.io") }
-    var password by remember { mutableStateOf("Konecto2026!") }
-    var showServerDialog by remember { mutableStateOf(false) }
+    var email by rememberSaveable { mutableStateOf("engineer@konecto.io") }
+    var password by rememberSaveable { mutableStateOf("Konecto2026!") }
+    var showServerDialog by rememberSaveable { mutableStateOf(false) }
 
     val isDark = ThemeController.isDarkTheme
     val accentColor = KonectoTheme.semantics.accent
@@ -248,7 +250,7 @@ fun LoginScreen(vm: MainViewModel) {
             IconButton(onClick = { ThemeController.toggleTheme() }) {
                 Icon(
                     imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                    contentDescription = "Toggle Theme",
+                    contentDescription = stringResource(R.string.theme_toggle),
                     tint = KonectoTheme.semantics.accent
                 )
             }
@@ -261,15 +263,18 @@ fun LoginScreen(vm: MainViewModel) {
             }
         }
 
-        // Contenedor principal centrado
+        // Contenedor principal centrado y desplazable (soporta fuentes grandes 1.3x/2.0x y landscape)
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = Spacing.l)
-                .navigationBarsPadding(),
+                .verticalScroll(rememberScrollState())
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = Spacing.l, vertical = Spacing.m),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            Spacer(modifier = Modifier.height(36.dp))
             // Emblema técnico de 120 dp con presencia
             ActuatorGaugeEmblem(modifier = Modifier.padding(bottom = Spacing.s))
 

@@ -70,6 +70,7 @@
     <string name="card_col_metric">Parámetro</string>
     <string name="card_col_60hz">60 Hz</string>
     <string name="card_col_50hz">50 Hz</string>
+    <string name="card_spec_semantics">Ficha técnica del actuador %1$s</string>
     <string name="card_copy_action">Copiar número de parte</string>
     <string name="card_copied_part">Número de parte copiado</string>
     <string name="card_share_action">Compartir</string>
@@ -92,6 +93,8 @@
     <string name="table_col_mod_torque">Torque Modulante</string>
     <string name="table_col_duty">Ciclo (On/Mod)</string>
     <string name="table_col_cert">Certificación</string>
+    <string name="table_col_fla_freq">FLA (60|50Hz)</string>
+    <string name="table_col_lra_freq">LRA (60|50Hz)</string>
 
     <!-- Server Dialog -->
     <string name="server_dialog_title">Configuración del Servidor</string>
@@ -211,6 +214,7 @@
     <string name="voice_permission_grant">Permitir acceso</string>
     <string name="voice_permission_denied">Permiso de micrófono denegado. Puede habilitarlo en los ajustes del sistema.</string>
     <string name="voice_confirm_title">Confirmar consulta técnica</string>
+    <string name="voice_confirm_query_label">Consulta</string>
     <string name="voice_confirm_desc">Revise y edite la consulta reconocida antes de enviar:</string>
     <string name="voice_confirm_send">Confirmar y Enviar</string>
     <string name="voice_cancel">Cancelar</string>
