@@ -84,7 +84,8 @@ data class ActuatorDto(
     @SerialName("csa_certified") val csaCertified: Boolean = true,
     @SerialName("ce_ukca_certified") val ceUkcaCertified: Boolean = false,
     @SerialName("hazardous_classification") val hazardousClassification: String? = null,
-    @SerialName("source_page") val sourcePage: Int? = null
+    @SerialName("source_page") val sourcePage: Int? = null,
+    @SerialName("source_method") val sourceMethod: String? = null
 )
 
 @Immutable
@@ -177,7 +178,8 @@ data class DebugTracePayload(
     @SerialName("cost_usd_estimate") val costUsdEstimate: Double = 0.0,
     val provider: String = "",
     @SerialName("session_cost_usd") val sessionCostUsd: Double = 0.0,
-    val language: String = ""
+    val language: String = "",
+    @SerialName("error") val error: String? = null
 )
 
 @Immutable

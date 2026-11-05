@@ -542,25 +542,27 @@ fun SingleActuatorSpecCard(
 
                 // 3. Acción para desplegar Ficha Técnica Completa (ModalBottomSheet)
                 if (onOpenFullDatasheet != null) {
-                    OutlinedButton(
+                    FilledTonalButton(
                         onClick = { onOpenFullDatasheet(actuator) },
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.6f)),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = KonectoTheme.semantics.accent
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.fillMaxWidth().padding(top = 2.dp)
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.accent.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            modifier = Modifier.size(15.dp)
+                            tint = KonectoTheme.semantics.accent,
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.datasheet_sheet_title),
-                            fontSize = 11.sp,
+                            text = stringResource(R.string.btn_view_full_datasheet),
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -906,6 +908,30 @@ private fun copyComparisonTableToClipboard(context: Context, actuators: List<Act
 /**
  * Tabla Comparativa Side-by-Side con primera columna fija y ambas frecuencias (60 y 50 Hz)
  */
+/**
+ * Determina marcadores neutros (▲ mayor / ▼ menor) para filas numéricas.
+ * No marca empates ni cuando todos los valores son iguales. Tolera nulos.
+ */
+private fun computeMinMaxMarkers(values: List<Double?>): List<String> {
+    val nonNulls = values.filterNotNull()
+    if (nonNulls.size < 2) return List(values.size) { "" }
+    val max = nonNulls.maxOrNull() ?: return List(values.size) { "" }
+    val min = nonNulls.minOrNull() ?: return List(values.size) { "" }
+    if (max == min) return List(values.size) { "" }
+
+    val hasSingleMax = nonNulls.count { it == max } == 1
+    val hasSingleMin = nonNulls.count { it == min } == 1
+
+    return values.map { v ->
+        when {
+            v == null -> ""
+            hasSingleMax && v == max -> "▲ "
+            hasSingleMin && v == min -> "▼ "
+            else -> ""
+        }
+    }
+}
+
 @Composable
 fun ActuatorComparisonTable(
     actuators: List<ActuatorDto>
@@ -918,10 +944,17 @@ fun ActuatorComparisonTable(
         (it.modulatingTorqueNm == null && it.onOffTorqueNm != null)
     }
 
-    val bestOnOffTorque = if (actuators.size > 1) actuators.mapNotNull { it.singleTorqueNm ?: it.onOffTorqueNm }.maxOrNull() else null
-    val bestModTorque = if (actuators.size > 1) actuators.mapNotNull { it.modulatingTorqueNm }.maxOrNull() else null
-    val bestSpeed60 = if (actuators.size > 1) actuators.mapNotNull { it.speed60HzSec ?: it.speedDcOrFixedSec }.minOrNull() else null
-    val bestSpeed50 = if (actuators.size > 1) actuators.mapNotNull { it.speed50HzSec }.minOrNull() else null
+    val onOffTorqueValues = actuators.map { (it.singleTorqueNm ?: it.onOffTorqueNm) }
+    val onOffMarkers = computeMinMaxMarkers(onOffTorqueValues)
+
+    val modTorqueValues = actuators.map { if (it.phaseType.contains("3") || it.singleTorqueNm != null) null else it.modulatingTorqueNm }
+    val modMarkers = computeMinMaxMarkers(modTorqueValues)
+
+    val speed60Values = actuators.map { it.speed60HzSec ?: it.speedDcOrFixedSec }
+    val speed60Markers = computeMinMaxMarkers(speed60Values)
+
+    val powerValues = actuators.map { it.motorPowerWatts?.toDouble() }
+    val powerMarkers = computeMinMaxMarkers(powerValues)
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1055,7 +1088,7 @@ fun ActuatorComparisonTable(
                         .horizontalScroll(scrollState),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    actuators.forEach { act ->
+                    actuators.forEachIndexed { index, act ->
                         val isActThreePhase = act.phaseType.contains("3") ||
                             act.singleTorqueNm != null ||
                             (act.modulatingTorqueNm == null && act.onOffTorqueNm != null)
@@ -1111,27 +1144,29 @@ fun ActuatorComparisonTable(
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val rawTorque = (act.singleTorqueNm ?: act.onOffTorqueNm)
-                                val isBest = bestOnOffTorque != null && rawTorque != null && rawTorque == bestOnOffTorque
+                                val marker = onOffMarkers.getOrElse(index) { "" }
+                                val isMarked = marker.isNotEmpty()
                                 val onOff = if (isActThreePhase) {
-                                    if (rawTorque != null) "${if (isBest) "★ " else ""}${rawTorque.toInt()} Nm" else "—"
+                                    if (rawTorque != null) "${marker}${rawTorque.toInt()} Nm" else "—"
                                 } else {
-                                    if (act.onOffTorqueNm != null) "${if (isBest) "★ " else ""}${act.onOffTorqueNm.toInt()} Nm" else "—"
+                                    if (act.onOffTorqueNm != null) "${marker}${act.onOffTorqueNm.toInt()} Nm" else "—"
                                 }
                                 Text(
                                     text = onOff,
                                     fontSize = 11.sp,
-                                    fontWeight = if (isBest) FontWeight.ExtraBold else FontWeight.Bold,
-                                    color = if (isBest) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                    fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                val isBest = bestModTorque != null && act.modulatingTorqueNm != null && act.modulatingTorqueNm == bestModTorque
-                                val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${if (isBest) "★ " else ""}${act.modulatingTorqueNm.toInt()} Nm" else "—"
+                                val marker = modMarkers.getOrElse(index) { "" }
+                                val isMarked = marker.isNotEmpty()
+                                val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${marker}${act.modulatingTorqueNm.toInt()} Nm" else "—"
                                 Text(
                                     text = mod,
                                     fontSize = 11.sp,
-                                    fontWeight = if (isBest) FontWeight.ExtraBold else FontWeight.Bold,
-                                    color = if (isBest) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                    fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
@@ -1139,14 +1174,14 @@ fun ActuatorComparisonTable(
                                 Text(duty, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                val isBestSpeed = (bestSpeed60 != null && (act.speed60HzSec == bestSpeed60 || act.speedDcOrFixedSec == bestSpeed60)) ||
-                                    (bestSpeed50 != null && act.speed50HzSec == bestSpeed50)
+                                val marker = speed60Markers.getOrElse(index) { "" }
+                                val isMarked = marker.isNotEmpty()
                                 Text(
-                                    text = if (isBestSpeed) "★ $speedStr" else speedStr,
+                                    text = if (isMarked && speedStr != "—") "${marker}$speedStr" else speedStr,
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    fontWeight = if (isBestSpeed) FontWeight.Bold else FontWeight.SemiBold,
-                                    color = if (isBestSpeed) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                    fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
@@ -1156,7 +1191,15 @@ fun ActuatorComparisonTable(
                                 Text(lraStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(if (act.motorPowerWatts != null) "${act.motorPowerWatts} W" else "—", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurface)
+                                val marker = powerMarkers.getOrElse(index) { "" }
+                                val isMarked = marker.isNotEmpty()
+                                Text(
+                                    text = if (act.motorPowerWatts != null) "${marker}${act.motorPowerWatts} W" else "—",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = if (isMarked) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 Text(
@@ -1788,8 +1831,11 @@ fun UIAlertsView(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         alerts.forEach { alert ->
-            val isError = alert.severity.equals("error", ignoreCase = true) || alert.code == "LLM_UNAVAILABLE"
-            val isWarning = alert.severity.equals("warning", ignoreCase = true)
+            val isError = alert.severity.equals("error", ignoreCase = true) ||
+                alert.code.equals("LLM_UNAVAILABLE", ignoreCase = true) ||
+                alert.code.equals("SERVICE_UNAVAILABLE", ignoreCase = true)
+            val isWarning = alert.severity.equals("warning", ignoreCase = true) ||
+                alert.code.equals("SAFETY_FACTOR_APPLIED", ignoreCase = true)
 
             val bgColor = when {
                 isError -> KonectoTheme.semantics.errorBg
@@ -1817,7 +1863,10 @@ fun UIAlertsView(
                 alert.title.isNotBlank() -> alert.title
                 alert.code.equals("DUTY_CYCLE_INFO", ignoreCase = true) -> stringResource(R.string.alert_title_duty_cycle)
                 alert.code.equals("HAZARDOUS_NEEDS_EXPLOSIONPROOF", ignoreCase = true) -> stringResource(R.string.alert_title_hazardous)
-                alert.code.equals("LLM_UNAVAILABLE", ignoreCase = true) || alert.code.contains("UNAVAILABLE", ignoreCase = true) -> stringResource(R.string.alert_title_service_unavailable)
+                alert.code.equals("SERVICE_UNAVAILABLE", ignoreCase = true) ||
+                    alert.code.equals("LLM_UNAVAILABLE", ignoreCase = true) ||
+                    alert.code.contains("UNAVAILABLE", ignoreCase = true) -> stringResource(R.string.alert_title_service_unavailable)
+                alert.code.equals("SAFETY_FACTOR_APPLIED", ignoreCase = true) -> stringResource(R.string.alert_title_safety_factor)
                 alert.code.equals("NO_MATCH_HARD_CONSTRAINTS", ignoreCase = true) -> stringResource(R.string.alert_title_no_match)
                 alert.code.equals("SINGLE_TORQUE_RATING", ignoreCase = true) -> stringResource(R.string.alert_title_single_torque)
                 else -> stringResource(R.string.alert_title_generic)
@@ -2031,31 +2080,31 @@ fun ActuatorFullDatasheetSheet(
                     modifier = Modifier.padding(Spacing.s),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    DatasheetMetricRow("Frame Size", "Frame ${actuator.frameSize}")
-                    DatasheetMetricRow("Enclosure Type", actuator.enclosureType)
-                    DatasheetMetricRow("Phase", actuator.phaseType)
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_frame), "Frame ${actuator.frameSize}")
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_enclosure), actuator.enclosureType)
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_phase), actuator.phaseType)
                     if (isThreePhase) {
                         val tNm = actuator.singleTorqueNm ?: actuator.onOffTorqueNm
                         val tLbs = actuator.singleTorqueInLbs ?: actuator.onOffTorqueInLbs
                         DatasheetMetricRow(
-                            "Output Torque",
+                            stringResource(R.string.card_output_torque),
                             if (tNm != null) "${tNm.toInt()} Nm (${tLbs?.toInt() ?: "—"} in-lbs)" else "—"
                         )
-                        DatasheetMetricRow("Duty Rating", "70% (S4)")
+                        DatasheetMetricRow(stringResource(R.string.datasheet_field_duty_rating), "70% (S4)")
                     } else {
                         DatasheetMetricRow(
-                            "On/Off Torque",
+                            stringResource(R.string.datasheet_field_on_off_torque),
                             if (actuator.onOffTorqueNm != null) "${actuator.onOffTorqueNm.toInt()} Nm (${actuator.onOffTorqueInLbs?.toInt() ?: "—"} in-lbs)" else "—"
                         )
                         DatasheetMetricRow(
-                            "Modulating Torque",
+                            stringResource(R.string.datasheet_field_mod_torque),
                             if (actuator.modulatingTorqueNm != null) "${actuator.modulatingTorqueNm.toInt()} Nm (${actuator.modulatingTorqueInLbs?.toInt() ?: "—"} in-lbs)" else "—"
                         )
-                        DatasheetMetricRow("On/Off Duty Cycle", if (actuator.onOffDutyCyclePct != null) "${actuator.onOffDutyCyclePct}%" else "—")
-                        DatasheetMetricRow("Modulating Duty Cycle", if (actuator.modulatingDutyCyclePct != null) "${actuator.modulatingDutyCyclePct}%" else "—")
+                        DatasheetMetricRow(stringResource(R.string.datasheet_field_on_off_duty), if (actuator.onOffDutyCyclePct != null) "${actuator.onOffDutyCyclePct}%" else "—")
+                        DatasheetMetricRow(stringResource(R.string.datasheet_field_mod_duty), if (actuator.modulatingDutyCyclePct != null) "${actuator.modulatingDutyCyclePct}%" else "—")
                     }
-                    DatasheetMetricRow("Cycles / Hour", if (actuator.cyclesPerHour != null) "${actuator.cyclesPerHour} ciclos/h" else "—")
-                    DatasheetMetricRow("Starts / Hour", if (actuator.startsPerHour != null) "${actuator.startsPerHour} arranques/h" else "—")
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_cycles_hour), if (actuator.cyclesPerHour != null) "${actuator.cyclesPerHour} ciclos/h" else "—")
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_starts_hour), if (actuator.startsPerHour != null) "${actuator.startsPerHour} arranques/h" else "—")
                 }
             }
 
@@ -2076,18 +2125,18 @@ fun ActuatorFullDatasheetSheet(
                     modifier = Modifier.padding(Spacing.s),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    DatasheetMetricRow("Power Supply", actuator.powerSupply)
-                    DatasheetMetricRow("Motor Power", if (actuator.motorPowerWatts != null) "${actuator.motorPowerWatts} W" else "—")
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_power_supply), actuator.powerSupply)
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_motor_power), if (actuator.motorPowerWatts != null) "${actuator.motorPowerWatts} W" else "—")
                     DatasheetMetricRow(
-                        "Operating Speed 90°",
+                        stringResource(R.string.card_speed_metric),
                         "60Hz: ${actuator.speed60HzSec ?: actuator.speedDcOrFixedSec ?: "—"}s | 50Hz: ${actuator.speed50HzSec ?: "—"}s"
                     )
                     DatasheetMetricRow(
-                        "Full Load Amps (FLA)",
+                        stringResource(R.string.datasheet_field_fla),
                         "60Hz: ${actuator.fla60HzAmps ?: actuator.flaDcOrFixedAmps ?: "—"}A | 50Hz: ${actuator.fla50HzAmps ?: "—"}A"
                     )
                     DatasheetMetricRow(
-                        "Locked Rotor Amps (LRA)",
+                        stringResource(R.string.datasheet_field_lra),
                         "60Hz: ${actuator.lra60HzAmps ?: actuator.lraDcOrFixedAmps ?: "—"}A | 50Hz: ${actuator.lra50HzAmps ?: "—"}A"
                     )
                 }
@@ -2111,10 +2160,10 @@ fun ActuatorFullDatasheetSheet(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     DatasheetMetricRow(
-                        "CSA Certified",
+                        stringResource(R.string.datasheet_field_csa),
                         if (actuator.csaCertified) "✓ Certified (UL 429 / CSA C22.2 No. 139)" else "Non-CSA"
                     )
-                    DatasheetMetricRow("Enclosure Rating", actuator.enclosureType)
+                    DatasheetMetricRow(stringResource(R.string.datasheet_field_enclosure), actuator.enclosureType)
                 }
             }
 

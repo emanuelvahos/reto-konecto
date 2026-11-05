@@ -153,27 +153,38 @@
     <!-- Common -->
     <string name="retry">Retry</string>
 
-    <!-- Alert Titles -->
-    <string name="alert_title_duty_cycle">Duty Cycle Information</string>
-    <string name="alert_title_hazardous">Hazardous Location / Explosion-Proof</string>
-    <string name="alert_title_service_unavailable">Service Unavailable</string>
-    <string name="alert_title_no_match">No Exact Matches Found</string>
-    <string name="alert_title_single_torque">Three-Phase Torque Rating</string>
-    <string name="alert_title_generic">Engineering Notice</string>
-    <string name="error_service_unavailable_clean_msg">The technical assistant is temporarily unavailable. Please retry your query.</string>
-
     <!-- Comparison Table Enhancements -->
-    <string name="comparison_best_legend">★ Best parameter value</string>
+    <string name="comparison_best_legend">▲ higher value · ▼ lower value</string>
     <string name="comparison_copy_btn">Copy Comparison</string>
     <string name="comparison_copied_toast">Comparison copied to clipboard</string>
 
     <!-- Full Datasheet Sheet -->
+    <string name="btn_view_full_datasheet">View full datasheet</string>
     <string name="datasheet_sheet_title">Series 76 Technical Datasheet</string>
     <string name="datasheet_group_mechanical">Mechanical Specifications</string>
     <string name="datasheet_group_electrical">Electrical Specifications</string>
     <string name="datasheet_group_certifications">Standards &amp; Certifications</string>
     <string name="datasheet_source_page">Source: Series 76 electric data, p. %1$d</string>
     <string name="datasheet_copied_toast">Technical datasheet copied to clipboard</string>
+    <string name="datasheet_field_frame">Frame Size</string>
+    <string name="datasheet_field_enclosure">Enclosure Type</string>
+    <string name="datasheet_field_phase">Phase</string>
+    <string name="datasheet_field_duty_rating">Duty Rating</string>
+    <string name="datasheet_field_on_off_torque">On/Off Torque</string>
+    <string name="datasheet_field_mod_torque">Modulating Torque</string>
+    <string name="datasheet_field_on_off_duty">On/Off Duty Cycle</string>
+    <string name="datasheet_field_mod_duty">Modulating Duty Cycle</string>
+    <string name="datasheet_field_cycles_hour">Cycles / Hour</string>
+    <string name="datasheet_field_starts_hour">Starts / Hour</string>
+    <string name="datasheet_field_power_supply">Power Supply</string>
+    <string name="datasheet_field_motor_power">Motor Power</string>
+    <string name="datasheet_field_speed_60">Operating Speed (60 Hz)</string>
+    <string name="datasheet_field_speed_50">Operating Speed (50 Hz)</string>
+    <string name="datasheet_field_fla">Full Load Amps (FLA)</string>
+    <string name="datasheet_field_lra">Locked Rotor Amps (LRA)</string>
+    <string name="datasheet_field_csa">CSA Certification</string>
+    <string name="datasheet_field_ce_ukca">CE / UKCA Certification</string>
+    <string name="datasheet_field_hazardous">Hazardous Location</string>
 
     <!-- Settings Dialog: Language & TTS -->
     <string name="settings_dialog_title">Settings &amp; Server</string>
@@ -183,8 +194,15 @@
     <string name="settings_lang_en">English</string>
     <string name="settings_tts_title">Read answers aloud</string>
     <string name="settings_tts_desc">Automatically speak assistant response with system TTS</string>
+    <string name="settings_tts_engine_unavailable">TTS engine not found on this device</string>
+    <string name="settings_tts_download_language">Download voice data for this language</string>
+    <string name="server_dialog_localhost_help">With phone connected via USB, run adb reverse tcp:8001 tcp:8001 and select Localhost.</string>
 
-    <!-- Voice Input and Confirmation -->
+    <!-- Voice Input, States and Confirmation -->
+    <string name="voice_state_preparing">Preparing…</string>
+    <string name="voice_state_listening">Listening</string>
+    <string name="voice_state_processing">Processing…</string>
+    <string name="voice_silence_warning">No sound detected: check microphone or speak closer</string>
     <string name="voice_listening_title">Listening for technical query…</string>
     <string name="voice_listening_desc">Dictate part numbers or questions in English or Spanish</string>
     <string name="voice_processing">Processing audio…</string>
@@ -198,5 +216,24 @@
     <string name="voice_cancel">Cancel</string>
     <string name="voice_stop">Stop Listening</string>
     <string name="voice_unavailable">Speech recognition is not available on this device</string>
+    <string name="voice_retry">Retry</string>
+    <string name="voice_error_no_match">Didn\'t catch that, try again</string>
+    <string name="voice_error_network">Network connection error</string>
+    <string name="voice_error_server_disconnected">Voice server disconnected</string>
+    <string name="voice_error_language_not_supported">Language not supported by voice engine</string>
+    <string name="voice_error_language_unavailable">Offline language pack not available</string>
+    <string name="voice_error_busy">Microphone is busy, please wait</string>
+    <string name="voice_error_permissions">Microphone permission not granted</string>
+    <string name="voice_error_generic">Could not process voice</string>
+
+    <!-- Alert Titles -->
+    <string name="alert_title_duty_cycle">Duty Cycle Information</string>
+    <string name="alert_title_hazardous">Hazardous Location / Explosion-Proof</string>
+    <string name="alert_title_service_unavailable">Service Unavailable</string>
+    <string name="alert_title_no_match">No Exact Matches Found</string>
+    <string name="alert_title_single_torque">Three-Phase Torque Rating</string>
+    <string name="alert_title_safety_factor">Safety Factor Applied</string>
+    <string name="alert_title_generic">Engineering Notice</string>
+    <string name="error_service_unavailable_clean_msg">The technical assistant is temporarily unavailable. Please retry your query.</string>
 </resources>
 

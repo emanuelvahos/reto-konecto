@@ -17,10 +17,15 @@ object DebugMockProvider {
     val sampleKeys = listOf(
         "single_spec_card",
         "comparison_table",
+        "comparison_table_3",
         "recommendation_with_relaxation",
+        "recommendation_no_match",
         "clarification",
-        "no_match_hard_constraints",
-        "llm_unavailable_error"
+        "three_phase_single_torque",
+        "model_listed_as_na",
+        "typo_correction",
+        "out_of_scope",
+        "llm_error"
     )
 
     private var cachedSamples: Map<String, ConversationResponse>? = null
@@ -51,11 +56,16 @@ object DebugMockProvider {
         if (!isMockEnabled) return null
         val samples = getAvailableSamples(context)
         val match = when {
-            query.contains("error", ignoreCase = true) || query.contains("llm", ignoreCase = true) -> "llm_unavailable_error"
-            query.contains("no match", ignoreCase = true) || query.contains("12000", ignoreCase = true) -> "no_match_hard_constraints"
+            query.contains("error", ignoreCase = true) || query.contains("llm", ignoreCase = true) -> "llm_error"
+            query.contains("no match", ignoreCase = true) || query.contains("12000", ignoreCase = true) -> "recommendation_no_match"
+            query.contains("three", ignoreCase = true) || query.contains("trifas", ignoreCase = true) || query.contains("trifás", ignoreCase = true) -> "three_phase_single_torque"
+            query.contains("compare 3", ignoreCase = true) || query.contains("tres", ignoreCase = true) -> "comparison_table_3"
             query.contains("compare", ignoreCase = true) || query.contains("compara", ignoreCase = true) -> "comparison_table"
             query.contains("200 Nm", ignoreCase = true) || query.contains("recomiend", ignoreCase = true) || query.contains("recommend", ignoreCase = true) -> "recommendation_with_relaxation"
             query.contains("aclar", ignoreCase = true) || query.contains("clarif", ignoreCase = true) || query.contains("tensión", ignoreCase = true) -> "clarification"
+            query.contains("typo", ignoreCase = true) || query.contains("corrige", ignoreCase = true) -> "typo_correction"
+            query.contains("scope", ignoreCase = true) || query.contains("alcance", ignoreCase = true) -> "out_of_scope"
+            query.contains(" na", ignoreCase = true) || query.contains("no disponible", ignoreCase = true) -> "model_listed_as_na"
             query.contains("763B", ignoreCase = true) || query.contains("spec", ignoreCase = true) || query.contains("ficha", ignoreCase = true) -> "single_spec_card"
             else -> sampleKeys.firstOrNull { query.contains(it, ignoreCase = true) } ?: selectedSampleKey
         }

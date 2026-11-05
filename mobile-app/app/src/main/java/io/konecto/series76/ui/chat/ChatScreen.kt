@@ -58,9 +58,11 @@ import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 import io.konecto.series76.ui.theme.ThemeController
 import io.konecto.series76.util.LocaleController
+import io.konecto.series76.util.VoiceErrorType
 import io.konecto.series76.util.VoiceNormalizer
 import io.konecto.series76.util.VoiceRecognitionManager
 import io.konecto.series76.util.VoiceState
+import androidx.compose.ui.draw.scale
 
 @Composable
 fun TypingIndicator(modifier: Modifier = Modifier) {
@@ -97,6 +99,18 @@ fun TypingIndicator(modifier: Modifier = Modifier) {
     }
 }
 
+fun formatChatTitle(title: String, maxLength: Int = 28): String {
+    val trimmed = title.trim()
+    if (trimmed.length <= maxLength) return trimmed
+    val sub = trimmed.take(maxLength)
+    val lastSpace = sub.lastIndexOf(' ')
+    return if (lastSpace > 0) {
+        sub.substring(0, lastSpace).trimEnd() + "…"
+    } else {
+        sub.take(maxLength - 1) + "…"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatScreen(vm: MainViewModel) {
@@ -127,8 +141,8 @@ fun ChatScreen(vm: MainViewModel) {
 
     val displayTitle = remember(vm.activeSessionTitle, activePart) {
         val raw = vm.activeSessionTitle.trim()
-        if (raw.isNotEmpty() && raw != "Series 76" && raw != "New Actuator Consultation") {
-            raw.take(28)
+        if (raw.isNotEmpty() && raw != "Series 76" && raw != "New Actuator Consultation" && raw != "New Consultation") {
+            formatChatTitle(raw, maxLength = 28)
         } else if (activePart != null) {
             activePart
         } else {
@@ -461,19 +475,34 @@ fun ChatScreen(vm: MainViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     // Botón de Voz
+                    val isVoiceAvailable = voiceManager.isAvailable()
                     Box(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                            .clickable { startVoiceFlow() },
+                            .background(
+                                if (isVoiceAvailable) MaterialTheme.colorScheme.surfaceVariant
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            )
+                            .border(
+                                1.dp,
+                                if (isVoiceAvailable) MaterialTheme.colorScheme.outline
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                CircleShape
+                            )
+                            .clickable {
+                                if (isVoiceAvailable) {
+                                    startVoiceFlow()
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.voice_unavailable), Toast.LENGTH_SHORT).show()
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = stringResource(R.string.chat_voice),
-                            tint = KonectoTheme.semantics.accent,
+                            tint = if (isVoiceAvailable) KonectoTheme.semantics.accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -551,6 +580,9 @@ fun ChatScreen(vm: MainViewModel) {
             },
             onStopListening = {
                 voiceManager.stopListening()
+            },
+            onRetry = {
+                voiceManager.startListening(speechTag, isRetry = true)
             }
         )
     }
@@ -583,14 +615,36 @@ fun ChatScreen(vm: MainViewModel) {
 fun VoiceListeningDialog(
     voiceManager: VoiceRecognitionManager,
     onDismiss: () -> Unit,
-    onStopListening: () -> Unit
+    onStopListening: () -> Unit,
+    onRetry: () -> Unit
 ) {
+    val context = LocalContext.current
+    val reduceMotion = remember {
+        try {
+            android.provider.Settings.Global.getFloat(
+                context.contentResolver,
+                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
+                1.0f
+            ) == 0f
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    val statusTitle = when (voiceManager.state) {
+        is VoiceState.Preparing -> stringResource(R.string.voice_state_preparing)
+        is VoiceState.Listening -> stringResource(R.string.voice_state_listening)
+        is VoiceState.Processing -> stringResource(R.string.voice_state_processing)
+        is VoiceState.Error -> stringResource(R.string.chat_error_title)
+        else -> stringResource(R.string.voice_listening_title)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
             Text(
-                text = stringResource(R.string.voice_listening_title),
+                text = statusTitle,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold
@@ -604,15 +658,26 @@ fun VoiceListeningDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.m)
             ) {
-                // Indicador visual RMS dinámico
+                // Indicador visual RMS dinámico con animación suave (respetando reduced motion)
+                val isListeningState = voiceManager.state is VoiceState.Listening
+                val animatedScale by animateFloatAsState(
+                    targetValue = if (reduceMotion || !isListeningState) 1f else 1f + (voiceManager.rmsLevel * 0.35f),
+                    animationSpec = tween(durationMillis = 100),
+                    label = "rmsScale"
+                )
+                val borderWidth = if (reduceMotion || !isListeningState) 3.dp else (3 + (voiceManager.rmsLevel * 7)).dp
+
                 Box(
                     modifier = Modifier
                         .size(88.dp)
+                        .scale(animatedScale)
                         .clip(CircleShape)
-                        .background(KonectoTheme.semantics.accentContainer)
+                        .background(
+                            if (voiceManager.state is VoiceState.Error) KonectoTheme.semantics.errorBg else KonectoTheme.semantics.accentContainer
+                        )
                         .border(
-                            width = (3 + (voiceManager.rmsLevel * 7)).dp,
-                            color = KonectoTheme.semantics.accent,
+                            width = borderWidth,
+                            color = if (voiceManager.state is VoiceState.Error) KonectoTheme.semantics.errorBorder else KonectoTheme.semantics.accent,
                             shape = CircleShape
                         ),
                     contentAlignment = Alignment.Center
@@ -620,17 +685,36 @@ fun VoiceListeningDialog(
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = null,
-                        tint = KonectoTheme.semantics.accentText,
+                        tint = if (voiceManager.state is VoiceState.Error) KonectoTheme.semantics.errorText else KonectoTheme.semantics.accentText,
                         modifier = Modifier.size(38.dp)
                     )
                 }
 
-                Text(
-                    text = stringResource(R.string.voice_listening_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+                // Estado / Instrucción
+                val state = voiceManager.state
+                if (state is VoiceState.Listening && state.isSilent) {
+                    Surface(
+                        color = KonectoTheme.semantics.warningBg,
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.warningBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "⚠️ " + stringResource(R.string.voice_silence_warning),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = KonectoTheme.semantics.warningText,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                } else if (state !is VoiceState.Error) {
+                    Text(
+                        text = stringResource(R.string.voice_listening_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
 
                 // Transcripción en vivo de resultados parciales
                 if (voiceManager.partialResult.isNotBlank()) {
@@ -650,27 +734,62 @@ fun VoiceListeningDialog(
                     }
                 }
 
-                if (voiceManager.state is VoiceState.Error) {
-                    val err = (voiceManager.state as VoiceState.Error).message
-                    Text(
-                        text = "⚠️ $err",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = KonectoTheme.semantics.errorText
-                    )
+                // Error amigable sin números ni inglés técnico
+                if (state is VoiceState.Error) {
+                    val errorMsg = when (state.errorType) {
+                        VoiceErrorType.NO_MATCH_OR_TIMEOUT -> stringResource(R.string.voice_error_no_match)
+                        VoiceErrorType.NETWORK -> stringResource(R.string.voice_error_network)
+                        VoiceErrorType.SERVER_DISCONNECTED -> stringResource(R.string.voice_error_server_disconnected)
+                        VoiceErrorType.LANGUAGE_NOT_SUPPORTED -> stringResource(R.string.voice_error_language_not_supported)
+                        VoiceErrorType.LANGUAGE_UNAVAILABLE -> stringResource(R.string.voice_error_language_unavailable)
+                        VoiceErrorType.RECOGNIZER_BUSY -> stringResource(R.string.voice_error_busy)
+                        VoiceErrorType.INSUFFICIENT_PERMISSIONS -> stringResource(R.string.voice_error_permissions)
+                        VoiceErrorType.GENERIC -> stringResource(R.string.voice_error_generic)
+                    }
+                    Surface(
+                        color = KonectoTheme.semantics.errorBg,
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "🛑 $errorMsg",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = KonectoTheme.semantics.errorText,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            Button(
-                onClick = onStopListening,
-                colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.voice_stop),
-                    color = KonectoTheme.semantics.onAccent,
-                    fontWeight = FontWeight.Bold
-                )
+            if (voiceManager.state is VoiceState.Error) {
+                Button(
+                    onClick = onRetry,
+                    colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.voice_retry),
+                        color = KonectoTheme.semantics.onAccent,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Button(
+                    onClick = onStopListening,
+                    enabled = voiceManager.state is VoiceState.Listening,
+                    colors = ButtonDefaults.buttonColors(containerColor = KonectoTheme.semantics.accent),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.voice_stop),
+                        color = KonectoTheme.semantics.onAccent,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         },
         dismissButton = {

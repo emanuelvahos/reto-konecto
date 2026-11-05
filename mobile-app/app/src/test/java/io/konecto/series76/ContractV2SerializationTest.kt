@@ -195,5 +195,60 @@ class ContractV2SerializationTest {
         assertEquals("sid-test", resp.sessionId)
         assertEquals("TEXT_ONLY", resp.uiPayload.displayType)
     }
+
+    @Test
+    fun testDeserializeAll11SamplesFromAssets() {
+        val possiblePaths = listOf(
+            java.io.File("src/debug/assets/contract_v2_samples.json"),
+            java.io.File("app/src/debug/assets/contract_v2_samples.json"),
+            java.io.File("mobile-app/app/src/debug/assets/contract_v2_samples.json")
+        )
+        val file = possiblePaths.firstOrNull { it.exists() }
+        assertNotNull("contract_v2_samples.json file must exist", file)
+
+        val jsonString = file!!.readText()
+        val rootObj = ApiClient.jsonFormat.parseToJsonElement(jsonString) as kotlinx.serialization.json.JsonObject
+
+        val expectedKeys = listOf(
+            "single_spec_card",
+            "comparison_table",
+            "comparison_table_3",
+            "recommendation_with_relaxation",
+            "recommendation_no_match",
+            "clarification",
+            "three_phase_single_torque",
+            "model_listed_as_na",
+            "typo_correction",
+            "out_of_scope",
+            "llm_error"
+        )
+
+        assertEquals("Expected exactly 11 samples", 11, rootObj.size)
+        expectedKeys.forEach { key ->
+            assertTrue("Sample key '$key' must exist in fixture", rootObj.containsKey(key))
+            val element = rootObj[key]!!
+            val resp = ApiClient.jsonFormat.decodeFromJsonElement(ConversationResponse.serializer(), element)
+            assertNotNull("ConversationResponse for $key should deserialize", resp)
+            assertNotNull("Answer must be non-null for $key", resp.answer)
+        }
+
+        // Verify single_spec_card real source data
+        val singleSpec = ApiClient.jsonFormat.decodeFromJsonElement(
+            ConversationResponse.serializer(),
+            rootObj["single_spec_card"]!!
+        )
+        val actuator = singleSpec.uiPayload.actuators.firstOrNull()
+        assertNotNull("Actuator in single_spec_card should exist", actuator)
+        assertNotNull("source_page should be present in real data", actuator?.sourcePage)
+        assertTrue("source_page should be > 0", (actuator?.sourcePage ?: 0) > 0)
+
+        // Verify llm_error error fields
+        val llmError = ApiClient.jsonFormat.decodeFromJsonElement(
+            ConversationResponse.serializer(),
+            rootObj["llm_error"]!!
+        )
+        assertTrue("llm_error should contain alerts", llmError.uiPayload.alerts.isNotEmpty())
+        assertNotNull("debug_trace.error or alerts should be populated", llmError.debugTrace.error ?: llmError.uiPayload.alerts.firstOrNull()?.message)
+    }
 }
 

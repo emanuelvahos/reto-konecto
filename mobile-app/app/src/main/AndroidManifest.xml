@@ -22,10 +22,15 @@
         </activity>
     </application>
 
-    <!-- Android 11+ query visibility para servicios de reconocimiento de voz -->
+    <!-- Android 11+ query visibility para servicios de voz y TTS -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <package android:name="com.google.android.tts" />
     </queries>
 </manifest>

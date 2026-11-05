@@ -30,6 +30,10 @@ import io.konecto.series76.mock.DebugMockProvider
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 import io.konecto.series76.util.LocaleController
+import android.content.Intent
+import android.speech.tts.TextToSpeech
+import io.konecto.series76.util.TtsManager
+import io.konecto.series76.util.TtsStatus
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,6 +56,8 @@ fun ConnectionDialog(
     // Language & TTS settings
     var currentLang by remember { mutableStateOf(ServerPreferences.LANG_AUTO) }
     var isTtsEnabled by remember { mutableStateOf(false) }
+    val isTtsEnginePresent = remember { TtsManager.isTtsEngineInstalled(context) }
+    var ttsStatus by remember { mutableStateOf(if (isTtsEnginePresent) TtsStatus.AVAILABLE else TtsStatus.NO_ENGINE) }
 
     LaunchedEffect(Unit) {
         currentLang = ServerPreferences.getAppLanguageSync(context)
@@ -137,38 +143,71 @@ fun ConnectionDialog(
 
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 
-                // 2. LECTURA EN VOZ ALTA (TTS)
-                Row(
+                // 2. LECTURA EN VOZ ALTA (TTS) - Siempre visible
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xxs)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.settings_tts_title),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = stringResource(R.string.settings_tts_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.settings_tts_title),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isTtsEnginePresent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                            Text(
+                                text = if (isTtsEnginePresent) {
+                                    stringResource(R.string.settings_tts_desc)
+                                } else {
+                                    stringResource(R.string.settings_tts_engine_unavailable)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isTtsEnginePresent) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Switch(
+                            checked = isTtsEnabled && isTtsEnginePresent,
+                            enabled = isTtsEnginePresent,
+                            onCheckedChange = { checked ->
+                                isTtsEnabled = checked
+                                coroutineScope.launch {
+                                    ServerPreferences.setTtsEnabled(context, checked)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = KonectoTheme.semantics.onAccent,
+                                checkedTrackColor = KonectoTheme.semantics.accent
+                            )
                         )
                     }
-                    Switch(
-                        checked = isTtsEnabled,
-                        onCheckedChange = { checked ->
-                            isTtsEnabled = checked
-                            coroutineScope.launch {
-                                ServerPreferences.setTtsEnabled(context, checked)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = KonectoTheme.semantics.onAccent,
-                            checkedTrackColor = KonectoTheme.semantics.accent
-                        )
-                    )
+
+                    if (isTtsEnginePresent && ttsStatus == TtsStatus.MISSING_LANGUAGE_DATA) {
+                        TextButton(
+                            onClick = {
+                                try {
+                                    val installIntent = Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA)
+                                    context.startActivity(installIntent)
+                                } catch (e: Exception) {
+                                    try {
+                                        context.startActivity(Intent("com.android.settings.TTS_SETTINGS"))
+                                    } catch (_: Exception) {}
+                                }
+                            },
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text(
+                                text = "⬇ ${stringResource(R.string.settings_tts_download_language)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = KonectoTheme.semantics.accentText,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
                 }
 
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
@@ -212,6 +251,21 @@ fun ConnectionDialog(
                             testResult = null
                         },
                         label = { Text(stringResource(R.string.server_dialog_preset_localhost), fontSize = 11.sp) }
+                    )
+                }
+
+                // Ayuda para conexión USB con celular
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "ℹ " + stringResource(R.string.server_dialog_localhost_help),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(Spacing.xs)
                     )
                 }
 
