@@ -192,3 +192,9 @@ def test_router_source_has_no_hand_written_catalog_values():
     assert not re.search(r"\d{6}-\d{6,9}", code)                          # números de parte
     assert not re.search(r"(?<![\w.])\d{2,}(?:\.\d+)?\s?(?:nm|w|a|amps?|s|sec|%)\b", code, re.I)  # cifra + unidad fija
     assert not re.search(r"\b(?:=|==|:)\s*(?:24|110|220|50|60|3000)\b", code)  # valores de voltaje/frecuencia asignados
+
+
+@pytest.mark.parametrize("q", ["What is its operating speed and FLA at 50Hz?", "¿Cuál es su velocidad y su corriente a 50Hz?", "what is their power?"])
+def test_possessive_followup_is_not_a_concept_question(q):
+    d = go(q, active=[PN])
+    assert d.rule == "followup_active_part" and d.calls[0]["name"] == LOOKUP and d.calls[0]["args"]["part_number"] == PN

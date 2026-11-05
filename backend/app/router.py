@@ -59,7 +59,7 @@ _RECO_VERB = re.compile(
     r"which actuator|what actuator|qu[eé] actuador|cu[aá]l actuador|best actuator|mejor actuador|help me (?:select|choose|pick)|"
     r"actuator (?:for|that|which|with)|actuador (?:para|que|con)", FLAGS)
 _CONCEPT = re.compile(
-    r"qu[eé] (?:es|son|significa)\s+(?!(?:el|la|los|las|un|una)\b)\w{2,}|what (?:is|are|does)\s+(?!(?:the|an?|it|this|that)\b)\w{2,}|\bdefin\w+|diferencia entre|difference between|explica\w*|explain|"
+    r"qu[eé] (?:es|son|significa)\s+(?!(?:el|la|los|las|un|una|su|sus|esto|eso)\b)\w{2,}|what (?:is|are|does)\s+(?!(?:the|an?|it|its|their|this|that|these|those)\b)\w{2,}|\bdefin\w+|diferencia entre|difference between|explica\w*|explain|"
     r"c[oó]mo se calcula|how (?:is|are) .{0,30}calculated|tolerancia|tolerance|duty cycle|ciclo de trabajo|certificaciones|certifications|"
     r"\bs4\b|clasificaci\w+|classification", FLAGS)
 _FOLLOW_ALL = re.compile(r"compar\w+|ambos|both|todos|\ball\b|\bboth\b|them|ellos", FLAGS)
