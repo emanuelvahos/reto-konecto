@@ -289,19 +289,25 @@ class MainViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
-                val rawMsg = e.localizedMessage ?: e.javaClass.simpleName
-                val hasTechnicalCode = rawMsg.contains("503") ||
-                    rawMsg.contains("500") ||
-                    rawMsg.contains("502") ||
-                    rawMsg.contains("LLM", ignoreCase = true) ||
-                    rawMsg.contains("OpenRouter", ignoreCase = true) ||
-                    rawMsg.contains("Anthropic", ignoreCase = true) ||
-                    rawMsg.contains("Claude", ignoreCase = true)
-                errorMessage = if (hasTechnicalCode) {
-                    appContext?.getString(R.string.error_service_unavailable_clean_msg)
+                if (e is retrofit2.HttpException) {
+                    val backendMessage = try {
+                        val body = e.response()?.errorBody()?.string()
+                        if (!body.isNullOrBlank()) {
+                            val jsonElem = ApiClient.jsonFormat.parseToJsonElement(body)
+                            (jsonElem as? kotlinx.serialization.json.JsonObject)?.let { obj ->
+                                (obj["detail"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                                    ?: (obj["message"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+                            } ?: body
+                        } else null
+                    } catch (_: Exception) {
+                        null
+                    }
+                    errorMessage = backendMessage?.takeIf { it.isNotBlank() }
+                        ?: appContext?.getString(R.string.error_service_unavailable_clean_msg)
                         ?: "The technical assistant is temporarily unavailable. Please retry your query."
                 } else {
-                    appContext?.getString(R.string.error_connection_clean_msg)
+                    // Errores de red del cliente
+                    errorMessage = appContext?.getString(R.string.error_connection_clean_msg)
                         ?: "Connection error. Please check your network connection and retry."
                 }
             } finally {

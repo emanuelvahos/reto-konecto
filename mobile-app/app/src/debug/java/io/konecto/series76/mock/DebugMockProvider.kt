@@ -16,6 +16,7 @@ object DebugMockProvider {
 
     val sampleKeys = listOf(
         "single_spec_card",
+        "degraded_lookup",
         "comparison_table",
         "comparison_table_3",
         "recommendation_with_relaxation",
@@ -56,6 +57,7 @@ object DebugMockProvider {
         if (!isMockEnabled) return null
         val samples = getAvailableSamples(context)
         val match = when {
+            query.contains("degraded", ignoreCase = true) || query.contains("degradad", ignoreCase = true) -> "degraded_lookup"
             query.contains("error", ignoreCase = true) || query.contains("llm", ignoreCase = true) -> "llm_error"
             query.contains("no match", ignoreCase = true) || query.contains("12000", ignoreCase = true) -> "recommendation_no_match"
             query.contains("three", ignoreCase = true) || query.contains("trifas", ignoreCase = true) || query.contains("trifás", ignoreCase = true) -> "three_phase_single_torque"

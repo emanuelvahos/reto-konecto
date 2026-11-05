@@ -197,7 +197,7 @@ class ContractV2SerializationTest {
     }
 
     @Test
-    fun testDeserializeAll11SamplesFromAssets() {
+    fun testDeserializeAll12SamplesFromAssets() {
         val possiblePaths = listOf(
             java.io.File("src/debug/assets/contract_v2_samples.json"),
             java.io.File("app/src/debug/assets/contract_v2_samples.json"),
@@ -220,10 +220,11 @@ class ContractV2SerializationTest {
             "model_listed_as_na",
             "typo_correction",
             "out_of_scope",
-            "llm_error"
+            "llm_error",
+            "degraded_lookup"
         )
 
-        assertEquals("Expected exactly 11 samples", 11, rootObj.size)
+        assertEquals("Expected exactly 12 samples", 12, rootObj.size)
         expectedKeys.forEach { key ->
             assertTrue("Sample key '$key' must exist in fixture", rootObj.containsKey(key))
             val element = rootObj[key]!!
@@ -249,6 +250,22 @@ class ContractV2SerializationTest {
         )
         assertTrue("llm_error should contain alerts", llmError.uiPayload.alerts.isNotEmpty())
         assertNotNull("debug_trace.error or alerts should be populated", llmError.debugTrace.error ?: llmError.uiPayload.alerts.firstOrNull()?.message)
+
+        // Verify degraded_lookup sample with informative mode alert
+        val degradedLookup = ApiClient.jsonFormat.decodeFromJsonElement(
+            ConversationResponse.serializer(),
+            rootObj["degraded_lookup"]!!
+        )
+        assertEquals("fallback_template", degradedLookup.verification.status)
+        assertEquals("SINGLE_SPEC_CARD", degradedLookup.uiPayload.displayType)
+        assertEquals(1, degradedLookup.uiPayload.actuators.size)
+        assertEquals("763B00-11300000/A", degradedLookup.uiPayload.actuators.first().basePartNumber)
+        val degradedAlert = degradedLookup.uiPayload.alerts.firstOrNull()
+        assertNotNull("degraded_lookup should contain an alert", degradedAlert)
+        assertEquals("LLM_UNAVAILABLE", degradedAlert?.code)
+        assertEquals("info", degradedAlert?.severity)
+        assertEquals("Modo reducido", degradedAlert?.title)
+        assertTrue("degraded_lookup alert message should not be blank", degradedAlert?.message?.isNotBlank() == true)
     }
 }
 

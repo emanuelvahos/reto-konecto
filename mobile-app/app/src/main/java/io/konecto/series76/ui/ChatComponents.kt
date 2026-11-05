@@ -1831,11 +1831,8 @@ fun UIAlertsView(
         verticalArrangement = Arrangement.spacedBy(Spacing.xs)
     ) {
         alerts.forEach { alert ->
-            val isError = alert.severity.equals("error", ignoreCase = true) ||
-                alert.code.equals("LLM_UNAVAILABLE", ignoreCase = true) ||
-                alert.code.equals("SERVICE_UNAVAILABLE", ignoreCase = true)
-            val isWarning = alert.severity.equals("warning", ignoreCase = true) ||
-                alert.code.equals("SAFETY_FACTOR_APPLIED", ignoreCase = true)
+            val isError = alert.severity.equals("error", ignoreCase = true)
+            val isWarning = alert.severity.equals("warning", ignoreCase = true)
 
             val bgColor = when {
                 isError -> KonectoTheme.semantics.errorBg
@@ -1872,20 +1869,11 @@ fun UIAlertsView(
                 else -> stringResource(R.string.alert_title_generic)
             }
 
-            // Mensaje limpio: el usuario nunca debe ver códigos HTTP (503, 500), nombre del proveedor ni "LLM"
-            val raw = alert.message
-            val containsTechnicalArtifacts = raw.contains("503") ||
-                raw.contains("500") ||
-                raw.contains("502") ||
-                raw.contains("LLM", ignoreCase = true) ||
-                raw.contains("OpenRouter", ignoreCase = true) ||
-                raw.contains("Anthropic", ignoreCase = true) ||
-                raw.contains("Claude", ignoreCase = true) ||
-                raw.contains("HTTP", ignoreCase = true)
-            val displayMessage = if (containsTechnicalArtifacts || (isError && raw.isBlank())) {
-                stringResource(R.string.error_service_unavailable_clean_msg)
+            // Muestra el mensaje localizado que envía el backend sin ocultar por contener "LLM" u "OpenRouter"
+            val displayMessage = if (alert.message.isNotBlank()) {
+                alert.message
             } else {
-                raw
+                stringResource(R.string.error_service_unavailable_clean_msg)
             }
 
             Surface(
