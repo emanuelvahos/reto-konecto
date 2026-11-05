@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 
 from app.database import get_db_cursor, sanitize_rows
+from app import recommend as rec
 from app.i18n import alert_severity, render_alert_message
 
 # ContextVars por turno. LangChain ejecuta tools síncronas en una copia del contexto: un ``.set()``
@@ -33,6 +34,14 @@ current_turn_actuators: ContextVar[Dict[Any, Any]] = ContextVar(
 current_turn_alerts: ContextVar[List[Dict[str, Any]]] = ContextVar(
     "current_turn_alerts", default=[]
 )
+# Recomendación estructurada del turno ({status, hard, relaxed, items}); se localiza al armar el ui_payload
+current_turn_recommendation: ContextVar[Dict[str, Any]] = ContextVar("current_turn_recommendation", default={})
+# Aclaración pedida en el turno ({topic, options, args}); vacío si no hubo
+current_turn_clarification: ContextVar[Dict[str, Any]] = ContextVar("current_turn_clarification", default={})
+# Argumentos de una aclaración del turno anterior (solo lectura): la respuesta del usuario se resuelve en el mismo contexto
+current_pending_args: ContextVar[Dict[str, Any]] = ContextVar("current_pending_args", default={})
+# Mensajes del usuario de la sesión (solo lectura): se descartan argumentos de recommend que el usuario nunca dijo
+current_user_text: ContextVar[str] = ContextVar("current_user_text", default="")
 
 # Grupos de campos que el LLM puede necesitar según la intención de la pregunta
 FOCUS_GROUPS: Dict[str, List[str]] = {
@@ -57,6 +66,10 @@ def reset_turn_telemetry() -> None:
     current_turn_tool_traces.set([])
     current_turn_actuators.set({})
     current_turn_alerts.set([])
+    current_turn_recommendation.set({})
+    current_turn_clarification.set({})
+    current_pending_args.set({})
+    current_user_text.set("")
 
 
 def record_tool_trace(
@@ -174,16 +187,18 @@ class LookupPartNumberInput(BaseModel):
         None,
         description="Only the field groups the user asked about: torque, duty, speed, current, power. Omit for all.",
     )
+    frequency_hz: Optional[int] = Field(None, description="50 or 60 only if the user asks for values at a specific frequency.")
 
 
 @tool("lookup_actuator_by_part_number", args_schema=LookupPartNumberInput)
-def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] = None) -> Dict[str, Any]:
+def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] = None, frequency_hz: Optional[int] = None) -> Dict[str, Any]:
     """
     Looks up Series 76 actuator specs by Base Part Number. Handles exact matches, missing '/A',
     N/A models in 220V 3-Phase, and typos (pg_trgm fuzzy match).
     """
     t0 = time.perf_counter()
-    args = {"part_number": part_number, **({"focus": focus} if focus else {})}
+    args = {"part_number": part_number, **({"focus": focus} if focus else {}),
+            **({"frequency_hz": frequency_hz} if frequency_hz else {})}
     clean_input = part_number.strip().upper()
     norm_input = re.sub(r"[^A-Z0-9]", "", clean_input)
     # Si el usuario omitió el '/A' al final, también probamos agregando 'A' al normalizado
@@ -244,6 +259,8 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
                 "actuators": _compact_rows(exact_rows, focus),
             }
             alerts = _single_torque_alerts(exact_rows)
+            if frequency_hz and any(r["voltage_num"] == 24 for r in exact_rows):
+                alerts.append(record_alert("DC_NO_FREQUENCY"))
             if alerts:
                 result["alerts"] = alerts
             record_tool_trace("lookup_actuator_by_part_number", args, sql_exact, result,
@@ -282,18 +299,19 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
 
 
 # =====================================================================
-# TOOL 2: MOTOR DE RECOMENDACIÓN CON RELAJACIÓN DE RESTRICCIONES
+# TOOL 2: RECOMENDACIÓN CON RESTRICCIONES DURAS Y BLANDAS (lógica y fórmula del score en app/recommend.py)
 # =====================================================================
 class RecommendActuatorsInput(BaseModel):
     min_torque_nm: Optional[float] = Field(None, description="Minimum required output torque in Nm.")
     min_torque_in_lbs: Optional[float] = Field(None, description="Minimum required output torque in in-lbs.")
     application_type: Optional[str] = Field(
         None,
-        description="'On/Off', 'Modulating', or None if not specified by the user.",
+        description="'On/Off' or 'Modulating'. Leave empty if the user did not say; the tool then asks the user.",
     )
-    enclosure_type: Optional[str] = Field(None, description="'Weatherproof' or 'Explosionproof'.")
-    voltage_num: Optional[int] = Field(None, description="Supply voltage: 24, 110, or 220.")
-    phase_type: Optional[str] = Field(None, description="'Single Phase', '3 Phase', 'AC/DC', or 'DC'.")
+    enclosure_type: Optional[str] = Field(None, description="'Weatherproof' or 'Explosionproof', only if the user requires it (hard constraint).")
+    hazardous_area: Optional[bool] = Field(None, description="True if the user says the area is hazardous/explosive (hard: Explosionproof only); False if non-hazardous.")
+    voltage_num: Optional[int] = Field(None, description="Supply voltage: 24, 110, or 220 (hard constraint).")
+    phase_type: Optional[str] = Field(None, description="'Single Phase', '3 Phase', 'AC/DC', or 'DC' (hard constraint).")
     frequency_hz: Optional[int] = Field(None, description="50 or 60 (Hz) when checking speed or current.")
     max_speed_sec: Optional[float] = Field(None, description="Maximum seconds for a 90-degree turn.")
     max_fla_amps: Optional[float] = Field(None, description="Maximum Full Load Current (FLA) in Amps.")
@@ -311,12 +329,73 @@ def _torque_ceiling(cur, where: str, params: List[Any]) -> Optional[float]:
     return float(m) if m is not None else None
 
 
+RECOMMEND_SQL = (
+    "SELECT * FROM actuators WHERE is_available = TRUE;  -- restricciones duras, filtros blandos y score: app.recommend"
+)
+
+
+def _clarification_result(gate: Dict[str, Any], merged: Dict[str, Any], ignored: List[str]) -> Dict[str, Any]:
+    pending = current_turn_clarification.get()
+    pending.clear()
+    pending.update({"topic": gate["topic"], "options": gate["options"], "args": merged})
+    return {
+        "status": "NEEDS_CLARIFICATION",
+        "missing": gate["topic"],
+        **({"ignored_arguments": ignored} if ignored else {}),
+        "instruction": "The app now asks the user this question with buttons. Do not recommend or state any figure; reply with one short neutral sentence.",
+    }
+
+
+def _relaxation_diagnostics(cur, a: Dict[str, Any], want_nm: Optional[float]) -> List[Dict[str, Any]]:
+    diag: List[Dict[str, Any]] = []
+    if want_nm is not None:
+        checks = []
+        if a.get("require_csa_certification"):
+            checks.append(("csa", "", "csa_certified = TRUE", []))
+        if a.get("voltage_num") is not None:
+            checks.append(("voltage", a["voltage_num"], "voltage_num = %s", [a["voltage_num"]]))
+        if a.get("enclosure_type") or a.get("hazardous_area"):
+            enc = "Explosionproof" if a.get("hazardous_area") else a["enclosure_type"]
+            checks.append(("enclosure", enc, "LOWER(enclosure_type) = LOWER(%s)", [enc]))
+        if a.get("phase_type"):
+            checks.append(("phase", a["phase_type"], "LOWER(phase_type) = LOWER(%s)", [a["phase_type"]]))
+        for kind, value, where, p in checks:
+            ceiling = _torque_ceiling(cur, where, p)
+            if ceiling is not None and want_nm > ceiling:
+                diag.append({"code": "TORQUE_ABOVE_CEILING", "params": {
+                    "filter_kind": kind, "filter_value": value, "ceiling": _num(ceiling), "requested": _num(want_nm)}})
+        catalog_max = _torque_ceiling(cur, "TRUE", [])
+        if catalog_max is not None and want_nm > catalog_max:
+            diag.append({"code": "CATALOG_TORQUE_CEILING", "params": {"ceiling": _num(catalog_max)}})
+        if a.get("require_csa_certification"):
+            cur.execute("SELECT MIN(frame_size) AS f FROM actuators WHERE is_available AND NOT csa_certified;")
+            f = cur.fetchone()["f"]
+            if f is not None:
+                diag.append({"code": "CSA_SIZE_LIMIT", "params": {"frame_size": f}})
+    if not diag:
+        diag.append({"code": "CONSTRAINT_RELAXED", "params": {}})
+    return diag
+
+
+def _hard_failure_alert(rows: List[Dict[str, Any]], a: Dict[str, Any]) -> Dict[str, Any]:
+    if a.get("hazardous_area") and a.get("enclosure_type") == "Weatherproof":
+        return {"code": "HAZARDOUS_NEEDS_EXPLOSIONPROOF", "params": {}}
+    if a.get("voltage_num") is not None and (a.get("enclosure_type") or a.get("hazardous_area")):
+        enc = "Explosionproof" if a.get("hazardous_area") else a["enclosure_type"]
+        offered = sorted({r["enclosure_type"] for r in rows if r["voltage_num"] == a["voltage_num"]})
+        if offered and enc not in offered:
+            return {"code": "VOLTAGE_ENCLOSURE_UNAVAILABLE",
+                    "params": {"voltage": a["voltage_num"], "enclosure": enc, "available": " / ".join(offered)}}
+    return {"code": "HARD_CONSTRAINTS_UNSATISFIABLE", "params": {}}
+
+
 @tool("recommend_actuators", args_schema=RecommendActuatorsInput)
 def recommend_actuators(
     min_torque_nm: Optional[float] = None,
     min_torque_in_lbs: Optional[float] = None,
     application_type: Optional[str] = None,
     enclosure_type: Optional[str] = None,
+    hazardous_area: Optional[bool] = None,
     voltage_num: Optional[int] = None,
     phase_type: Optional[str] = None,
     frequency_hz: Optional[int] = None,
@@ -326,222 +405,106 @@ def recommend_actuators(
     require_csa_certification: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
-    Recommends Series 76 actuators for technical requirements. If none satisfies all of them,
-    runs constraint relaxation and returns diagnostics and the closest alternatives.
+    Recommends Series 76 actuators. Hard constraints (voltage, enclosure, phase, hazardous area => Explosionproof)
+    filter; soft ones (torque, duty, speed, FLA, CSA) score the candidates (formula in app/recommend.py).
+    If a decisive datum is missing (voltage, On/Off vs Modulating, hazardous area) it returns NEEDS_CLARIFICATION.
     """
     t0 = time.perf_counter()
-    args_dict = {k: v for k, v in locals().items() if k != "t0" and v is not None}
-
-    conditions = ["is_available = TRUE"]
-    params: List[Any] = []
-    ambiguous_service = False
-
-    app_mode = (application_type or "").strip().lower()
-    if app_mode in ("on/off", "on_off", "onoff"):
-        if min_torque_nm is not None:
-            conditions.append("on_off_torque_nm >= %s")
-            params.append(min_torque_nm)
-        if min_torque_in_lbs is not None:
-            conditions.append("on_off_torque_in_lbs >= %s")
-            params.append(min_torque_in_lbs)
-        if min_duty_cycle_pct is not None:
-            conditions.append("on_off_duty_cycle_pct >= %s")
-            params.append(min_duty_cycle_pct)
-        conditions.append("on_off_torque_nm IS NOT NULL")
-    elif app_mode == "modulating":
-        # Trifásico: un único torque de salida (guardado como on/off). Es candidato con advertencia
-        # SINGLE_TORQUE_RATING, salvo que se exija un duty modulante, que la hoja no permite verificar.
-        mod_parts = ["modulating_torque_nm IS NOT NULL"]
-        mod_params: List[Any] = []
-        single_parts = ["phase_type = '3 Phase'", "modulating_torque_nm IS NULL", "on_off_torque_nm IS NOT NULL"]
-        single_params: List[Any] = []
-        if min_torque_nm is not None:
-            mod_parts.append("modulating_torque_nm >= %s")
-            mod_params.append(min_torque_nm)
-            single_parts.append("on_off_torque_nm >= %s")
-            single_params.append(min_torque_nm)
-        if min_torque_in_lbs is not None:
-            mod_parts.append("modulating_torque_in_lbs >= %s")
-            mod_params.append(min_torque_in_lbs)
-            single_parts.append("on_off_torque_in_lbs >= %s")
-            single_params.append(min_torque_in_lbs)
-        if min_duty_cycle_pct is not None:
-            mod_parts.append("modulating_duty_cycle_pct >= %s")
-            mod_params.append(min_duty_cycle_pct)
-            conditions.append("(" + " AND ".join(mod_parts) + ")")
-            params.extend(mod_params)
-        else:
-            conditions.append("((" + " AND ".join(mod_parts) + ") OR (" + " AND ".join(single_parts) + "))")
-            params.extend(mod_params + single_params)
-    else:
-        # Sin tipo de servicio: cumple en CUALQUIERA de los dos
-        if min_torque_nm is not None or min_torque_in_lbs is not None:
-            ambiguous_service = True
-        if min_torque_nm is not None:
-            conditions.append("(COALESCE(on_off_torque_nm, 0) >= %s OR COALESCE(modulating_torque_nm, 0) >= %s)")
-            params.extend([min_torque_nm, min_torque_nm])
-        if min_torque_in_lbs is not None:
-            conditions.append("(COALESCE(on_off_torque_in_lbs, 0) >= %s OR COALESCE(modulating_torque_in_lbs, 0) >= %s)")
-            params.extend([min_torque_in_lbs, min_torque_in_lbs])
-        if min_duty_cycle_pct is not None:
-            conditions.append("(COALESCE(on_off_duty_cycle_pct, 0) >= %s OR COALESCE(modulating_duty_cycle_pct, 0) >= %s)")
-            params.extend([min_duty_cycle_pct, min_duty_cycle_pct])
-
-    if enclosure_type:
-        conditions.append("LOWER(enclosure_type) = LOWER(%s)")
-        params.append(enclosure_type.strip())
-
-    if voltage_num is not None:
-        conditions.append("voltage_num = %s")
-        params.append(voltage_num)
-
-    if phase_type:
-        p_clean = phase_type.strip().lower()
-        if "3" in p_clean or "three" in p_clean:
-            conditions.append("phase_type = '3 Phase'")
-        elif "single" in p_clean or "1" in p_clean:
-            conditions.append("phase_type = 'Single Phase'")
-        elif p_clean == "dc":
-            conditions.append("phase_type IN ('DC', 'AC/DC')")
-        else:
-            conditions.append("LOWER(phase_type) = LOWER(%s)")
-            params.append(phase_type.strip())
-
-    if max_speed_sec is not None:
-        if frequency_hz == 50:
-            conditions.append("COALESCE(speed_50hz_sec, speed_dc_or_fixed_sec) <= %s")
-            params.append(max_speed_sec)
-        elif frequency_hz == 60:
-            conditions.append("COALESCE(speed_60hz_sec, speed_dc_or_fixed_sec) <= %s")
-            params.append(max_speed_sec)
-        else:
-            conditions.append(
-                "(COALESCE(speed_60hz_sec, 9999) <= %s OR COALESCE(speed_50hz_sec, 9999) <= %s OR COALESCE(speed_dc_or_fixed_sec, 9999) <= %s)"
-            )
-            params.extend([max_speed_sec, max_speed_sec, max_speed_sec])
-
-    if max_fla_amps is not None:
-        if frequency_hz == 50:
-            conditions.append("COALESCE(fla_50hz_amps, fla_dc_or_fixed_amps) <= %s")
-            params.append(max_fla_amps)
-        elif frequency_hz == 60:
-            conditions.append("COALESCE(fla_60hz_amps, fla_dc_or_fixed_amps) <= %s")
-            params.append(max_fla_amps)
-        else:
-            conditions.append(
-                "(COALESCE(fla_60hz_amps, 9999) <= %s OR COALESCE(fla_50hz_amps, 9999) <= %s OR COALESCE(fla_dc_or_fixed_amps, 9999) <= %s)"
-            )
-            params.extend([max_fla_amps, max_fla_amps, max_fla_amps])
-
-    if require_csa_certification is True:
-        conditions.append("csa_certified = TRUE")
-
-    where_clause = " AND ".join(conditions)
-    order_col = (
-        "COALESCE(modulating_torque_nm, on_off_torque_nm)"
-        if app_mode == "modulating"
-        else "COALESCE(on_off_torque_nm, modulating_torque_nm)"
-    )
-    sql_query = f"""
-        SELECT * FROM actuators
-        WHERE {where_clause}
-        ORDER BY {order_col} ASC, voltage_num ASC
-        LIMIT 6;
-    """
-
-    # Campos que el LLM necesita según lo preguntado (la tarjeta móvil muestra todo desde la DB)
-    focus = ["torque", "power"]
-    if min_duty_cycle_pct is not None:
-        focus.append("duty")
-    if max_speed_sec is not None:
-        focus.append("speed")
-    if max_fla_amps is not None:
-        focus.append("current")
+    given = {k: v for k, v in locals().items() if k != "t0" and v is not None}
+    given, ignored = rec.ground_args(given, current_user_text.get())
+    # Respuesta a una aclaración previa: los argumentos pendientes se completan con lo que ahora envía el modelo
+    merged = {**current_pending_args.get(), **given}
+    a = rec.clean_args(merged)
+    args_dict = dict(a)
 
     with get_db_cursor() as cur:
-        cur.execute(sql_query, tuple(params))
-        matches = sanitize_rows(cur.fetchall())
+        cur.execute("SELECT * FROM actuators WHERE is_available = TRUE;")
+        rows = sanitize_rows(cur.fetchall())
 
-        if matches:
-            register_ui_actuators(matches)
-            alerts = [record_alert("AMBIGUOUS_SERVICE_TYPE")] if ambiguous_service else []
-            alerts += _single_torque_alerts(matches)
-            result: Dict[str, Any] = {
-                "status": "MATCHES_FOUND",
-                "count": len(matches),
-                "recommended_actuators": _compact_rows(matches, focus),
-            }
-            if alerts:
-                result["alerts"] = alerts
-            record_tool_trace("recommend_actuators", args_dict, sql_query, result,
-                              (time.perf_counter() - t0) * 1000)
+        gate = rec.gate(rows, a)
+        if gate:
+            result = _clarification_result(gate, a, ignored)
+            record_tool_trace("recommend_actuators", args_dict, RECOMMEND_SQL, result, (time.perf_counter() - t0) * 1000)
             return result
 
-        # =================================================================
-        # RELAJACIÓN DE RESTRICCIONES: todas las cifras salen de la DB
-        # =================================================================
-        want_nm = min_torque_nm
-        if want_nm is None and min_torque_in_lbs is not None:
-            cur.execute(
-                "SELECT MIN(on_off_torque_nm / NULLIF(on_off_torque_in_lbs, 0)) AS r FROM actuators "
-                "WHERE is_available AND on_off_torque_in_lbs IS NOT NULL;"
-            )
-            ratio = cur.fetchone()["r"]
-            want_nm = float(ratio) * min_torque_in_lbs if ratio else None
+        candidates = [r for r in rows if rec.passes_hard(r, a)]
+        hard = rec.hard_codes(a)
+        focus = ["torque", "power"]
+        if a.get("min_duty_cycle_pct") is not None:
+            focus.append("duty")
+        if a.get("max_speed_sec") is not None:
+            focus.append("speed")
+        if a.get("max_fla_amps") is not None:
+            focus.append("current")
 
-        diag: List[Dict[str, Any]] = []  # [{code, params}] -> se localizan al construir el ui_payload
-        if want_nm is not None:
-            checks = []
-            if require_csa_certification:
-                checks.append(("csa", "", "csa_certified = TRUE", []))
-            if voltage_num is not None:
-                checks.append(("voltage", voltage_num, "voltage_num = %s", [voltage_num]))
-            if enclosure_type:
-                checks.append(("enclosure", enclosure_type.strip(), "LOWER(enclosure_type) = LOWER(%s)", [enclosure_type.strip()]))
-            if phase_type:
-                checks.append(("phase", phase_type.strip(), "LOWER(phase_type) = LOWER(%s)", [phase_type.strip()]))
-            for kind, value, where, p in checks:
-                ceiling = _torque_ceiling(cur, where, p)
-                if ceiling is not None and want_nm > ceiling:
-                    diag.append({"code": "TORQUE_ABOVE_CEILING", "params": {
-                        "filter_kind": kind, "filter_value": value, "ceiling": _num(ceiling), "requested": _num(want_nm)}})
-            catalog_max = _torque_ceiling(cur, "TRUE", [])
-            if catalog_max is not None and want_nm > catalog_max:
-                diag.append({"code": "CATALOG_TORQUE_CEILING", "params": {"ceiling": _num(catalog_max)}})
-            if require_csa_certification:
-                cur.execute("SELECT MIN(frame_size) AS f FROM actuators WHERE is_available AND NOT csa_certified;")
-                f = cur.fetchone()["f"]
-                if f is not None:
-                    diag.append({"code": "CSA_SIZE_LIMIT", "params": {"frame_size": f}})
-        if not diag:
-            diag.append({"code": "CONSTRAINT_RELAXED", "params": {}})
+        store = current_turn_recommendation.get()
+        store.clear()
+        store.update({"hard": hard, "relaxed": [], "items": [], "status": ""})
 
-        if want_nm is not None:
-            cur.execute(
-                "SELECT * FROM actuators WHERE is_available = TRUE "
-                "ORDER BY ABS(COALESCE(on_off_torque_nm, modulating_torque_nm) - %s) ASC LIMIT 3;",
-                (want_nm,),
-            )
+        if not candidates:
+            alert = _hard_failure_alert(rows, a)
+            msg = record_alert(alert["code"], **alert["params"])["message"]
+            result = {"status": "NO_MATCH_HARD_CONSTRAINTS", "count": 0, "diagnostics": [msg]}
+            store["status"] = result["status"]
+            record_tool_trace("recommend_actuators", args_dict, RECOMMEND_SQL, result, (time.perf_counter() - t0) * 1000)
+            return result
+
+        ranked = rec.rank(candidates, a)
+        full = [x for x in ranked if x["all_met"]]
+        shown = (full if full else ranked)[: rec.TOP_N]
+        register_ui_actuators([x["row"] for x in shown])
+        for i, item in enumerate(shown):
+            r = rec.reasons(item, is_top_full_match=(i == 0 and bool(full)))
+            store["items"].append({"id": item["row"]["id"], "pn": item["row"]["base_part_number"],
+                                   "score": item["score"], **r})
+        ranking_for_llm = []
+        for item in shown:
+            entry: Dict[str, Any] = {"part_number": item["row"]["base_part_number"], "score": item["score"]}
+            for c in item["criteria"]:
+                if c["key"] == "torque" and c["met"]:
+                    entry["torque_margin_pct"] = c["margin_pct"]
+            ranking_for_llm.append(entry)
+
+        alerts: List[Dict[str, str]] = []
+        if not a.get("application_type") and (a.get("min_torque_nm") is not None or a.get("min_torque_in_lbs") is not None):
+            alerts.append(record_alert("AMBIGUOUS_SERVICE_TYPE"))
+        if a.get("frequency_hz") and any(x["row"]["voltage_num"] == 24 for x in shown):
+            alerts.append(record_alert("DC_NO_FREQUENCY"))
+        alerts += _single_torque_alerts([x["row"] for x in shown])
+
+        if full:
+            result: Dict[str, Any] = {
+                "status": "MATCHES_FOUND",
+                "count": len(full),
+                "recommended_actuators": _compact_rows([x["row"] for x in shown], focus),
+                "ranking": ranking_for_llm,
+            }
+            store["status"] = "MATCHES_FOUND"
         else:
-            cur.execute(
-                "SELECT * FROM actuators WHERE is_available = TRUE "
-                "ORDER BY COALESCE(on_off_torque_nm, modulating_torque_nm) ASC LIMIT 3;"
-            )
-        relaxed_candidates = sanitize_rows(cur.fetchall())
-
-    register_ui_actuators(relaxed_candidates)
-    diagnostics = [record_alert(d["code"], **d["params"])["message"] for d in diag]
-    single_alerts = _single_torque_alerts(relaxed_candidates)
-    result = {
-        "status": "NO_EXACT_MATCH_CONSTRAINT_RELAXATION",
-        "count": 0,
-        "diagnostics": diagnostics,
-        "closest_alternative_actuators": _compact_rows(relaxed_candidates, focus),
-    }
-    if single_alerts:
-        result["alerts"] = single_alerts
-    record_tool_trace("recommend_actuators", args_dict, sql_query, result,
-                      (time.perf_counter() - t0) * 1000)
+            want_nm = a.get("min_torque_nm")
+            if want_nm is None and a.get("min_torque_in_lbs") is not None:
+                cur.execute(
+                    "SELECT MIN(on_off_torque_nm / NULLIF(on_off_torque_in_lbs, 0)) AS r FROM actuators "
+                    "WHERE is_available AND on_off_torque_in_lbs IS NOT NULL;"
+                )
+                ratio = cur.fetchone()["r"]
+                want_nm = float(ratio) * a["min_torque_in_lbs"] if ratio else None
+            diag = _relaxation_diagnostics(cur, a, want_nm)
+            store["relaxed"] = rec.relaxed_codes(ranked[0], a)
+            store["status"] = "NO_EXACT_MATCH_CONSTRAINT_RELAXATION"
+            result = {
+                "status": "NO_EXACT_MATCH_CONSTRAINT_RELAXATION",
+                "count": 0,
+                "diagnostics": [record_alert(d["code"], **d["params"])["message"] for d in diag],
+                "closest_alternative_actuators": _compact_rows([x["row"] for x in shown[:3]], focus),
+                "ranking": ranking_for_llm[:3],
+                "unmet_constraints": [c["key"] for c in ranked[0]["criteria"] if not c["met"]],
+            }
+        if alerts:
+            result["alerts"] = alerts
+        if ignored:
+            result["ignored_arguments"] = ignored  # el usuario no los dijo: no se aplicaron
+    record_tool_trace("recommend_actuators", args_dict, RECOMMEND_SQL, result, (time.perf_counter() - t0) * 1000)
     return result
 
 

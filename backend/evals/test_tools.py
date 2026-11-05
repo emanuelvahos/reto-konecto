@@ -135,7 +135,7 @@ def test_csa_diagnostic_mentions_non_certified_sizes():
 
 def test_ui_rows_come_from_db_in_tool_order():
     reset_turn_telemetry()
-    recommend_actuators.invoke({"min_torque_nm": 200, "enclosure_type": "Explosionproof", "voltage_num": 24})
+    recommend_actuators.invoke({"min_torque_nm": 200, "enclosure_type": "Explosionproof", "voltage_num": 24, "application_type": "On/Off"})
     ids = list(current_turn_actuators.get().values())
     rows = fetch_ui_actuators(ids)
     assert [r["id"] for r in rows] == ids
