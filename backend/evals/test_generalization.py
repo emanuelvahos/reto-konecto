@@ -155,3 +155,35 @@ def test_typo_answer_must_name_the_suggested_model():
     assert _typo_without_suggestion("It does not exist; the closest is 761B00-11300000/A.") is False
     reset_turn_telemetry()
     assert _typo_without_suggestion("anything") is False
+
+
+def test_part_numbers_from_earlier_history_of_the_session_are_grounded(monkeypatch):
+    """'compáralo con el que vimos al inicio': el LLM consulta un número que solo aparece en el historial (turno del asistente)."""
+    import app.agent as agent
+    from langchain_core.messages import AIMessage
+    from app.tools import current_turn_tool_traces
+
+    seen = {}
+
+    class Asker:
+        def invoke(self, state, config=None):
+            seen["first"] = lookup_actuator_by_part_number.invoke({"part_number": "763B00-11300000/A"})["status"]      # solo en el historial del asistente
+            seen["invented"] = lookup_actuator_by_part_number.invoke({"part_number": "765A00-11300000/A"})["status"]  # en ningún sitio
+            return {"messages": list(state["messages"]) + [AIMessage(content="Listo.")]}
+
+    monkeypatch.setattr(agent, "build_llm", lambda: None)
+    monkeypatch.setattr(agent, "create_react_agent", lambda llm, tools: Asker())
+    monkeypatch.setattr(agent, "ROUTER_ENABLED", False)
+    history = [{"role": "user", "content": "recomiéndame algo de 500 Nm"}, {"role": "assistant", "content": "Te sugiero el 763B00-11300000/A."},
+               {"role": "user", "content": "ahora algo más grande"}, {"role": "assistant", "content": "Mira el 764A00-11300000/A."}]
+    agent.run_agent_turn("compáralo con el que vimos al inicio", history, ["764A00-11300000/A"], {}, locale="es")
+    assert seen["first"] == "EXACT_MATCH" and seen["invented"] == "UNGROUNDED_PART_NUMBER"
+
+
+def test_knowledge_fallback_in_another_language_returns_the_start_not_a_bare_title():
+    from app.fallback import KNOWLEDGE_MAX_WORDS, _knowledge_text
+    from app.tools import search_engineering_knowledge
+
+    q = "¿Cuál es la tolerancia de voltaje?"
+    text = _knowledge_text([search_engineering_knowledge.invoke({"query": q})], q)
+    assert len(text.split()) > 8 and len(text.split()) <= KNOWLEDGE_MAX_WORDS + 1

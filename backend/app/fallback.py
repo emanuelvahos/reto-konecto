@@ -97,8 +97,17 @@ def _knowledge_text(tool_outputs: Iterable[Any], query: str = "") -> Optional[st
     text = " ".join(texts)
     if len(text.split()) <= KNOWLEDGE_MAX_WORDS:
         return text
-    q = {w for w in re.findall(r"[a-záéíóúñ0-9]{2,}", query.lower()) if w not in _STOP}
+    q = {w for w in re.findall(r"[a-záéíóúñ0-9]{2,}", query.lower()) if w not in _STOP and not w.isdigit()}
     sentences = [x.strip() for x in re.split(r"(?<=[.;])\s+", text) if x.strip()]
+    merged: List[str] = []
+    for x in sentences:                      # frases muy cortas ("1.", títulos) se pegan a la siguiente
+        if merged and len(merged[-1].split()) < 4:
+            merged[-1] += " " + x
+        else:
+            merged.append(x)
+    sentences = merged
+    if not any(q & set(re.findall(r"[a-záéíóúñ0-9]{2,}", x.lower())) for x in sentences):
+        return " ".join(text.split()[:KNOWLEDGE_MAX_WORDS]).rstrip(",;:") + "…"      # nada coincide (otro idioma): el comienzo del fragmento
     ranked = sorted(range(len(sentences)), key=lambda i: (-len(q & set(re.findall(r"[a-záéíóúñ0-9]{2,}", sentences[i].lower()))), i))
     chosen, words = [], 0
     for i in ranked:
@@ -110,7 +119,10 @@ def _knowledge_text(tool_outputs: Iterable[Any], query: str = "") -> Optional[st
         if q & set(re.findall(r"[a-záéíóúñ0-9]{2,}", sentences[i].lower())) or not chosen:
             chosen.append(i)
             words += n
-    return " ".join(sentences[i] for i in sorted(chosen))
+    out = " ".join(sentences[i] for i in sorted(chosen))
+    if len(out.split()) < 6:                 # solo coincidió un título: mejor el comienzo del fragmento
+        return " ".join(text.split()[:KNOWLEDGE_MAX_WORDS]).rstrip(",;:") + "…"
+    return out
 
 
 _STOP = {"what", "does", "mean", "for", "the", "these", "this", "that", "is", "are", "of", "qué", "que", "es", "son", "significa",

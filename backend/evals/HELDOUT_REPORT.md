@@ -79,3 +79,14 @@ Hay variación entre corridas porque el LLM es no determinista (NIM gratuito, co
 ## Qué no se re-ejecutó tras el último cambio
 
 Tras añadir la regla 9 (typo sin sugerencia nombrada) se pasaron las 474 pruebas sin LLM, EVAL 11/11 y ADV 30/30, pero **no** se repitió la batería ciega completa: la memoria libre cayó por debajo de 1 GB (≈0,77 GB) y se detuvo según la regla acordada.
+
+## Corridas finales (tras ampliar la fundamentación al historial y recortar bien la plantilla de conocimiento)
+
+| Corrida | Aprobados | Fallos |
+| --- | --- | --- |
+| Final A | 37/40 | HLD-20 (LLM caído: error controlado), HLD-33 (regex estrecha), HLD-39 (plantilla de conocimiento devolvía solo un título: corregido) |
+| Final B | 38/40 | HLD-20 (LLM caído), HLD-39 (mismo fallo de la plantilla) |
+| **Final C (definitiva)** | **39/40 (97,5 %)** | HLD-20 |
+
+HLD-20 falla en las tres porque el último turno es `uncertain` y depende del LLM: con NIM caído (0 tokens, 5-6 reintentos de transporte) devuelve el error neutro; con NIM sano contesta con los alternativos monofásicos sin decir que los trifásicos no están disponibles.
+Además: prueba de persistencia con reinicio real del contenedor (`RUN_LIVE=1`): 1 passed. EVAL 11/11.

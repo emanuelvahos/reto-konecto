@@ -403,6 +403,8 @@ def run_agent_turn(
     current_pending_args.set(pending_args)
     current_user_text.set(normalize_spoken_pn(" ".join(prev_users + [user_query]))[0])
     current_grounded_pns.get().update(pn_key(x) for x in active_part_numbers)
+    for m in history_messages:                       # números mencionados antes en la misma sesión (usuario o asistente)
+        current_grounded_pns.get().update(pn_key(x) for x in extract_part_numbers_from_text(str(m.get("content", ""))))
     visible_filters = {k: v for k, v in active_filters.items() if k != "_pending"}
 
     cfg = load_llm_config()
