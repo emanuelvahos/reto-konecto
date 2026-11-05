@@ -149,7 +149,7 @@ El **oráculo** (`golden.json`) es independiente de lo que devuelven las herrami
 Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q    # 520 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
+python -m pytest backend/evals -q    # 520 pruebas; una (test_api_e2e multiturno) llama al LLM real y se omite si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos

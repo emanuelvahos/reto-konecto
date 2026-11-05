@@ -1,4 +1,5 @@
 import os
+import pytest
 
 import jwt
 from fastapi.testclient import TestClient
@@ -42,6 +43,8 @@ def test_multiturn_conversation_coreference_and_persistence():
     )
     assert t1.status_code == 200, t1.text
     d1 = t1.json()
+    if d1["intent"] == "error":   # esta prueba usa el LLM real: sin clave o con el proveedor caído (429/5xx) no se puede evaluar
+        pytest.skip("LLM no disponible en este momento")
     session_id = d1["session_id"]
     assert session_id
     assert "500" in d1["answer"], d1["answer"]  # On/Off Nm
