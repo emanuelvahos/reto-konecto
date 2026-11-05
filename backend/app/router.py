@@ -114,6 +114,12 @@ def extract_criteria(text: str) -> Dict[str, Any]:
         a["max_fla_amps"] = _to_float(m.group(1))
     if re.search(r"\bcsa\b", text, FLAGS) and re.search(r"must|debe|requier\w+|require\w*|exig\w+|obligator\w+|certified|certificad\w+", text, FLAGS):
         a["require_csa_certification"] = True
+    m = re.search(r"(?:factor de (?:seguridad|servicio)|margen de seguridad|safety (?:factor|margin)|service factor)\D{0,14}(\d+(?:[.,]\d+)?)\s?(%?)", text, FLAGS)
+    if m:
+        v = _to_float(m.group(1))
+        f = 1 + v / 100 if m.group(2) else v
+        if 1.0 < f <= 5.0:
+            a["safety_factor"] = round(f, 4)
     hz = set(re.findall(r"(?<![\d.])(\d{2})\s?hz\b", text, FLAGS))
     if len(hz) == 1:
         a["frequency_hz"] = int(next(iter(hz)))

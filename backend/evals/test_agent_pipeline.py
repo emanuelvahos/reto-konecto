@@ -88,7 +88,7 @@ def test_persistent_ungrounded_numbers_use_deterministic_template_in_user_langua
 def test_no_tool_with_numbers_falls_back_to_generic_message_and_intent_error(run):
     (answer, ui, _, _, _, meta), _ = run([{"answer": "It has 500 Nm."}], "hola, ¿cuánto torque tiene?", locale="es")
     assert meta["verification"]["status"] == "fallback_template" and meta["intent"] == "error"
-    assert "No pude verificar" in answer and ui["actuators"] == []
+    assert "No pude confirmar" in answer and ui["actuators"] == []
 
 
 def test_no_tool_without_numbers_is_verified_clarify(run):
@@ -108,7 +108,7 @@ def test_empty_answer_without_tool_results_is_reported_as_error(run):
     (answer, ui, dbg, _, _, meta), fake = run([{"answer": ""}], "hello", locale="en")
     assert dbg["token_usage"]["llm_retries"] == 2
     assert meta["intent"] == "error" and ui["alerts"][0]["code"] == "LLM_UNAVAILABLE"
-    assert "temporarily unavailable" in answer
+    assert "try again in a few seconds" in answer
 
 
 def test_intent_follows_last_tool(run):
@@ -149,7 +149,7 @@ def test_missing_decisive_data_returns_clarification_with_one_question_and_optio
     assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and ui["actuators"] == []
     c = ui["clarification"]
     assert answer == c["question"] == "¿Qué voltaje de alimentación necesita el actuador?"
-    assert [o["value"] for o in c["options"]] == ["110V", "220V"]  # 24V no llega a 450 Nm: no se ofrece
+    assert [o["value"] for o in c["options"]] == ["110V monofásico", "220V trifásico", "220V monofásico"]  # 24V no llega a 450 Nm: solo combinaciones reales
     assert meta["verification"]["status"] == "verified" and ui["suggested_followups"] == []
     assert filters["_pending"] == {"topic": "voltage", "args": {"min_torque_nm": 450}}
 
@@ -157,7 +157,7 @@ def test_missing_decisive_data_returns_clarification_with_one_question_and_optio
 def test_clarification_chain_resolves_each_answer_in_the_same_context(run):
     """El valor elegido se reenvía como mensaje; el LLM puede llamar a la tool SOLO con lo nuevo: el contexto lo completa."""
     (_, ui, _, _, filters, _), _ = run([{"tool": ("recommend", {"min_torque_nm": 450}), "answer": "q"}], "need 450 Nm", locale="en")
-    assert ui["clarification"]["options"][0]["value"] == "110V"
+    assert ui["clarification"]["options"][0]["value"] == "110V single phase"
     (_, ui, _, _, filters, _), _ = run(
         [{"tool": ("recommend", {"voltage_num": 110}), "answer": "q"}], "110V", locale="en", filters=filters
     )

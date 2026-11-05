@@ -63,6 +63,14 @@ def clean_args(args: Dict[str, Any]) -> Dict[str, Any]:
         a["application_type"] = "On/Off" if mode == "onoff" else "Modulating"
     else:
         a.pop("application_type", None)
+    try:  # factor de seguridad: solo si el usuario lo pidió (ground_args) y es un multiplicador razonable
+        f = float(a["safety_factor"]) if a.get("safety_factor") is not None else None
+    except (TypeError, ValueError):
+        f = None
+    if f is not None and 1.0 < f <= 5.0:
+        a["safety_factor"] = f
+    else:
+        a.pop("safety_factor", None)
     return a
 
 
@@ -163,6 +171,8 @@ def evaluate(row: Dict[str, Any], a: Dict[str, Any]) -> List[Dict[str, Any]]:
     if a.get("min_torque_nm") is not None or a.get("min_torque_in_lbs") is not None:
         unit = "Nm" if a.get("min_torque_nm") is not None else "in-lbs"
         req = float(a["min_torque_nm"] if unit == "Nm" else a["min_torque_in_lbs"])
+        if a.get("safety_factor"):   # SOLO si el usuario lo pidió; el PDF no define ningún factor de seguridad
+            req = round(req * float(a["safety_factor"]), 2)
         t = torque_of(row, mode, unit)
         crits.append(_min_crit("torque", req, t["value"], unit, kind=t["kind"]))
     if a.get("min_duty_cycle_pct") is not None:
@@ -270,10 +280,18 @@ def gate(rows: List[Dict[str, Any]], a: Dict[str, Any]) -> Optional[Dict[str, An
         return frozenset(r["base_part_number"] for r in full_matches(avail, args))
 
     if a.get("voltage_num") is None:
-        volts = sorted({r["voltage_num"] for r in avail if passes_hard(r, {**a, "voltage_num": r["voltage_num"]})})
-        opts = [v for v in volts if pns({**a, "voltage_num": v})]
+        # combinaciones (voltaje, fase) que EXISTEN en la base dadas las restricciones ya conocidas y que tienen coincidencias
+        combos = sorted({
+            (int(r["voltage_num"]), r["phase_type"] if r["phase_type"] in ("Single Phase", "3 Phase") else None)
+            for r in avail if passes_hard(r, {**a, "voltage_num": r["voltage_num"]})
+        }, key=lambda k: (k[0], k[1] or ""))
+        opts = []
+        for v, ph in combos:
+            args = {"voltage_num": v, **({"phase_type": ph} if ph else {})}
+            if pns({**a, **args}):
+                opts.append(args)
         if len(opts) >= 2:
-            return {"topic": "voltage", "options": [{"args": {"voltage_num": int(v)}} for v in opts]}
+            return {"topic": "voltage", "options": [{"args": o} for o in opts]}
 
     wants_service = any(a.get(k) is not None for k in ("min_torque_nm", "min_torque_in_lbs", "min_duty_cycle_pct"))
     if a.get("application_type") is None and wants_service:
@@ -296,6 +314,7 @@ import re  # noqa: E402
 _CATEGORICAL_PATTERNS = {
     "application_type": r"on\s*/?\s*-?\s*off|modul",
     "enclosure_type": r"weather|intemperie|exterior|outdoor|explosi|antiexplos|hazard|peligros|atex",
+    "safety_factor": r"factor|safety|seguridad|margen|margin",
     "phase_type": r"fase|phase|monof|trif|three|single|\b[13]\s?ph\b|\bdc\b|\bcc\b|corriente continua|ac/dc",
     "require_csa_certification": r"csa",
     "frequency_hz": r"(?<!\d)(?:50|60)\s?hz",

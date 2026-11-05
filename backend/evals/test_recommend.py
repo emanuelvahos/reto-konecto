@@ -122,7 +122,7 @@ def test_3phase_modulating_uses_single_rating_and_duty_is_unverifiable():
 # ------------------------------------------------------------------ aclaración
 def test_gate_asks_voltage_first_then_service_then_hazard():
     g = rec.gate(AVAIL, rec.clean_args({}))
-    assert g["topic"] == "voltage" and [o["args"]["voltage_num"] for o in g["options"]] == [24, 110, 220]
+    assert g["topic"] == "voltage" and [(o["args"]["voltage_num"], o["args"].get("phase_type")) for o in g["options"]] == [(24, None), (110, "Single Phase"), (220, "3 Phase"), (220, "Single Phase")]
     g = rec.gate(AVAIL, rec.clean_args({"voltage_num": 110, "min_torque_nm": 450}))
     assert g["topic"] == "service" and len(g["options"]) == 2
     g = rec.gate(AVAIL, rec.clean_args({"voltage_num": 110, "min_torque_nm": 450, "application_type": "On/Off"}))
