@@ -15,7 +15,7 @@ SAMPLES = json.loads((Path(__file__).parent / "fixtures" / "contract_v2_samples.
 
 
 def test_fixture_has_the_four_original_samples_plus_the_real_ones():
-    assert {"single_spec_card", "comparison_table", "recommendation_with_relaxation", "clarification"} <= set(SAMPLES) and len(SAMPLES) == 11
+    assert {"single_spec_card", "comparison_table", "recommendation_with_relaxation", "clarification"} <= set(SAMPLES) and len(SAMPLES) == 12
 
 
 @pytest.mark.parametrize("name", sorted(SAMPLES))

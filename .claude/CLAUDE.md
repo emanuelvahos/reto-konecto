@@ -59,7 +59,7 @@ Any modification to `backend/scripts/ingest.py` or `backend/app/tools.py` MUST p
   - **Ingestion Gate (`ActuatorRecord.verify_physical_laws`):** Enforces physical unit conversion invariants:
     $$\frac{\text{Torque (in-lbs)}}{\text{Torque (Nm)}} \in [8.2, 9.5] \quad (\text{theoretical } 1\text{ Nm} \approx 8.8507\text{ in-lbs})$$
     $$\text{LRA (Amps)} \ge \text{FLA (Amps)} \quad \forall f \in \{50\text{Hz}, 60\text{Hz}, \text{DC}\}$$
-  - **Runtime Fuzzy Recovery (`lookup_actuator_by_part_number`):** Combines `pg_trgm` (`similarity() >= 0.45`) with custom Levenshtein distance ranking to recover corrupted part numbers in a single tool call (`status = "FUZZY_SUGGESTIONS"`).
+  - **Runtime Fuzzy Recovery (`lookup_actuator_by_part_number`):** Combines `pg_trgm` (`similarity() >= 0.42`) with custom Levenshtein distance ranking to recover corrupted part numbers in a single tool call (`status = "TYPO_OR_CLOSEST_MATCH_FOUND"`).
 
 ---
 

@@ -137,8 +137,11 @@ def build_fallback_answer(
     groups: Optional[Sequence[str]] = None,
     recommend: bool = False,
     query: str = "",
+    compare: bool = False,
 ) -> str:
     groups = tuple(groups or DEFAULT_GROUPS)
+    if rows and compare and len(rows) >= 2 and not recommend:   # comparación de números de parte explícitos: una frase por modelo
+        return " ".join(describe_row(lang, r, groups) + "." for r in rows[:3])
     if rows:
         sentence = describe_row(lang, rows[0], groups)
         if recommend:

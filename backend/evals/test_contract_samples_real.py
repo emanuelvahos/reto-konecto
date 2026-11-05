@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.i18n import ALERT_TITLES
+from app.i18n import ALERT_TITLES, DEGRADED_ALERT
 from app.tools import UI_COLUMNS
 
 HERE = Path(__file__).parent
@@ -14,7 +14,7 @@ GOLDEN = {g["base_part_number"]: g for g in json.loads((HERE / "oracle" / "golde
 PN_RX = re.compile(r"\b\d{3}[A-Z]\d{2}-\d{8}(?:/[A-Z])?\b|\b\d{3}[A-Z]\d{2}-\d{4}[0-9A-Z]{4}/[A-Z]\b")
 EXPECTED = {
     "single_spec_card", "comparison_table", "comparison_table_3", "three_phase_single_torque", "model_listed_as_na",
-    "recommendation_with_relaxation", "recommendation_no_match", "clarification", "out_of_scope", "llm_error", "typo_correction",
+    "recommendation_with_relaxation", "recommendation_no_match", "clarification", "out_of_scope", "llm_error", "degraded_lookup", "typo_correction",
 }
 
 
@@ -67,6 +67,9 @@ def test_scenarios_cover_what_they_claim():
     c = S["clarification"]["ui_payload"]["clarification"]
     assert 2 <= len(c["options"]) <= 4 and S["clarification"]["intent"] == "clarify"
     assert [a["code"] for a in S["out_of_scope"]["ui_payload"]["alerts"]] == ["OUT_OF_SCOPE"] and S["out_of_scope"]["intent"] == "knowledge"
+    d = S["degraded_lookup"]   # sin LLM: tarjeta + texto de plantilla + aviso informativo (no error)
+    assert d["intent"] == "lookup" and d["ui_payload"]["display_type"] == "SINGLE_SPEC_CARD" and d["verification"]["status"] == "fallback_template"
+    assert [(a["code"], a["severity"]) for a in d["ui_payload"]["alerts"]] == [("LLM_UNAVAILABLE", "info")]
     assert S["llm_error"]["intent"] == "error" and S["llm_error"]["ui_payload"]["alerts"][0]["code"] == "LLM_UNAVAILABLE"
     assert "TYPO_OR_CLOSEST_MATCH_FOUND" in [a["code"] for a in S["typo_correction"]["ui_payload"]["alerts"]]
 
@@ -75,7 +78,10 @@ def test_alerts_have_titles_and_nothing_invented_remains():
     blob = json.dumps(SAMPLES, ensure_ascii=False).lower()
     for s in SAMPLES.values():
         for a in s["ui_payload"]["alerts"]:
-            assert a["title"] and a["title"] in {v for t in ALERT_TITLES[a["code"]].values() for v in [t]}
+            titles = {v for t in ALERT_TITLES[a["code"]].values() for v in [t]}
+            if a["severity"] == "info" and a["code"] == "LLM_UNAVAILABLE":
+                titles |= set(DEGRADED_ALERT["title"].values())
+            assert a["title"] and a["title"] in titles
     for invented in ("factor de servicio", "service factor", "762b20", "763a20", "(s4 "):
         assert invented not in blob
     assert not re.search(r"\b50[0-9]\b.*(?:openrouter|nvidia)|llm|modelo de lenguaje|language model", json.dumps([s["answer"] for s in SAMPLES.values()]), re.I)

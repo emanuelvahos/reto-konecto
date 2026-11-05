@@ -57,6 +57,7 @@ SAMPLES = {
     "recommendation_no_match": ("Quiero un actuador de 24V weatherproof", "es", False),
     "out_of_scope": ("¿Cuánto cuesta el 763B00-11300000/A y cuál es el plazo de entrega?", "es", False),
     "llm_error": ("hola, necesito ayuda con un actuador", "es", True),
+    "degraded_lookup": ("¿Cuánto torque y qué potencia tiene el 763B00-11300000/A?", "es", True),
     "typo_correction": ("Give me the specs of 761800-11300000/A", "en", False),
 }
 

@@ -23,6 +23,7 @@ from app.i18n import (
     detect_language,
     make_short_title,
     render_alert,
+    render_degraded_alert,
     render_alert_message,
     render_clarification,
     render_rank_text,
@@ -494,13 +495,13 @@ def run_agent_turn(
     llm_failed = False
     all_msgs: List[BaseMessage] = []
     try:
+        pre_msgs = lc_messages
+        if decision is not None and decision.kind == "tools":   # las herramientas del router corren SIN LLM, antes de construirlo
+            pre_msgs = build_router_graph(decision).invoke({"messages": lc_messages}, config={"callbacks": [rec]})["messages"]
         try:
             inner = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
         except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
             raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
-        pre_msgs = lc_messages
-        if decision is not None and decision.kind == "tools":
-            pre_msgs = build_router_graph(decision).invoke({"messages": lc_messages}, config={"callbacks": [rec]})["messages"]
         if current_turn_clarification.get():          # la pregunta de aclaración la arma la app, sin LLM
             all_msgs = pre_msgs
         else:
@@ -611,7 +612,11 @@ def run_agent_turn(
             groups=infer_groups(user_query, focus),
             recommend=bool(traces) and traces[-1]["tool_name"] == "recommend_actuators",
             query=user_query,
+            compare=sum(1 for tr in traces if isinstance(tr.get("raw_output"), dict)
+                        and tr["raw_output"].get("status") == "EXACT_MATCH") >= 2,
         )
+        if llm_failed and traces:   # modo degradado: respuesta correcta desde la base, con aviso informativo (no error)
+            ui_payload["alerts"].append(render_degraded_alert(lang))
         rec.add_step("fallback_template", (fb_t - t0) * 1000, (time.perf_counter() - fb_t) * 1000, detail=template_reason or "ungrounded")
         fallback_used = True
         status = "fallback_template"

@@ -12,22 +12,56 @@ Asistente conversacional para consultar, comparar y recomendar los actuadores el
 
 ## Requisitos
 
-- Docker y Docker Compose v2.24+ (usa `env_file` con `required: false`).
-- Una clave de LLM (NVIDIA NIM u OpenRouter) para respuestas generadas por el modelo. **Sin clave el backend arranca igual**: las consultas que necesitan el LLM devuelven una alerta `LLM_UNAVAILABLE`, y lo que resuelve el router (fuera de alcance, aclaraciones, etc.) sigue funcionando.
-- Para ejecutar pruebas desde el host: Python 3.11+ y `pip install -r backend/requirements.txt`.
+- Docker y Docker Compose v2.24 o superior (`docker compose version`).
+- Puertos libres en el host: `5433` (PostgreSQL) y `8001` (API). Se pueden cambiar con `DB_HOST_PORT` y `API_HOST_PORT` en `.env`.
+- Opcional: una clave de LLM (NVIDIA NIM u OpenRouter). Sin clave el backend arranca y responde en **modo degradado** (ver más abajo).
+- Opcional, solo para ejecutar las pruebas desde el host: Python 3.11+ y `pip install -r backend/requirements.txt`.
 
 ## Arranque
 
 ```bash
-cp .env.example .env        # opcional; sin .env se usan los valores de demostración
-# editar .env: LLM_PROVIDER y la clave del proveedor elegido (LLM_API_KEY_NIM o LLM_API_KEY)
+git clone <url-del-repositorio> reto-konecto
+cd reto-konecto
+cp .env.example .env          # en PowerShell: Copy-Item .env.example .env
+```
+
+Edita `.env` solo si quieres respuestas redactadas por el modelo: pon `LLM_PROVIDER=nim` y la clave en `LLM_API_KEY_NIM` (o `LLM_PROVIDER=openrouter` y la clave en `LLM_API_KEY`). Si no tocas nada, todo arranca con valores de demostración y sin LLM.
+
+```bash
 docker compose up --build
 ```
 
-- API: <http://localhost:8001> (salud: `/health`, Swagger: `/docs`). PostgreSQL en el host: puerto `5433`.
-- Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (valida las reglas físicas) y siembra 68 actuadores y 3 usuarios demo. Luego se inicia Uvicorn.
-- La imagen del backend es autosuficiente (sin bind mounts ni `--reload`); `db` y `backend` tienen healthcheck y límite de memoria (512 MB y 1 GB).
-- Variables: todas están documentadas en `.env.example`. Las claves van siempre vacías en ese archivo; `.env` está ignorado por git.
+La primera vez tarda por la construcción de la imagen. Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
+
+- API: <http://localhost:8001> (Swagger: <http://localhost:8001/docs>). PostgreSQL en el host: puerto `5433`.
+- Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (validando las reglas físicas) y siembra 68 actuadores y 3 usuarios demo; después se inicia Uvicorn.
+- La imagen del backend es autosuficiente (sin bind mounts ni `--reload`); `db` y `backend` tienen healthcheck y límite de memoria (512 MB y 1 GB). Si cambias código del backend, repite `docker compose up --build`.
+- Todas las variables están documentadas en `.env.example`. Las claves van siempre vacías ahí; `.env` está ignorado por git.
+- Para detener: `docker compose down` (conserva los datos); `docker compose down -v` también borra el volumen de PostgreSQL.
+
+### Verificar que funciona
+
+Los comandos usan `curl` (en PowerShell de Windows usa `curl.exe` y comillas dobles escapadas, o ejecuta estos comandos desde Git Bash).
+
+```bash
+# 1. Salud: debe listar 68 actuadores y el proveedor/modelo activos
+curl -s http://localhost:8001/health
+# {"status":"ok","actuators_loaded":68,"llm_provider":"nim","llm_model":"..."}
+
+# 2. Login demo: devuelve access_token, token_type "bearer" y el usuario
+curl -s -X POST http://localhost:8001/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"engineer@konecto.io","password":"Konecto2026!"}'
+
+# 3. Una consulta
+curl -s -X POST http://localhost:8001/api/conversation   -H "Content-Type: application/json"   -d '{"query":"Specs of 763B00-11300000/A","locale":"en"}'
+```
+
+Respuesta esperada de la consulta (JSON completo; resumen de los campos estables, comprobado contra el backend en ejecución):
+
+- `intent`: `lookup`; `ui_payload.display_type`: `SINGLE_SPEC_CARD`; `ui_payload.actuators[0].base_part_number`: `763B00-11300000/A`.
+- `answer`: una o dos frases con torque on/off 500 Nm (4400 in-lbs), torque modulante 380 Nm (3350 in-lbs) y potencia 90 W (cifras del catálogo, verificadas contra el oráculo).
+- `verification.status`: `verified` si el LLM redactó la respuesta y pasó el verificador; `fallback_template` si respondió la plantilla (siempre en modo degradado). La redacción exacta del LLM varía de una ejecución a otra; las cifras no.
+
+Para ejecutar las pruebas contra esa base de datos, ver «Pruebas» en la sección de ingestión.
 
 ## Backend
 
@@ -61,6 +95,23 @@ Cada sesión guarda mensajes, los números de parte activos y los filtros activo
 - Inyección de prompt, preguntas fuera de alcance, números de parte inventados o que el usuario nunca dio (`UNGROUNDED_PART_NUMBER`).
 - Base de datos caída, UUID inválido, caracteres NUL, `locale` solo `es`/`en`: error controlado, no excepción.
 
+### Modo degradado (sin LLM)
+
+Si no hay LLM (clave vacía, proveedor caído, error 429/5xx, presupuesto de tiempo del turno agotado), el backend sigue respondiendo lo que puede resolver con la base de datos y las reglas, sin llamar al modelo:
+
+| Consulta | Respuesta sin LLM |
+| --- | --- |
+| Número de parte válido o pregunta de ficha (también seguimientos sobre la parte activa) | `SINGLE_SPEC_CARD` con datos de PostgreSQL y una o dos frases de plantilla |
+| Comparación de números de parte explícitos | `COMPARISON_TABLE` y una frase por modelo |
+| Typo de número de parte, modelo N/A, criterios de selección completos | Tarjeta o lista de la herramienta y plantilla |
+| Pregunta conceptual | Fragmento de `knowledge.json` recortado a la pregunta |
+| Falta un dato para recomendar | Pregunta de aclaración (`CLARIFICATION`) |
+| Fuera de alcance o inyección de prompt | Respuesta fija del router |
+
+En los casos con tarjeta o conocimiento se añade una alerta `LLM_UNAVAILABLE` con `severity: "info"` («el asistente de lenguaje no está disponible; la respuesta se armó con los datos del catálogo») y `verification.status` es `fallback_template`. Una consulta que el router no sabe clasificar (p. ej. «cuéntame algo interesante») sí necesita el LLM: sin él devuelve `intent: "error"` con la misma alerta pero con `severity: "error"`.
+
+Cubierto por `backend/evals/test_degraded_mode.py` (clave vacía y proveedor caído, sin llamar al LLM).
+
 ## Ingestión de datos
 
 1. `backend/scripts/extract_from_pdf.py`: extracción por modelo de visión desde imágenes del PDF en dos pasadas independientes (A y B) y reconciliación (`backend/data/extraction/`).
@@ -71,14 +122,16 @@ Reglas del catálogo: en todas las tablas el orden de columnas es 60 Hz | 50 Hz;
 
 El **oráculo** (`golden.json`) es independiente de lo que devuelven las herramientas: las pruebas comprueban que cada cifra de una respuesta y cada tarjeta coincidan con él.
 
-Pruebas (la base debe estar arriba; ninguna llama al LLM salvo los runners):
+Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q                      # 479 pruebas recolectadas
+python -m pytest backend/evals -q    # 506 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
 ```
+
+Los tres runners requieren clave de LLM en `.env`; sobrescriben sus informes `.md`. Las pruebas de `backend/evals` no necesitan clave salvo la indicada.
 
 ## Modelos por entorno
 
@@ -134,6 +187,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 - **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
 - **Tasas medidas solo con NIM.** Los resultados de arriba corresponden a `nvidia/nemotron-3.5-lightning-30b-a3b`. No hay corrida con OpenRouter todavía; no se afirma latencia ni tasa de acierto para `gpt-4o-mini`.
 - **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
+- **Modo degradado.** Las respuestas de plantilla son más rígidas que las del LLM y las consultas que el router no clasifica no se pueden contestar sin modelo. Las cifras son las mismas (vienen de la base de datos), no la redacción. Esta ruta se probó con pruebas automáticas, no con una corrida de las baterías sin LLM.
 - La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.
 - La batería ciega completa no se repitió tras el último cambio menor del verificador (ver `HELDOUT_REPORT.md`).
 

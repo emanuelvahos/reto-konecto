@@ -155,6 +155,22 @@ def render_alert_message(code: str, params: Optional[Dict[str, Any]], lang: str)
     return entry.get(lang, entry["en"]).format(**p)
 
 
+DEGRADED_ALERT: Dict[str, Dict[str, str]] = {
+    "title": {"en": "Reduced mode", "es": "Modo reducido"},
+    "message": {
+        "en": "The language assistant is not available right now. This answer was built directly from the catalog data.",
+        "es": "El asistente de lenguaje no está disponible en este momento. Esta respuesta se armó directamente con los datos del catálogo.",
+    },
+}
+
+
+def render_degraded_alert(lang: str) -> Dict[str, str]:
+    """Aviso informativo (no error) cuando la respuesta sale de la plantilla por falta de LLM; mismo código LLM_UNAVAILABLE."""
+    return {"code": "LLM_UNAVAILABLE", "severity": "info",
+            "title": DEGRADED_ALERT["title"].get(lang, DEGRADED_ALERT["title"]["en"]),
+            "message": DEGRADED_ALERT["message"].get(lang, DEGRADED_ALERT["message"]["en"])}
+
+
 def render_alert_title(code: str, lang: str) -> str:
     entry = ALERT_TITLES.get(code)
     return code if entry is None else entry.get(lang, entry["en"])
