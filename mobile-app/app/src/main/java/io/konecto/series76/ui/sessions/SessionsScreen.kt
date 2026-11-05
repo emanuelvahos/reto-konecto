@@ -232,19 +232,54 @@ fun SessionsScreen(vm: MainViewModel) {
                     border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
                     modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.s)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(Spacing.s),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Column(modifier = Modifier.padding(Spacing.s)) {
                         Text(
                             text = vm.errorMessage!!,
                             color = KonectoTheme.semantics.errorText,
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.weight(1f)
+                            style = MaterialTheme.typography.bodySmall
                         )
-                        TextButton(onClick = { vm.loadSessions() }) {
-                            Text(stringResource(R.string.retry), color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(Spacing.xs))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { showServerDialog = true },
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
+                                contentPadding = PaddingValues(horizontal = Spacing.s, vertical = Spacing.xxs)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = KonectoTheme.semantics.errorText
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(R.string.error_open_settings),
+                                    color = KonectoTheme.semantics.errorText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(Spacing.xs))
+                            Button(
+                                onClick = { vm.loadSessions() },
+                                shape = RoundedCornerShape(6.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                ),
+                                contentPadding = PaddingValues(horizontal = Spacing.s, vertical = Spacing.xxs)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.retry),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

@@ -235,5 +235,9 @@
     <string name="alert_title_generic">Engineering Notice</string>
     <string name="error_service_unavailable_clean_msg">The technical assistant is temporarily unavailable. Please retry your query.</string>
     <string name="error_connection_clean_msg">Connection error. Please check your network connection and retry.</string>
+    <string name="error_server_unreachable">Could not connect to server at %1$s. Make sure the backend is running, or open Settings to configure the server URL.</string>
+    <string name="error_change_server_url">Open Settings / Change URL</string>
+    <string name="error_open_settings">Settings</string>
+    <string name="login_error_credentials">Invalid credentials. Please verify your email and password.</string>
 </resources>
 

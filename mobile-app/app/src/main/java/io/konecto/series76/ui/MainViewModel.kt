@@ -82,7 +82,14 @@ class MainViewModel : ViewModel() {
                 currentScreen = AppScreen.SESSIONS
                 loadSessions()
             } catch (e: Exception) {
-                errorMessage = "Login failed: ${e.localizedMessage ?: "Cannot connect to ${ApiClient.baseUrl}"}"
+                val isHttpAuth = e is retrofit2.HttpException && (e.code() == 401 || e.code() == 403)
+                errorMessage = if (isHttpAuth) {
+                    appContext?.getString(R.string.login_error_credentials)
+                        ?: "Invalid credentials. Please verify your email and password."
+                } else {
+                    appContext?.getString(R.string.error_server_unreachable, ApiClient.baseUrl)
+                        ?: "Could not connect to server at ${ApiClient.baseUrl}. Make sure the backend is running, or open Settings to configure the server URL."
+                }
             } finally {
                 isLoading = false
             }
@@ -120,7 +127,13 @@ class MainViewModel : ViewModel() {
                     sessions = ApiClient.api.getSessions()
                 }
             } catch (e: Exception) {
-                errorMessage = "Could not load conversations (${ApiClient.baseUrl}): ${e.localizedMessage}"
+                val isNetwork = e is java.io.IOException || (e is retrofit2.HttpException && e.code() in listOf(502, 503, 504))
+                errorMessage = if (isNetwork) {
+                    appContext?.getString(R.string.error_server_unreachable, ApiClient.baseUrl)
+                        ?: "Could not connect to server at ${ApiClient.baseUrl}. Make sure the backend is running, or open Settings to configure the server URL."
+                } else {
+                    "Could not load conversations (${ApiClient.baseUrl}): ${e.localizedMessage}"
+                }
             } finally {
                 isLoading = false
             }
@@ -306,9 +319,10 @@ class MainViewModel : ViewModel() {
                         ?: appContext?.getString(R.string.error_service_unavailable_clean_msg)
                         ?: "The technical assistant is temporarily unavailable. Please retry your query."
                 } else {
-                    // Errores de red del cliente
-                    errorMessage = appContext?.getString(R.string.error_connection_clean_msg)
-                        ?: "Connection error. Please check your network connection and retry."
+                    // Errores de red del cliente o servidor no responde
+                    errorMessage = appContext?.getString(R.string.error_server_unreachable, ApiClient.baseUrl)
+                        ?: appContext?.getString(R.string.error_connection_clean_msg)
+                        ?: "Could not connect to server at ${ApiClient.baseUrl}. Make sure the backend is running, or open Settings to configure the server URL."
                 }
             } finally {
                 isLoading = false

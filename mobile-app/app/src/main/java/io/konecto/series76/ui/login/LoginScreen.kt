@@ -388,12 +388,38 @@ fun LoginScreen(vm: MainViewModel) {
                             border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
-                                text = vm.errorMessage!!,
-                                color = KonectoTheme.semantics.errorText,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(Spacing.s)
-                            )
+                            Column(modifier = Modifier.padding(Spacing.s)) {
+                                Text(
+                                    text = vm.errorMessage!!,
+                                    color = KonectoTheme.semantics.errorText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xs))
+                                OutlinedButton(
+                                    onClick = { showServerDialog = true },
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = KonectoTheme.semantics.errorText
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = Spacing.s, vertical = Spacing.xxs),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = KonectoTheme.semantics.errorText
+                                    )
+                                    Spacer(modifier = Modifier.width(Spacing.xs))
+                                    Text(
+                                        text = stringResource(R.string.error_change_server_url),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = KonectoTheme.semantics.errorText
+                                    )
+                                }
+                            }
                         }
                     }
 

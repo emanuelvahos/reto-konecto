@@ -235,5 +235,9 @@
     <string name="alert_title_generic">Aviso de ingeniería</string>
     <string name="error_service_unavailable_clean_msg">El asistente técnico no se encuentra disponible temporalmente. Por favor, reintente su consulta.</string>
     <string name="error_connection_clean_msg">Error de conexión. Verifica tu conexión de red y reintenta.</string>
+    <string name="error_server_unreachable">No se pudo conectar al servidor en %1$s. Verifica que el backend esté en ejecución o abre Ajustes para cambiar la URL.</string>
+    <string name="error_change_server_url">Abrir Ajustes / Cambiar URL</string>
+    <string name="error_open_settings">Ajustes</string>
+    <string name="login_error_credentials">Credenciales incorrectas. Verifica tu correo y contraseña.</string>
 </resources>
 

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import io.konecto.series76.ui.components.ConnectionDialog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -54,6 +56,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import io.konecto.series76.R
 import io.konecto.series76.data.ActuatorDto
+import io.konecto.series76.data.ApiClient
 import io.konecto.series76.data.ServerPreferences
 import io.konecto.series76.ui.ActuatorFullDatasheetSheet
 import io.konecto.series76.ui.AppScreen
@@ -130,6 +133,7 @@ fun ChatScreen(vm: MainViewModel) {
     var selectedActuatorForDatasheet by remember { mutableStateOf<ActuatorDto?>(null) }
     var showPermissionRationale by remember { mutableStateOf(false) }
     var showVoiceListeningDialog by remember { mutableStateOf(false) }
+    var showServerDialog by rememberSaveable { mutableStateOf(false) }
     var voiceTextToConfirm by remember { mutableStateOf<String?>(null) }
 
     val listState = rememberLazyListState()
@@ -350,39 +354,66 @@ fun ChatScreen(vm: MainViewModel) {
                         .fillMaxWidth()
                         .padding(horizontal = Spacing.s, vertical = Spacing.xs)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(Spacing.s),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.chat_error_title),
-                                color = KonectoTheme.semantics.errorText,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = vm.errorMessage!!,
-                                color = KonectoTheme.semantics.errorText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                        Button(
-                            onClick = { vm.retryLastMessage() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            ),
-                            shape = RoundedCornerShape(6.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    Column(modifier = Modifier.padding(Spacing.s)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = stringResource(R.string.retry),
-                                color = MaterialTheme.colorScheme.onError,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.chat_error_title),
+                                    color = KonectoTheme.semantics.errorText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = vm.errorMessage!!,
+                                    color = KonectoTheme.semantics.errorText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedButton(
+                                    onClick = { showServerDialog = true },
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, KonectoTheme.semantics.errorBorder),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp),
+                                        tint = KonectoTheme.semantics.errorText
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text(
+                                        text = stringResource(R.string.error_open_settings),
+                                        color = KonectoTheme.semantics.errorText,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                Button(
+                                    onClick = { vm.retryLastMessage() },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        contentColor = MaterialTheme.colorScheme.onError
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.retry),
+                                        color = MaterialTheme.colorScheme.onError,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -652,6 +683,17 @@ fun ChatScreen(vm: MainViewModel) {
             onGrant = {
                 showPermissionRationale = false
                 recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        )
+    }
+
+    if (showServerDialog) {
+        ConnectionDialog(
+            initialUrl = ApiClient.baseUrl,
+            onDismiss = { showServerDialog = false },
+            onSaved = { newUrl ->
+                showServerDialog = false
+                vm.updateServerUrl(context, newUrl)
             }
         )
     }
