@@ -89,6 +89,11 @@ class ClarificationPayload(BaseModel):
     options: List[ClarificationOption] = Field(default_factory=list)
 
 
+class SuggestedFollowup(BaseModel):
+    label: str
+    query: str
+
+
 class UIPayload(BaseModel):
     display_type: str = Field(
         "TEXT_ONLY",
@@ -102,6 +107,10 @@ class UIPayload(BaseModel):
     alerts: List[UIAlert] = Field(default_factory=list)
     recommendation: Optional[RecommendationPayload] = None
     clarification: Optional[ClarificationPayload] = None
+    suggested_followups: List[SuggestedFollowup] = Field(
+        default_factory=list,
+        description="Up to 3 deterministic follow-up chips {label, query}; resend `query` as the next user message.",
+    )
 
 
 class Verification(BaseModel):

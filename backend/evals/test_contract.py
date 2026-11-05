@@ -47,3 +47,27 @@ def test_request_new_fields_optional_and_validated():
     assert ConversationRequest(query="q", locale="es", input_mode="voice").input_mode == "voice"
     with pytest.raises(ValueError):
         ConversationRequest(query="q", locale="fr")
+
+
+def test_suggested_followups_contract():
+    from app.schemas import UIPayload
+
+    assert UIPayload().suggested_followups == []  # aditivo: ausente = lista vacía
+    for name in ("single_spec_card", "recommendation_with_relaxation"):
+        chips = ConversationResponse.model_validate(SAMPLES[name]).ui_payload.suggested_followups
+        assert 1 <= len(chips) <= 3 and all(c.label and c.query for c in chips)
+    assert ConversationResponse.model_validate(SAMPLES["clarification"]).ui_payload.suggested_followups == []
+
+
+def test_clarification_options_are_resendable_values():
+    r = ConversationResponse.model_validate(SAMPLES["clarification"])
+    assert r.intent == "clarify" and r.ui_payload.display_type == "CLARIFICATION" and r.answer == r.ui_payload.clarification.question
+    assert 2 <= len(r.ui_payload.clarification.options) <= 4
+    assert all(o.label and o.value for o in r.ui_payload.clarification.options)
+
+
+def test_recommendation_sample_has_ranking_and_constraints():
+    r = ConversationResponse.model_validate(SAMPLES["recommendation_with_relaxation"])
+    rec = r.ui_payload.recommendation
+    assert r.intent == "recommend" and r.ui_payload.display_type == "RECOMMENDATION_LIST"
+    assert rec.ranking[0].score >= rec.ranking[1].score and rec.hard_constraints and rec.relaxed_constraints

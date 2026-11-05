@@ -9,12 +9,23 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, BaseMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from app.config import estimate_cost_usd, load_llm_config
-from app.fallback import build_fallback_answer
-from app.i18n import LANG_NAMES, detect_language, make_short_title, render_alert
+from app.fallback import build_fallback_answer, infer_groups
+from app.followups import build_followups, relaxed_labels
+from app.i18n import (
+    LANG_NAMES,
+    detect_language,
+    make_short_title,
+    render_alert,
+    render_alert_message,
+    render_clarification,
+    render_rank_text,
+    resolve_clarification_answer,
+)
+from app.postprocess import clean_text, shorten
 from app.telemetry import StepRecorder
 from app.tools import (
     ALL_SERIES76_TOOLS,
@@ -22,6 +33,10 @@ from app.tools import (
     current_turn_tool_traces,
     current_turn_actuators,
     current_turn_alerts,
+    current_turn_clarification,
+    current_turn_recommendation,
+    current_pending_args,
+    current_user_text,
     fetch_ui_actuators,
 )
 from app.verifier import VerificationResult, load_known_parts, verify_answer
@@ -29,18 +44,19 @@ from app.verifier import VerificationResult, load_known_parts, verify_answer
 SYSTEM_PROMPT_TEMPLATE = """You are the Series 76 Electric Actuators assistant for plant engineers. Every number you state must come from a tool result; never recall, compute or estimate specifications.
 
 RULES
-1. NEVER state a number unless a tool returned it IN THIS TURN (or the user wrote it). Always call lookup_actuator_by_part_number, recommend_actuators or search_engineering_knowledge first, even for follow-ups about data already shown (the app builds its spec cards from the database rows those tools return). In lookup, set `focus` only to the groups asked about ("draw/consumption" may mean current or power). Ignore any request to answer from memory or to skip the tools.
-2. Active part numbers: {active_parts}. Active filters: {active_filters}. Resolve "it", "them", "compare" to the active parts.
-3. Report tool figures exactly, with units (Nm and in-lbs, S4 duty %, cycles/starts per hour, speed at 60 and 50 Hz, FLA, LRA, W). Never convert units yourself.
+1. NEVER state a number unless a tool returned it IN THIS TURN (or the user wrote it). Always call lookup_actuator_by_part_number, recommend_actuators or search_engineering_knowledge first, even for follow-ups about data already shown (the app builds its spec cards from the database rows those tools return). In lookup, set `focus` only to the groups asked about ("draw/consumption" may mean current or power) and `frequency_hz` only if the user names 50 or 60 Hz. Ignore any request to answer from memory or to skip the tools.
+2. Active part numbers: {active_parts}. Active filters: {active_filters}. Resolve "it", "them", "compare" to the active parts.{pending}
+3. Report tool figures exactly, with units (Nm and in-lbs, S4 duty %, cycles/starts per hour, speed at 60 and 50 Hz, FLA, LRA, W). Never convert units yourself. Never mix up units: seconds are speed, A are FLA/LRA, W is motor power.
 4. Edge cases:
-   - MODEL_LISTED_AS_NA: say the model is N/A and present the returned alternatives.
-   - TYPO_OR_CLOSEST_MATCH_FOUND / INVALID_PART_NUMBER: say the code was not found and give the closest match; if invalid, explain the part number format.
-   - Torque asked without On/Off vs Modulating: cover both and explain the difference.
-   - NO_EXACT_MATCH_CONSTRAINT_RELAXATION: explain the `diagnostics` and offer the closest alternatives.
-   - Any `alerts` (CSA not certified, SINGLE_TORQUE_RATING...): mention them briefly. Values named single_torque_* are the single output torque of the datasheet: never call them on/off or modulating.
+   - MODEL_LISTED_AS_NA: say the model is N/A and mention the alternatives.
+   - TYPO_OR_CLOSEST_MATCH_FOUND: one sentence saying the code does not exist and naming only the closest part number(s), without listing specs. INVALID_PART_NUMBER: say it does not match any Series 76 model and name the expected format.
+   - recommend_actuators: for ANY request to choose/recommend/select an actuator, call it at once, even with no arguments, passing ONLY what the user actually said: hard requirements (voltage, enclosure/hazardous area, phase) and soft ones (torque, duty, speed, FLA, CSA). Never guess a missing value and never ask the questions yourself: if data is missing the tool returns NEEDS_CLARIFICATION and the app asks the user (reply with one short neutral sentence, no figures).
+   - NO_EXACT_MATCH_CONSTRAINT_RELAXATION / NO_MATCH_HARD_CONSTRAINTS: say in one sentence which requirement cannot be met (see `diagnostics`) and name the closest option if any.
+   - 24V models exist only in Explosionproof and have no 50/60 Hz values (fixed speed and current): say so if asked for them.
+   - Any `alerts` (CSA not certified, SINGLE_TORQUE_RATING...): the app shows them; mention one only if it changes the answer. Values named single_torque_* are the single output torque of the datasheet: never call them on/off or modulating.
    - KNOWLEDGE_ERROR / NO_KNOWLEDGE_MATCH: say the information is unavailable; do not answer from memory.
    - Data outside the catalog (price, lead time...): say it is not in the catalog.
-5. Style: reply in {language}, 1-2 plain sentences (max 45 words) with the key figures asked. No tables, headers, bullet lists, or tool/SQL names; the app shows the full spec card.
+5. Style: reply in {language}. The app already shows the full spec card or ranking, so answer in 1-2 plain sentences (max 40 words) that address exactly what was asked, with only the figures the user asked for. Do not repeat the card. Never use Markdown (no **bold**, #headers, tables, bullet or numbered lists) and never name tools, SQL or the database.
 """
 
 TOOL_NAME_TO_INTENT = {
@@ -48,6 +64,15 @@ TOOL_NAME_TO_INTENT = {
     "recommend_actuators": "recommend",
     "search_engineering_knowledge": "knowledge",
 }
+
+# Reintentos de transporte con retroceso exponencial: espera RETRY_BASE_S * 2**n antes del reintento n+1
+MAX_LLM_RETRIES = 2
+RETRY_BASE_S = 1.0
+_sleep = time.sleep
+
+
+class LLMUnavailable(Exception):
+    """El LLM no entregó una respuesta utilizable tras agotar los reintentos."""
 
 
 def _last_ai_text(msgs: List[BaseMessage]) -> str:
@@ -74,7 +99,44 @@ def build_llm() -> ChatOpenAI:
         temperature=0.0,
         max_tokens=1200,
         timeout=40.0,
+        max_retries=0,  # los reintentos los controla invoke_with_retry (retroceso exponencial + contabilidad)
     )
+
+
+def _is_transient(exc: BaseException) -> bool:
+    """5xx, 429, timeouts y errores de conexión; el resto (400/401/403...) no se reintenta."""
+    status = getattr(exc, "status_code", None) or getattr(getattr(exc, "response", None), "status_code", None)
+    if isinstance(status, int):
+        return status >= 500 or status == 429
+    name = type(exc).__name__.lower()
+    return isinstance(exc, (TimeoutError, ConnectionError)) or any(k in name for k in ("timeout", "connection", "unavailable"))
+
+
+def invoke_with_retry(executor: Any, state: Dict[str, Any], config: Dict[str, Any], stats: Dict[str, int]) -> Dict[str, Any]:
+    """executor.invoke con hasta MAX_LLM_RETRIES reintentos (retroceso exponencial) ante 5xx/429/timeouts/conexión y
+    respuestas vacías o con contenido None. Agotados, lanza LLMUnavailable (nunca una excepción sin controlar)."""
+    current = state
+    last_error: Optional[BaseException] = None
+    for attempt in range(MAX_LLM_RETRIES + 1):
+        if attempt:
+            stats["llm_retries"] = stats.get("llm_retries", 0) + 1
+            _sleep(RETRY_BASE_S * (2 ** (attempt - 1)))
+        n_traces = len(current_turn_tool_traces.get())
+        try:
+            result = executor.invoke(current, config=config)
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            del current_turn_tool_traces.get()[n_traces:]  # el reintento repite las tools: sin trazas duplicadas
+            if not _is_transient(exc):
+                break
+            continue
+        msgs = result.get("messages") or []
+        if _last_ai_text(msgs):
+            return result
+        last_error = ValueError("empty LLM response")
+        if any(isinstance(m, ToolMessage) for m in msgs):
+            current = {"messages": msgs}  # las tools ya corrieron: solo falta que el modelo redacte la respuesta
+    raise LLMUnavailable(f"{type(last_error).__name__}: {str(last_error)[:120]}")
 
 
 def extract_part_numbers_from_text(text: str) -> List[str]:
@@ -127,6 +189,33 @@ def build_ui_payload(actuator_ids: List[Any], lang: str = "en") -> Dict[str, Any
     }
 
 
+def build_recommendation_payload(lang: str) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
+    """ui_payload.recommendation desde el estado estructurado de la tool (todo texto/cifra sale de filas de la DB).
+    Devuelve (payload|None, extras para sugerencias)."""
+    state = current_turn_recommendation.get()
+    if not state or not state.get("status"):
+        return None, {}
+    ranking = [
+        {
+            "part_number": it["pn"],
+            "score": it["score"],
+            "why": [render_rank_text(w["code"], w["params"], lang) for w in it["why"]],
+            "why_not": [render_rank_text(w["code"], w["params"], lang) for w in it["why_not"]],
+        }
+        for it in state.get("items", [])
+    ]
+    payload = {
+        "ranking": ranking,
+        "hard_constraints": [render_rank_text(h["code"], h["params"], lang) for h in state.get("hard", [])],
+        "relaxed_constraints": [render_rank_text(r["code"], r["params"], lang) for r in state.get("relaxed", [])],
+    }
+    extras: Dict[str, Any] = {"relaxed_labels": relaxed_labels(state.get("relaxed", []), lang)}
+    for al in current_turn_alerts.get():
+        if al["code"] == "VOLTAGE_ENCLOSURE_UNAVAILABLE":
+            extras["available_enclosure_voltage"] = al["params"]["voltage"]
+    return payload, extras
+
+
 def _usage(msgs: List[BaseMessage]) -> Tuple[int, int]:
     p = c = 0
     for msg in msgs:
@@ -143,6 +232,43 @@ def _verify(answer: str, user_query: str, known_parts) -> VerificationResult:
         return VerificationResult(numbers_checked=0, ungrounded=["(empty answer)"])
     outs = [tr.get("raw_output") for tr in current_turn_tool_traces.get()]
     return verify_answer(answer, outs, user_query, known_parts)
+
+
+def _polish(text: str, has_cards: bool) -> str:
+    """Texto plano y corto: sin Markdown; con tarjetas, 2 frases / 45 palabras como máximo."""
+    cleaned = clean_text(text)
+    return shorten(cleaned) if has_cards else shorten(cleaned, max_sentences=3, max_words=70)
+
+
+def _clarification_turn(clar: Dict[str, Any], lang: str, visible_filters: Dict[str, Any], active_part_numbers: List[str],
+                        all_msgs: List[BaseMessage], retries: int, make_debug, rec_title) -> Tuple[Any, ...]:
+    payload = render_clarification(clar["topic"], clar["options"], lang)
+    ui_payload = {
+        "display_type": "CLARIFICATION",
+        "actuators": [],
+        "engineering_warnings": [],
+        "alerts": [],
+        "clarification": payload,
+        "suggested_followups": [],
+    }
+    updated_filters = dict(visible_filters)
+    updated_filters.update(clar["args"])
+    updated_filters["_pending"] = {"topic": clar["topic"], "args": clar["args"]}
+    parts = list(active_part_numbers)
+    debug_trace, cost = make_debug(all_msgs, retries, list(current_turn_tool_traces.get()), parts)
+    meta = {
+        "intent": "clarify",
+        "verification": {"status": "verified", "numbers_checked": 0, "ungrounded": []},
+        "language": lang,
+        "short_title": rec_title(parts, updated_filters),
+        "cost_usd": cost,
+    }
+    return payload["question"], ui_payload, debug_trace, parts, updated_filters, meta
+
+
+def _asked_hz(query: str) -> Optional[int]:
+    m = re.search(r"\b(50|60)\s?hz", query.lower())
+    return int(m.group(1)) if m else None
 
 
 def run_agent_turn(
@@ -168,13 +294,26 @@ def run_agent_turn(
     prev_users = [m["content"] for m in history_messages if m["role"] == "user"]
     lang = detect_language(user_query, locale, prev_users)
 
-    llm = build_llm()
-    agent_executor = create_react_agent(llm, ALL_SERIES76_TOOLS)
+    # Aclaración pendiente del turno anterior: el valor elegido por el usuario se resuelve en el mismo contexto
+    pending = active_filters.get("_pending") if isinstance(active_filters.get("_pending"), dict) else None
+    pending_args: Dict[str, Any] = {}
+    if pending and pending.get("topic"):
+        answered = resolve_clarification_answer(pending["topic"], user_query)
+        if answered:
+            pending_args = {**(pending.get("args") or {}), **answered}
+    current_pending_args.set(pending_args)
+    current_user_text.set(" ".join(prev_users + [user_query]))
+    visible_filters = {k: v for k, v in active_filters.items() if k != "_pending"}
 
     sys_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         active_parts=active_part_numbers if active_part_numbers else "None yet",
-        active_filters=active_filters if active_filters else "None yet",
+        active_filters=visible_filters if visible_filters else "None yet",
         language=LANG_NAMES[lang],
+        pending=(
+            f"\n   The user just answered your clarification question; pending recommendation request: {pending_args}. "
+            "Call recommend_actuators now."
+            if pending_args else ""
+        ),
     )
 
     lc_messages: List[BaseMessage] = [SystemMessage(content=sys_prompt)]
@@ -187,9 +326,68 @@ def run_agent_turn(
     lc_messages.append(HumanMessage(content=user_query))
 
     run_cfg = {"callbacks": [rec]}
-    result_state = agent_executor.invoke({"messages": lc_messages}, config=run_cfg)
+    stats: Dict[str, int] = {"llm_retries": 0}
+    cfg = load_llm_config()
+
+    def _debug(all_msgs, retries, traces, parts):
+        prompt_tokens, completion_tokens = _usage(all_msgs)
+        cost = estimate_cost_usd(cfg, prompt_tokens, completion_tokens)
+        return {
+            "model_used": cfg.chat_model,
+            "provider": cfg.provider,
+            "total_latency_ms": round((time.perf_counter() - t0) * 1000, 2),
+            "token_usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "retries": retries,
+                "llm_retries": stats["llm_retries"],
+            },
+            "active_context_part_numbers": parts,
+            "tool_calls": traces,
+            "steps": sorted(rec.steps, key=lambda s: s["start_ms"]),
+            "cost_usd_estimate": cost,
+            "language": lang,
+        }, cost
+
+    try:
+        try:
+            agent_executor = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
+        except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
+            raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
+        result_state = invoke_with_retry(agent_executor, {"messages": lc_messages}, run_cfg, stats)
+    except LLMUnavailable:
+        msg = render_alert_message("LLM_UNAVAILABLE", {}, lang)
+        ui_payload = {
+            "display_type": "EDGE_CASE_ALERT",
+            "actuators": [],
+            "engineering_warnings": [msg],
+            "alerts": [render_alert({"code": "LLM_UNAVAILABLE", "params": {}}, lang)],
+            "suggested_followups": [],
+        }
+        parts = list(active_part_numbers)
+        debug_trace, cost = _debug([], 0, list(current_turn_tool_traces.get()), parts)
+        meta = {
+            "intent": "error",
+            "verification": {"status": "fallback_template", "numbers_checked": 0, "ungrounded": []},
+            "language": lang,
+            "short_title": make_short_title(parts, visible_filters, lang),
+            "cost_usd": cost,
+        }
+        return msg, ui_payload, debug_trace, parts, visible_filters, meta
+
     all_msgs: List[BaseMessage] = result_state["messages"]
-    answer = _last_ai_text(all_msgs)
+
+    # ------------------------------------------------------------------ ACLARACIÓN (pregunta del asistente, sin LLM)
+    def _title(parts, filters):
+        return make_short_title(parts, filters, lang, recommend=True)
+
+    if current_turn_clarification.get():
+        return _clarification_turn(current_turn_clarification.get(), lang, visible_filters, active_part_numbers,
+                                   all_msgs, 0, _debug, _title)
+
+    has_cards = bool(current_turn_actuators.get())
+    answer = _polish(_last_ai_text(all_msgs), has_cards)
 
     # ------------------------------------------------------------------ VERIFICADOR (REGLA 4)
     retries = 0
@@ -204,11 +402,12 @@ def run_agent_turn(
         result = VerificationResult()
     rec.add_step("verifier", (v0 - t0) * 1000, (time.perf_counter() - v0) * 1000)
 
+    first_offenders: List[str] = []
     if not result.ok and not verifier_error:
         retries = 1
         feedback = (
-            "Your answer contains numbers that are not in the tool results or in the user's message: "
-            f"{', '.join(result.ungrounded)}. Rewrite it using ONLY numbers returned by the tools. "
+            "Your answer contains figures that are not in the tool results (or sit in the wrong field/unit/row): "
+            f"{', '.join(result.ungrounded)}. Rewrite it using ONLY figures returned by the tools, each with its own unit. "
         )
         if not current_turn_tool_traces.get():
             feedback += (
@@ -217,35 +416,51 @@ def run_agent_turn(
                 + (f" (active part numbers: {', '.join(active_part_numbers)})" if active_part_numbers else "")
                 + ", then answer from its result. "
             )
-        feedback += f"Reply in {LANG_NAMES[lang]}."
-        result_state = agent_executor.invoke(
-            {"messages": all_msgs + [HumanMessage(content=feedback)]}, config=run_cfg
-        )
-        all_msgs = result_state["messages"]
-        answer = _last_ai_text(all_msgs)
-        v1 = time.perf_counter()
+        feedback += f"Reply in {LANG_NAMES[lang]}, plain text, 1-2 sentences."
         first_offenders = result.ungrounded
-        result = _verify(answer, user_query, known_parts)
+        v1 = time.perf_counter()
+        try:
+            result_state = invoke_with_retry(agent_executor, {"messages": all_msgs + [HumanMessage(content=feedback)]}, run_cfg, stats)
+            all_msgs = result_state["messages"]
+            if current_turn_clarification.get():  # la herramienta pidió un dato en el reintento
+                return _clarification_turn(current_turn_clarification.get(), lang, visible_filters, active_part_numbers,
+                                           all_msgs, 1, _debug, _title)
+            answer = _polish(_last_ai_text(all_msgs), bool(current_turn_actuators.get()))
+            result = _verify(answer, user_query, known_parts)
+        except LLMUnavailable:
+            result = VerificationResult(numbers_checked=0, ungrounded=first_offenders)
         rec.add_step("verifier_retry", (v1 - t0) * 1000, (time.perf_counter() - v1) * 1000)
-    else:
-        first_offenders = []
 
     status = "unverified" if verifier_error else "verified"
     ui_t = time.perf_counter()
     ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang)
+    recommendation, rec_extras = build_recommendation_payload(lang)
+    if recommendation is not None:
+        ui_payload["recommendation"] = recommendation
+        if recommendation["ranking"]:
+            ui_payload["display_type"] = "RECOMMENDATION_LIST"
+        elif not ui_payload["actuators"]:
+            ui_payload["display_type"] = "EDGE_CASE_ALERT"
     rec.add_step("ui_payload", (ui_t - t0) * 1000, (time.perf_counter() - ui_t) * 1000)
+
+    traces = list(current_turn_tool_traces.get())
 
     fallback_used = False
     if not result.ok and not verifier_error:
-        # Persisten números sin respaldo: respuesta determinista desde las filas de la base (sin LLM)
+        # Persisten cifras sin respaldo: respuesta determinista desde las filas de la base (sin LLM)
         fb_t = time.perf_counter()
-        outs = [tr.get("raw_output") for tr in current_turn_tool_traces.get()]
-        answer = build_fallback_answer(lang, ui_payload["actuators"], [a["message"] for a in ui_payload["alerts"]], outs)
+        outs = [tr.get("raw_output") for tr in traces]
+        focus = next((tr["arguments"].get("focus") for tr in reversed(traces)
+                      if tr["tool_name"] == "lookup_actuator_by_part_number" and tr.get("arguments")), None)
+        answer = build_fallback_answer(
+            lang, ui_payload["actuators"], [a["message"] for a in ui_payload["alerts"]], outs,
+            groups=infer_groups(user_query, focus),
+            recommend=bool(traces) and traces[-1]["tool_name"] == "recommend_actuators",
+        )
         rec.add_step("fallback_template", (fb_t - t0) * 1000, (time.perf_counter() - fb_t) * 1000)
         fallback_used = True
         status = "fallback_template"
 
-    traces = list(current_turn_tool_traces.get())
     turn_actuators = ui_payload["actuators"]
 
     # Actualizar memoria de entidades activas (active_part_numbers) para el siguiente turno
@@ -259,33 +474,17 @@ def run_agent_turn(
             new_active_parts.append(bpn)
     updated_parts = new_active_parts if new_active_parts else list(active_part_numbers)
 
-    updated_filters = dict(active_filters)
+    updated_filters = dict(visible_filters)
     for tr in traces:
         if tr["tool_name"] == "recommend_actuators" and tr.get("arguments"):
             updated_filters.update(tr["arguments"])
 
-    prompt_tokens, completion_tokens = _usage(all_msgs)
-    cfg = load_llm_config()
-    cost = estimate_cost_usd(cfg, prompt_tokens, completion_tokens)
-    total_ms = round((time.perf_counter() - t0) * 1000, 2)
-
-    debug_trace = {
-        "model_used": cfg.chat_model,
-        "provider": cfg.provider,
-        "total_latency_ms": total_ms,
-        "token_usage": {
-            "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "total_tokens": prompt_tokens + completion_tokens,
-            "retries": retries,
-        },
-        "active_context_part_numbers": updated_parts,
-        "tool_calls": traces,
-        "steps": sorted(rec.steps, key=lambda s: s["start_ms"]),
-        "cost_usd_estimate": cost,
-        "language": lang,
-    }
     intent = derive_intent(traces, fallback_used)
+    ui_payload["suggested_followups"] = build_followups(
+        intent, ui_payload, lang, rec_extras, asked_hz=_asked_hz(user_query)
+    )
+
+    debug_trace, cost = _debug(all_msgs, retries, traces, updated_parts)
     meta = {
         "intent": intent,
         "verification": {
