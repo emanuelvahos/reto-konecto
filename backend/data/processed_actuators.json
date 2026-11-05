@@ -38,7 +38,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761B00-11300000/A",
@@ -79,7 +80,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762A00-11300000/A",
@@ -120,7 +122,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762B00-11300000/A",
@@ -161,7 +164,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763A00-11300000/A",
@@ -202,7 +206,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763B00-11300000/A",
@@ -243,7 +248,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763C00-11300000/A",
@@ -284,7 +290,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764A00-11300000/A",
@@ -325,7 +332,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764B00-11300000/A",
@@ -366,7 +374,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765A00-11300000/A",
@@ -407,7 +416,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765B00-11300000/A",
@@ -448,7 +458,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761A00-11320000/A",
@@ -489,7 +500,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761B00-11320000/A",
@@ -530,7 +542,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762A00-11320000/A",
@@ -571,7 +584,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762B00-11320000/A",
@@ -612,7 +626,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763A00-11320000/A",
@@ -653,7 +668,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763B00-11320000/A",
@@ -694,7 +710,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763C00-11320000/A",
@@ -735,7 +752,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764A00-11320000/A",
@@ -776,7 +794,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764B00-11320000/A",
@@ -817,7 +836,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765A00-11320000/A",
@@ -858,7 +878,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765B00-11320000/A",
@@ -899,7 +920,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "766A00-11320000/A",
@@ -941,7 +963,8 @@
       "6. Starts and cycles per hour based on rated torque",
       "* Sizes 6 and 7 are not CSA Certified"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "766B00-11320000/A",
@@ -983,7 +1006,8 @@
       "6. Starts and cycles per hour based on rated torque",
       "* Sizes 6 and 7 are not CSA Certified"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "767A00-11320000/A",
@@ -1025,7 +1049,8 @@
       "6. Starts and cycles per hour based on rated torque",
       "* Sizes 6 and 7 are not CSA Certified"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "767B00-11320000/A",
@@ -1067,7 +1092,8 @@
       "6. Starts and cycles per hour based on rated torque",
       "* Sizes 6 and 7 are not CSA Certified"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "767C00-11320000/A",
@@ -1109,7 +1135,8 @@
       "6. Starts and cycles per hour based on rated torque",
       "* Sizes 6 and 7 are not CSA Certified"
     ],
-    "source_page": 1
+    "source_page": 1,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "761A00-11330C00/A",
@@ -1145,7 +1172,8 @@
     "table_notes": [
       "Model listed as N/A in 220V 3-Phase table."
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "761B00-11330C00/A",
@@ -1181,7 +1209,8 @@
     "table_notes": [
       "Model listed as N/A in 220V 3-Phase table."
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "762A00-11330C00/A",
@@ -1217,7 +1246,8 @@
     "table_notes": [
       "Model listed as N/A in 220V 3-Phase table."
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "762B00-11330C00/A",
@@ -1253,7 +1283,8 @@
     "table_notes": [
       "Model listed as N/A in 220V 3-Phase table."
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763A00-11330C00/A",
@@ -1294,7 +1325,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763B00-11330C00/A",
@@ -1335,7 +1367,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763C00-11330C00/A",
@@ -1376,7 +1409,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "764A00-11330C00/A",
@@ -1417,7 +1451,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "764B00-11330C00/A",
@@ -1458,7 +1493,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "765A00-11330C00/A",
@@ -1499,7 +1535,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "765B00-11330C00/A",
@@ -1540,7 +1577,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 2
+    "source_page": 2,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "761X30-11380000/A",
@@ -1581,7 +1619,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761Y30-11380000/A",
@@ -1622,7 +1661,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762X30-11380000/A",
@@ -1663,7 +1703,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762Y30-11380000/A",
@@ -1704,7 +1745,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763X30-11380000/A",
@@ -1745,7 +1787,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761X30-11370000/A",
@@ -1786,7 +1829,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761Y30-11370000/A",
@@ -1827,7 +1871,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762X30-11370000/A",
@@ -1868,7 +1913,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762Y30-11370000/A",
@@ -1909,7 +1955,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763X30-11370000/A",
@@ -1950,7 +1997,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 3
+    "source_page": 3,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761X30-11300000/A",
@@ -1991,7 +2039,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "761Y30-11300000/A",
@@ -2032,7 +2081,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "762X30-11300000/A",
@@ -2073,7 +2123,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "762Y30-11300000/A",
@@ -2114,7 +2165,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763X30-11300000/A",
@@ -2155,7 +2207,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "763Y30-11300000/A",
@@ -2196,7 +2249,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "764X30-11300000/A",
@@ -2237,7 +2291,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "764Y30-11300000/A",
@@ -2278,7 +2333,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "765X30-11300000/A",
@@ -2319,7 +2375,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "765Y30-11300000/A",
@@ -2360,7 +2417,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A+B+humano"
   },
   {
     "base_part_number": "761X30-11320000/A",
@@ -2401,7 +2459,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "761Y30-11320000/A",
@@ -2442,7 +2501,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762X30-11320000/A",
@@ -2483,7 +2543,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "762Y30-11320000/A",
@@ -2524,7 +2585,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763X30-11320000/A",
@@ -2565,7 +2627,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "763Y30-11320000/A",
@@ -2606,7 +2669,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764X30-11320000/A",
@@ -2647,7 +2711,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "764Y30-11320000/A",
@@ -2688,7 +2753,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765X30-11320000/A",
@@ -2729,7 +2795,8 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   },
   {
     "base_part_number": "765Y30-11320000/A",
@@ -2770,6 +2837,7 @@
       "5. Duty cycle per IEC 60034-1 for on/off and modulating service",
       "6. Starts and cycles per hour based on rated torque"
     ],
-    "source_page": 4
+    "source_page": 4,
+    "source_method": "A=B"
   }
 ]
