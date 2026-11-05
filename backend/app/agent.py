@@ -305,37 +305,21 @@ def _asked_hz(query: str) -> Optional[int]:
     return int(m.group(1)) if m else None
 
 
-def build_graph(inner: Any, decision: Optional[Decision]):
-    """Grafo LangGraph: router (determinista) -> [tools forzadas] -> agente con herramientas (LLM redacta desde el ToolMessage).
-    El router solo actúa en la primera llamada del turno (configurable.route) y si el último mensaje es del usuario."""
+def build_router_graph(decision: Decision):
+    """Grafo LangGraph previo al LLM: router (determinista) -> ToolNode con las herramientas forzadas -> fin.
+    Se ejecuta UNA vez por turno, antes del modelo: si el LLM falla o tarda, los resultados ya obtenidos no se pierden
+    ni se repiten en los reintentos de transporte (el modelo solo redacta desde los ToolMessage)."""
 
-    def router_node(state: MessagesState, config: Dict[str, Any]) -> Dict[str, Any]:
-        enabled = (config.get("configurable") or {}).get("route", True)
-        msgs = state["messages"]
-        if not enabled or decision is None or decision.kind != "tools" or not isinstance(msgs[-1], HumanMessage):
-            return {}
+    def router_node(state: MessagesState) -> Dict[str, Any]:
         calls = [{"name": c["name"], "args": c["args"], "id": f"router-{i}", "type": "tool_call"} for i, c in enumerate(decision.calls)]
         return {"messages": [AIMessage(content="", tool_calls=calls)]}
-
-    def after_router(state: MessagesState) -> str:
-        last = state["messages"][-1]
-        return "tools" if isinstance(last, AIMessage) and last.tool_calls else "agent"
-
-    def after_tools(state: MessagesState) -> str:
-        return END if current_turn_clarification.get() else "agent"  # la pregunta de aclaración la arma la app, sin LLM
-
-    def agent_node(state: MessagesState, config: Dict[str, Any]) -> Dict[str, Any]:
-        out = inner.invoke({"messages": state["messages"]}, config=config)["messages"]
-        return {"messages": out[len(state["messages"]):]}
 
     g = StateGraph(MessagesState)
     g.add_node("router", router_node)
     g.add_node("tools", ToolNode(ALL_SERIES76_TOOLS, handle_tool_errors=True))
-    g.add_node("agent", agent_node)
     g.add_edge(START, "router")
-    g.add_conditional_edges("router", after_router, {"tools": "tools", "agent": "agent"})
-    g.add_conditional_edges("tools", after_tools, {"agent": "agent", END: END})
-    g.add_edge("agent", END)
+    g.add_edge("router", "tools")
+    g.add_edge("tools", END)
     return g.compile()
 
 
@@ -487,8 +471,8 @@ def run_agent_turn(
             lc_messages.append(AIMessage(content=m["content"]))
     lc_messages.append(HumanMessage(content=llm_query))
 
-    run_cfg = {"callbacks": [rec], "configurable": {"route": True}}
-    retry_cfg = {"callbacks": [rec], "configurable": {"route": False}}
+    run_cfg = {"callbacks": [rec]}
+    retry_cfg = {"callbacks": [rec]}
 
     llm_failed = False
     all_msgs: List[BaseMessage] = []
@@ -497,9 +481,14 @@ def run_agent_turn(
             inner = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
         except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
             raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
-        graph = build_graph(inner, decision)
-        result_state = invoke_with_retry(graph, {"messages": lc_messages}, run_cfg, stats, deadline)
-        all_msgs = result_state["messages"]
+        pre_msgs = lc_messages
+        if decision is not None and decision.kind == "tools":
+            pre_msgs = build_router_graph(decision).invoke({"messages": lc_messages}, config={"callbacks": [rec]})["messages"]
+        if current_turn_clarification.get():          # la pregunta de aclaración la arma la app, sin LLM
+            all_msgs = pre_msgs
+        else:
+            result_state = invoke_with_retry(inner, {"messages": pre_msgs}, run_cfg, stats, deadline)
+            all_msgs = result_state["messages"]
     except LLMUnavailable as exc:
         llm_failed = True
         if not current_turn_tool_traces.get() and not current_turn_clarification.get():
@@ -557,7 +546,7 @@ def run_agent_turn(
             v1 = time.perf_counter()
             try:
                 result_state = invoke_with_retry(
-                    graph, {"messages": all_msgs + [HumanMessage(content=feedback)]}, retry_cfg, stats, deadline)
+                    inner, {"messages": all_msgs + [HumanMessage(content=feedback)]}, retry_cfg, stats, deadline)
                 all_msgs = result_state["messages"]
                 if current_turn_clarification.get():  # la herramienta pidió un dato en el reintento
                     return _clarification_turn(current_turn_clarification.get(), lang, visible_filters, active_part_numbers,

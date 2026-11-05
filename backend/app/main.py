@@ -1,4 +1,5 @@
 import json
+import re
 import time
 import uuid
 from typing import List, Optional, Dict, Any
@@ -123,6 +124,7 @@ def conversation_endpoint(
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
 ):
     request_t0 = time.perf_counter()
+    req.query = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", req.query) or " "   # PostgreSQL no admite NUL
     try:
         ensure_schema()
     except Exception as exc:  # noqa: BLE001  (base de datos caída)

@@ -200,6 +200,7 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
     t0 = time.perf_counter()
     args = {"part_number": part_number, **({"focus": focus} if focus else {}),
             **({"frequency_hz": frequency_hz} if frequency_hz else {})}
+    part_number = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", part_number)[:120]  # sin NUL/controles; la base rechaza NUL
     clean_input = part_number.strip().upper()
     norm_input = re.sub(r"[^A-Z0-9]", "", clean_input)
     # Si el usuario omitió el '/A' al final, también probamos agregando 'A' al normalizado
