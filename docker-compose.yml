@@ -34,6 +34,7 @@ services:
         required: false
     environment:
       # Dentro de la red de compose la DB es siempre db:5432 (lo que diga DATABASE_URL en .env no aplica aqui).
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
       DATABASE_URL: postgresql://${POSTGRES_USER:-konecto}:${POSTGRES_PASSWORD:-konecto_secret_2026}@db:5432/${POSTGRES_DB:-series76_db}
     ports:
       - "${API_HOST_PORT:-8001}:8000"

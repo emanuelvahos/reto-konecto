@@ -25,7 +25,11 @@ cd reto-konecto
 cp .env.example .env          # en PowerShell: Copy-Item .env.example .env
 ```
 
-Edita `.env` solo si quieres respuestas redactadas por el modelo: pon `LLM_PROVIDER=nim` y la clave en `LLM_API_KEY_NIM` (o `LLM_PROVIDER=openrouter` y la clave en `LLM_API_KEY`). Si no tocas nada, todo arranca con valores de demostración y sin LLM.
+> **Pega tu clave de OpenRouter en `LLM_API_KEY` (archivo `.env`).** Sin clave, el sistema arranca en modo degradado (ver «Modo degradado»): responde con datos del catálogo, sin redacción del modelo. Tras arrancar, comprueba con `curl -s http://localhost:8001/health` que aparece `"llm_configured":true`; si es `false`, el log del backend lo dice explícitamente («LLM no configurado: falta LLM_API_KEY para el proveedor openrouter; …»).
+>
+> El proveedor por defecto es OpenRouter. Alternativa: `LLM_PROVIDER=nim` y la clave de NVIDIA NIM en `LLM_API_KEY_NIM`. Si pegas una clave del proveedor que no está activo, el sistema no cambia de proveedor por su cuenta: solo deja una nota en el log.
+
+El resto de variables tiene valores de demostración y no hace falta tocarlas.
 
 ```bash
 docker compose up --build
@@ -44,9 +48,9 @@ La primera vez descarga imágenes base y dependencias (en una prueba de clon lim
 Los comandos usan `curl` (en PowerShell de Windows usa `curl.exe` y comillas dobles escapadas, o ejecuta estos comandos desde Git Bash).
 
 ```bash
-# 1. Salud: debe listar 68 actuadores y el proveedor/modelo activos
+# 1. Salud: debe listar 68 actuadores, el proveedor/modelo activos y llm_configured (true si hay clave)
 curl -s http://localhost:8001/health
-# {"status":"ok","actuators_loaded":68,"llm_provider":"nim","llm_model":"..."}
+# {"status":"ok","actuators_loaded":68,"llm_provider":"openrouter","llm_model":"openai/gpt-4o-mini","llm_configured":true}
 
 # 2. Login demo: devuelve access_token, token_type "bearer" y el usuario
 curl -s -X POST http://localhost:8001/api/auth/login   -H "Content-Type: application/json"   -d '{"email":"engineer@konecto.io","password":"Konecto2026!"}'
@@ -125,7 +129,7 @@ El **oráculo** (`golden.json`) es independiente de lo que devuelven las herrami
 Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q    # 514 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
+python -m pytest backend/evals -q    # 520 pruebas; una (test_api_e2e multiturno) llama al LLM real y falla si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
@@ -137,13 +141,14 @@ Los tres runners requieren clave de LLM en `.env`; sobrescriben sus informes `.m
 
 Los perfiles están en `backend/config/llm_profiles.json` y se eligen con `LLM_PROVIDER`; ni modelos ni URLs están escritos en el código.
 
-| | Desarrollo | Entrega |
+| | Por defecto (entrega) | Alternativa (desarrollo) |
 | --- | --- | --- |
-| `LLM_PROVIDER` | `nim` | `openrouter` |
-| Modelo | `nvidia/nemotron-3.5-lightning-30b-a3b` | `openai/gpt-4o-mini` |
-| Costo | $0 (capa gratuita de NIM) | $0.15 / 1M tokens de entrada, $0.60 / 1M de salida (precio de lista) |
+| `LLM_PROVIDER` | `openrouter` (si no se define) | `nim` |
+| Clave | `LLM_API_KEY` | `LLM_API_KEY_NIM` |
+| Modelo | `openai/gpt-4o-mini` | `nvidia/nemotron-3.5-lightning-30b-a3b` |
+| Costo | $0.15 / 1M tokens de entrada, $0.60 / 1M de salida (precio de lista) | $0 (capa gratuita de NIM) |
 
-Justificación: NIM permite repetir cientos de corridas de evaluación sin gastar el presupuesto; OpenRouter con `gpt-4o-mini` es el candidato de entrega por su precio. Como no hay embeddings, cambiar de proveedor no exige reingestar ni tocar volúmenes. OpenRouter se midió en una pasada corta (ver abajo).
+Justificación: `gpt-4o-mini` en OpenRouter es el modelo por defecto por precio y por la latencia medida (ver abajo); NIM permite repetir cientos de corridas de evaluación sin gastar presupuesto, a costa de más variabilidad. Como no hay embeddings, cambiar de proveedor no exige reingestar ni tocar volúmenes. OpenRouter se midió en una pasada corta (ver abajo).
 
 Resultados medidos el 2026-11-05 en una validación final (los informes de `backend/evals/` pueden ser de corridas anteriores). Latencias por caso (los casos de varios turnos suman los turnos):
 
@@ -188,7 +193,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 - **HLD-20 y seguimientos ambiguos.** En la batería ciega falla un seguimiento («¿alguno de esos modelos trifásicos pequeños sirve?» tras un N/A): el router lo clasifica `uncertain`, decide el LLM y su respuesta habla de alternativos monofásicos sin decir que los trifásicos no están disponibles. No se corrigió con una regla general.
 - **El router solo cubre español e inglés.** Otro idioma pasa al LLM sin las protecciones previas.
 - **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
-- **OpenRouter medido solo en una pasada corta** (evals, adversarial y 10 casos ciegos, una corrida). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado.
+- **OpenRouter medido solo en una pasada corta** (una corrida: 11/11 evals, 30/30 adversarial y 9/10 en una muestra de 10 casos ciegos). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado.
 - **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
 - **Modo degradado.** Las respuestas de plantilla son más rígidas que las del LLM y las consultas que el router no clasifica no se pueden contestar sin modelo. Las cifras son las mismas (vienen de la base de datos), no la redacción. Esta ruta se probó con pruebas automáticas, no con una corrida de las baterías sin LLM.
 - La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.

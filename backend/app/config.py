@@ -50,3 +50,23 @@ def estimate_cost_usd(cfg: LLMConfig, prompt_tokens: int, completion_tokens: int
     if not price:
         return 0.0
     return round((prompt_tokens * price["input"] + completion_tokens * price["output"]) / 1_000_000, 8)
+
+
+def llm_status() -> Dict[str, Any]:
+    """Estado de configuracion del LLM: proveedor activo, si tiene clave y notas (p. ej. clave del otro proveedor sin usar)."""
+    spec = json.loads(PROFILES_PATH.read_text(encoding="utf-8"))
+    cfg = load_llm_config()
+    profiles = spec["profiles"]
+    key_env = profiles[cfg.provider]["api_key_env"]
+    configured = bool(cfg.api_key.strip())
+    unused = [name for name, p in profiles.items() if name != cfg.provider and os.getenv(p["api_key_env"], "").strip()]
+    notes = [f"Hay una clave para {name} ({profiles[name]['api_key_env']}) pero el proveedor activo es {cfg.provider}; "
+             f"no se cambia de proveedor automaticamente (LLM_PROVIDER={name} para usarla)." for name in unused]
+    return {"provider": cfg.provider, "model": cfg.chat_model, "configured": configured, "key_env": key_env, "notes": notes}
+
+
+def startup_message(status: Dict[str, Any]) -> str:
+    if status["configured"]:
+        return f"LLM configurado: proveedor {status['provider']}, modelo {status['model']}"
+    return (f"LLM no configurado: falta {status['key_env']} para el proveedor {status['provider']}; "
+            "el servicio responde en modo degradado")

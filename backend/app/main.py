@@ -112,7 +112,16 @@ def assert_session_access(session_user_id: Any, current_user: Optional[Dict[str,
 
 @app.on_event("startup")
 def _startup() -> None:
+    import logging
+
+    from app.config import llm_status, startup_message
+
     ensure_schema()
+    log = logging.getLogger("uvicorn.error")
+    st = llm_status()
+    (log.info if st["configured"] else log.warning)(startup_message(st))
+    for note in st["notes"]:
+        log.info("Nota: %s", note)
 
 
 @app.get("/health")
@@ -121,7 +130,8 @@ def health_check():
         cur.execute("SELECT COUNT(*) AS count FROM actuators;")
         act_count = cur.fetchone()["count"]
     cfg = load_llm_config()
-    return {"status": "ok", "actuators_loaded": act_count, "llm_provider": cfg.provider, "llm_model": cfg.chat_model}
+    return {"status": "ok", "actuators_loaded": act_count, "llm_provider": cfg.provider, "llm_model": cfg.chat_model,
+            "llm_configured": bool(cfg.api_key.strip())}
 
 
 # =====================================================================
