@@ -23,8 +23,8 @@ ALERTS: Dict[str, Dict[str, str]] = {
     },
     "INVALID_PART_NUMBER": {
         "severity": "error",
-        "en": "No Series 76 actuator matches '{query}'. Expected format: 76[1-7][A,B,C,X,Y][00|30]-113[0,2,3,7,8]0000/A (3-phase: 11330C00).",
-        "es": "Ningún actuador de la Serie 76 coincide con '{query}'. Formato esperado: 76[1-7][A,B,C,X,Y][00|30]-113[0,2,3,7,8]0000/A (trifásico: 11330C00).",
+        "en": "No Series 76 actuator matches '{query}'. Check the part number: it looks like 763B00-11300000/A (three-phase models end in 11330C00).",
+        "es": "Ningún actuador de la Serie 76 coincide con '{query}'. Revisa el número de parte: tiene la forma 763B00-11300000/A (los trifásicos terminan en 11330C00).",
     },
     "SINGLE_TORQUE_RATING": {
         "severity": "warning",
@@ -86,16 +86,50 @@ ALERTS: Dict[str, Dict[str, str]] = {
         "en": "Outside the technical catalog: prices, lead times, stock, warranty and other brands are not available here.",
         "es": "Fuera del catálogo técnico: aquí no hay precios, plazos de entrega, stock, garantía ni otras marcas.",
     },
+    "SAFETY_FACTOR_APPLIED": {
+        "severity": "info",
+        "en": "As you requested, a safety factor of x{factor} was applied: {requested} {unit} -> {effective} {unit}. The datasheet defines no safety factor.",
+        "es": "Como pediste, se aplicó un factor de seguridad de x{factor}: {requested} {unit} -> {effective} {unit}. La hoja de datos no define ningún factor de seguridad.",
+    },
     "LLM_UNAVAILABLE": {
         "severity": "error",
-        "en": "The language model is temporarily unavailable. Please try again in a moment.",
-        "es": "El modelo de lenguaje no está disponible temporalmente. Inténtalo de nuevo en un momento.",
+        "en": "I couldn't complete your request right now. Please try again in a few seconds.",
+        "es": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos.",
+    },
+    "SERVICE_UNAVAILABLE": {
+        "severity": "error",
+        "en": "I couldn't complete your request right now. Please try again in a few seconds.",
+        "es": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos.",
     },
     "KNOWLEDGE_UNAVAILABLE": {
         "severity": "info",
-        "en": "The requested technical information is not available in the knowledge base.",
-        "es": "La información técnica solicitada no está disponible en la base de conocimiento.",
+        "en": "That technical information is not available.",
+        "es": "Esa información técnica no está disponible.",
     },
+}
+
+
+# code -> título corto y legible por idioma (UIAlert.title). Sin cifras ni detalles internos.
+ALERT_TITLES: Dict[str, Dict[str, str]] = {
+    "MODEL_LISTED_AS_NA": {"en": "Not available in this table", "es": "No disponible en esta tabla"},
+    "TYPO_OR_CLOSEST_MATCH_FOUND": {"en": "Part number corrected", "es": "Número de parte corregido"},
+    "INVALID_PART_NUMBER": {"en": "Part number not found", "es": "Número de parte no encontrado"},
+    "SINGLE_TORQUE_RATING": {"en": "Single output torque", "es": "Torque de salida único"},
+    "AMBIGUOUS_SERVICE_TYPE": {"en": "Service type not specified", "es": "Tipo de servicio sin especificar"},
+    "CSA_NOT_CERTIFIED": {"en": "Not CSA certified", "es": "Sin certificación CSA"},
+    "TORQUE_ABOVE_CEILING": {"en": "Torque above the listed maximum", "es": "Torque sobre el máximo listado"},
+    "CATALOG_TORQUE_CEILING": {"en": "Catalog torque limit", "es": "Límite de torque del catálogo"},
+    "CSA_SIZE_LIMIT": {"en": "CSA limited by size", "es": "CSA limitada por tamaño"},
+    "CONSTRAINT_RELAXED": {"en": "Closest alternatives", "es": "Alternativas más cercanas"},
+    "VOLTAGE_ENCLOSURE_UNAVAILABLE": {"en": "Combination not offered", "es": "Combinación no ofrecida"},
+    "HAZARDOUS_NEEDS_EXPLOSIONPROOF": {"en": "Classified area", "es": "Área clasificada"},
+    "HARD_CONSTRAINTS_UNSATISFIABLE": {"en": "No matching model", "es": "Ningún modelo coincide"},
+    "DC_NO_FREQUENCY": {"en": "No 50/60 Hz values", "es": "Sin valores a 50/60 Hz"},
+    "OUT_OF_SCOPE": {"en": "Outside the technical catalog", "es": "Fuera del catálogo técnico"},
+    "SAFETY_FACTOR_APPLIED": {"en": "Safety factor applied", "es": "Factor de seguridad aplicado"},
+    "LLM_UNAVAILABLE": {"en": "Could not complete the request", "es": "No se pudo completar la consulta"},
+    "SERVICE_UNAVAILABLE": {"en": "Could not complete the request", "es": "No se pudo completar la consulta"},
+    "KNOWLEDGE_UNAVAILABLE": {"en": "Information not available", "es": "Información no disponible"},
 }
 
 FILTER_LABELS: Dict[str, Dict[str, str]] = {
@@ -121,12 +155,18 @@ def render_alert_message(code: str, params: Optional[Dict[str, Any]], lang: str)
     return entry.get(lang, entry["en"]).format(**p)
 
 
+def render_alert_title(code: str, lang: str) -> str:
+    entry = ALERT_TITLES.get(code)
+    return code if entry is None else entry.get(lang, entry["en"])
+
+
 def render_alert(alert: Dict[str, Any], lang: str) -> Dict[str, str]:
-    """alert interno {code, params} -> {code, severity, message} localizado (contrato UIAlert)."""
+    """alert interno {code, params} -> {code, severity, title, message} localizado (contrato UIAlert)."""
     code = alert["code"]
     return {
         "code": code,
         "severity": alert_severity(code),
+        "title": render_alert_title(code, lang),
         "message": render_alert_message(code, alert.get("params"), lang),
     }
 
@@ -241,6 +281,12 @@ CLARIFY: Dict[str, Dict[str, Any]] = {
 }
 
 
+PHASE_WORD: Dict[str, Dict[str, str]] = {
+    "Single Phase": {"en": "single phase", "es": "monofásico"},
+    "3 Phase": {"en": "three phase", "es": "trifásico"},
+}
+
+
 def render_clarification(topic: str, options: List[Dict[str, Any]], lang: str) -> Dict[str, Any]:
     """options: [{"args": {...}}] -> {"question", "options": [{"label", "value"}]} localizado."""
     spec = CLARIFY[topic]
@@ -248,8 +294,9 @@ def render_clarification(topic: str, options: List[Dict[str, Any]], lang: str) -
     for o in options:
         args = o["args"]
         if topic == "voltage":
-            v = args["voltage_num"]
-            out.append({"label": f"{v} V", "value": f"{v}V"})
+            v, ph = args["voltage_num"], args.get("phase_type")
+            word = PHASE_WORD[ph][lang] if ph in PHASE_WORD else ""
+            out.append({"label": f"{v} V {word}".strip(), "value": f"{v}V {word}".strip()})
         elif topic == "service":
             e = spec["options"][args["application_type"]]
             out.append({"label": e["label"][lang], "value": e["value"][lang]})
@@ -264,7 +311,14 @@ def resolve_clarification_answer(topic: str, text: str) -> Dict[str, Any]:
     low = text.lower()
     if topic == "voltage":
         m = re.search(r"(?<!\d)(24|110|220)(?!\d)", low)
-        return {"voltage_num": int(m.group(1))} if m else {}
+        if not m:
+            return {}
+        out: Dict[str, Any] = {"voltage_num": int(m.group(1))}
+        if re.search(r"tri-?f[aá]sic|three[- ]?phase|3[- ]?phase|3\s?ph\b", low):
+            out["phase_type"] = "3 Phase"
+        elif re.search(r"mono-?f[aá]sic|single[- ]?phase|1[- ]?phase|1\s?ph\b", low):
+            out["phase_type"] = "Single Phase"
+        return out
     if topic == "service":
         if re.search(r"modul", low):
             return {"application_type": "Modulating"}
@@ -380,9 +434,9 @@ def detect_language(text: str, locale: Optional[str] = None, previous: Optional[
 # ---------------------------------------------------------------------------------------------------
 FALLBACK: Dict[str, Dict[str, str]] = {
     "en": {
-        "header": "Catalog data (taken directly from the database):",
-        "unavailable": "I could not verify that information against the catalog database. Please rephrase your request with a part number or the technical requirements.",
-        "knowledge_unavailable": "That information is not available in the knowledge base.",
+        "header": "Catalog data:",
+        "unavailable": "I couldn't confirm that information in the catalog. Please rephrase your request with a part number or the technical requirements.",
+        "knowledge_unavailable": "That information is not available.",
         "more": "(+{n} more in the card)",
         "best": "Best match: {row}",
         "supply": "supply",
@@ -405,9 +459,9 @@ FALLBACK: Dict[str, Dict[str, str]] = {
         "power": "motor power {w} W",
     },
     "es": {
-        "header": "Datos del catálogo (tomados directamente de la base de datos):",
-        "unavailable": "No pude verificar esa información contra la base de datos del catálogo. Reformula tu consulta indicando un número de parte o los requisitos técnicos.",
-        "knowledge_unavailable": "Esa información no está disponible en la base de conocimiento.",
+        "header": "Datos del catálogo:",
+        "unavailable": "No pude confirmar esa información en el catálogo. Reformula tu consulta indicando un número de parte o los requisitos técnicos.",
+        "knowledge_unavailable": "Esa información no está disponible.",
         "more": "(+{n} más en la ficha)",
         "best": "Mejor opción: {row}",
         "supply": "alimentación",

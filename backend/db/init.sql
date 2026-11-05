@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS actuators (
     hazardous_classification TEXT,
     table_notes JSONB DEFAULT '[]'::jsonb,
     source_page INTEGER NOT NULL,
+    source_method TEXT,
 
     UNIQUE(base_part_number, power_supply, service_support)
 );

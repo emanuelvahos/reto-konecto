@@ -167,8 +167,8 @@ def test_fallback_without_rows_uses_alerts_knowledge_or_generic_message():
     assert build_fallback_answer("es", [], ["Aviso."], []) == "Aviso."
     kb = [{"status": "KNOWLEDGE_RETRIEVED", "chunks": [{"title": "T", "content": "C"}]}]
     assert build_fallback_answer("en", [], [], kb) == "C"
-    assert "No pude verificar" in build_fallback_answer("es", [], [], [])
-    assert "could not verify" in build_fallback_answer("en", [], [], [])
+    assert "No pude confirmar" in build_fallback_answer("es", [], [], [])
+    assert "couldn't confirm" in build_fallback_answer("en", [], [], [])
 
 
 # ----------------------------------------------------------------- verificador por unidad y fila (bloque B)

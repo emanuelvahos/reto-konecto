@@ -59,11 +59,13 @@ class DebugTracePayload(BaseModel):
     provider: str = ""
     session_cost_usd: float = 0.0
     language: str = ""
+    error: Optional[str] = Field(None, description="Technical detail of an internal failure (debug only; never shown to the user).")
 
 
 class UIAlert(BaseModel):
     code: str
     severity: str
+    title: str = Field("", description="Short localized (es/en) human-readable title, e.g. 'Área clasificada'.")
     message: str
 
 

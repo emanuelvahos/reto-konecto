@@ -59,6 +59,7 @@ UI_COLUMNS = [
     "phase_type", "service_support", "is_available",
     *FOCUS_GROUPS["torque"], *FOCUS_GROUPS["duty"], *FOCUS_GROUPS["speed"], *FOCUS_GROUPS["current"],
     "motor_power_watts", "csa_certified", "ce_ukca_certified", "hazardous_classification",
+    "source_page", "source_method",
 ]
 
 
@@ -317,6 +318,7 @@ class RecommendActuatorsInput(BaseModel):
     max_fla_amps: Optional[float] = Field(None, description="Maximum Full Load Current (FLA) in Amps.")
     min_duty_cycle_pct: Optional[int] = Field(None, description="Minimum duty cycle (S4%).")
     require_csa_certification: Optional[bool] = Field(None, description="True only if the user requires CSA certification.")
+    safety_factor: Optional[float] = Field(None, description="Multiplier > 1 applied to the requested torque ONLY if the user explicitly asks for a safety/service factor (e.g. 1.5, or 25% -> 1.25). The datasheet defines none: never invent one.")
 
 
 def _torque_ceiling(cur, where: str, params: List[Any]) -> Optional[float]:
@@ -403,6 +405,7 @@ def recommend_actuators(
     max_fla_amps: Optional[float] = None,
     min_duty_cycle_pct: Optional[int] = None,
     require_csa_certification: Optional[bool] = None,
+    safety_factor: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Recommends Series 76 actuators. Hard constraints (voltage, enclosure, phase, hazardous area => Explosionproof)
@@ -471,6 +474,13 @@ def recommend_actuators(
         if a.get("frequency_hz") and any(x["row"]["voltage_num"] == 24 for x in shown):
             alerts.append(record_alert("DC_NO_FREQUENCY"))
         alerts += _single_torque_alerts([x["row"] for x in shown])
+        if a.get("safety_factor"):
+            unit = "Nm" if a.get("min_torque_nm") is not None else "in-lbs"
+            asked = float(a["min_torque_nm"] if unit == "Nm" else a["min_torque_in_lbs"]) if (
+                a.get("min_torque_nm") is not None or a.get("min_torque_in_lbs") is not None) else None
+            if asked is not None:
+                alerts.append(record_alert("SAFETY_FACTOR_APPLIED", factor=a["safety_factor"], requested=asked,
+                                           effective=round(asked * a["safety_factor"], 2), unit=unit))
 
         if full:
             result: Dict[str, Any] = {

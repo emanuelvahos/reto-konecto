@@ -107,12 +107,12 @@ def test_single_retry_succeeds(run):
     assert ex.calls == 2 and sleeps == [1.0] and dbg["token_usage"]["llm_retries"] == 1 and meta["intent"] == "lookup"
 
 
-@pytest.mark.parametrize("locale,needle", [("es", "no está disponible temporalmente"), ("en", "temporarily unavailable")])
+@pytest.mark.parametrize("locale,needle", [("es", "No pude completar la consulta"), ("en", "couldn't complete your request")])
 def test_exhausted_retries_return_localized_error_not_an_exception(run, locale, needle):
     (answer, ui, dbg, parts, _, meta), ex, sleeps = run([Boom(503)], locale=locale)
     assert ex.calls == 3 and sleeps == [1.0, 2.0]
     assert meta["intent"] == "error" and needle in answer and meta["verification"]["numbers_checked"] == 0
-    assert ui["display_type"] == "EDGE_CASE_ALERT" and ui["alerts"][0] == {"code": "LLM_UNAVAILABLE", "severity": "error", "message": answer}
+    assert ui["display_type"] == "EDGE_CASE_ALERT" and ui["alerts"][0] == {"code": "LLM_UNAVAILABLE", "severity": "error", "title": ui["alerts"][0]["title"], "message": answer} and ui["alerts"][0]["title"]
     assert dbg["token_usage"]["llm_retries"] == 2 and dbg["language"] == locale
 
 
@@ -157,7 +157,7 @@ def test_llm_construction_failure_is_also_a_clean_error(monkeypatch):
 
     monkeypatch.setattr(agent, "build_llm", boom)
     answer, ui, _, _, _, meta = agent.run_agent_turn("hola", [], [], {}, locale="es")
-    assert meta["intent"] == "error" and "no está disponible" in answer
+    assert meta["intent"] == "error" and "No pude completar" in answer
 
 
 def test_retry_during_verifier_rewrite_falls_back_to_template(run):

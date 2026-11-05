@@ -56,17 +56,26 @@ def _compact_diffs(g, row):
     return diffs
 
 
+def _gold(g, f):
+    """Valor del oráculo; la procedencia vive en provenance (page/method)."""
+    if f == "source_method":
+        return g["provenance"]["method"]
+    if f == "source_page":
+        return g["provenance"]["page"]
+    return g[f]
+
+
 def _ui_diffs(g, ui):
     return [
-        f"{g['base_part_number']}.{f}: ui={ui.get(f)!r} golden={g[f]!r}"
-        for f in UI_FIELDS if not _same(ui.get(f), g[f])
+        f"{g['base_part_number']}.{f}: ui={ui.get(f)!r} golden={_gold(g, f)!r}"
+        for f in UI_FIELDS if not _same(ui.get(f), _gold(g, f))
     ]
 
 
 def test_ui_columns_cover_every_oracle_field_except_provenance_and_notes():
     covered = set(UI_FIELDS)
-    expected = {k for k in GOLDEN[0] if k not in ("provenance", "table_notes", "source_page")}
-    assert expected <= covered, f"campos del oráculo sin salida en la tarjeta: {sorted(expected - covered)}"
+    expected = {k for k in GOLDEN[0] if k not in ("provenance", "table_notes")}
+    assert expected <= covered and {"source_page", "source_method"} <= covered, f"campos del oráculo sin salida en la tarjeta: {sorted(expected - covered)}"
 
 
 def test_every_oracle_row_through_the_lookup_tool_has_zero_differences():

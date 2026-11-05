@@ -76,6 +76,7 @@ class ActuatorRecord(BaseModel):
     hazardous_classification: Optional[str] = None
     table_notes: List[str] = Field(default_factory=list)
     source_page: int
+    source_method: Optional[str] = None  # procedencia de la extracción (provenance.method del catálogo)
 
     @property
     def normalized_part_number(self) -> str:
@@ -144,7 +145,9 @@ def load_catalog(path: Path = CATALOG_PATH) -> List[ActuatorRecord]:
     records: List[ActuatorRecord] = []
     failures: List[str] = []
     for raw in doc["records"]:
+        prov = raw.get("provenance") or {}
         raw = {k: v for k, v in raw.items() if k != "provenance"}
+        raw["source_method"] = prov.get("method")
         try:
             records.append(ActuatorRecord(**raw))
         except Exception as e:  # noqa: BLE001
@@ -215,6 +218,7 @@ def seed_database(records: List[ActuatorRecord]) -> None:
                 )
 
             # 2. Limpiar y recargar catálogo de actuadores
+            cur.execute("ALTER TABLE actuators ADD COLUMN IF NOT EXISTS source_method TEXT;")  # bases creadas antes de la 2D
             cur.execute("TRUNCATE TABLE actuators RESTART IDENTITY CASCADE;")
             for r in records:
                 cur.execute(
@@ -229,12 +233,12 @@ def seed_database(records: List[ActuatorRecord]) -> None:
                         fla_60hz_amps, fla_50hz_amps, fla_dc_or_fixed_amps,
                         lra_60hz_amps, lra_50hz_amps, lra_dc_or_fixed_amps,
                         motor_power_watts, csa_certified, ce_ukca_certified,
-                        hazardous_classification, table_notes, source_page
+                        hazardous_classification, table_notes, source_page, source_method
                     ) VALUES (
                         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s, %s,
                         %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s
+                        %s, %s, %s, %s, %s, %s, %s
                     );
                     """,
                     (
@@ -247,7 +251,7 @@ def seed_database(records: List[ActuatorRecord]) -> None:
                         r.fla_60hz_amps, r.fla_50hz_amps, r.fla_dc_or_fixed_amps,
                         r.lra_60hz_amps, r.lra_50hz_amps, r.lra_dc_or_fixed_amps,
                         r.motor_power_watts, r.csa_certified, r.ce_ukca_certified,
-                        r.hazardous_classification, json.dumps(r.table_notes), r.source_page
+                        r.hazardous_classification, json.dumps(r.table_notes), r.source_page, r.source_method
                     ),
                 )
 
