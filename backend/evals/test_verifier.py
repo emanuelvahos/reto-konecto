@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.config import LLMConfig, estimate_cost_usd  # noqa: E402
 from app.fallback import build_fallback_answer  # noqa: E402
 from app.i18n import ALERTS, detect_language, make_short_title, render_alert  # noqa: E402
-from app.verifier import extract_numbers, known_part_keys, load_known_parts, verify_answer  # noqa: E402
+from app.verifier import extract_numbers, extract_quantities, known_part_keys, load_known_parts, verify_answer  # noqa: E402
 
 PN = "763B00-11300000/A"
 ROW = {
@@ -119,19 +119,33 @@ def test_known_parts_from_database():
     assert "763B0011300000A" in keys and "763B00" in keys and "763B" in keys
 
 
-# ----------------------------------------------------------------- plantillas de respaldo
-@pytest.mark.parametrize("lang,needle", [("en", "Catalog data"), ("es", "Datos del catálogo")])
-def test_fallback_template_from_rows(lang, needle):
+# ----------------------------------------------------------------- plantillas de respaldo (cortas)
+@pytest.mark.parametrize("lang,torque", [("en", "on/off torque 500 Nm (4400 in-lbs)"), ("es", "torque on/off 500 Nm (4400 in-lbs)")])
+def test_fallback_template_is_short_and_covers_only_default_groups(lang, torque):
     text = build_fallback_answer(lang, [ROW], [], [])
-    assert needle in text and PN in text
-    assert ("on/off torque 500 Nm (4400 in-lbs)" in text) if lang == "en" else ("torque on/off 500 Nm (4400 in-lbs)" in text)
-    assert "90 W" in text and "4.8 A" in text
+    assert text.startswith(PN) and torque in text and "90 W" in text
+    assert "FLA" not in text and chr(10) not in text and len(text.split()) <= 40
+
+
+def test_fallback_follows_requested_groups():
+    text = build_fallback_answer("en", [ROW], [], [], groups=["current"])
+    assert "FLA 4.8 A at 60 Hz" in text and "torque" not in text and "90 W" not in text
+
+
+def test_infer_groups_from_query_and_focus():
+    from app.fallback import infer_groups
+
+    assert infer_groups("¿cuánta corriente consume?") == ["current"]
+    assert infer_groups("potencia y velocidad") == ["speed", "power"]
+    assert infer_groups("specs please") == ["torque", "power"]
+    assert infer_groups("anything", ["duty"]) == ["duty"]
 
 
 def test_fallback_template_numbers_are_all_in_the_row():
-    text = build_fallback_answer("es", [ROW], [], [])
-    allowed = verify_answer(text, [ROW], "", KNOWN)
-    assert allowed.ok, allowed.ungrounded
+    for groups in (None, ["current"], ["torque", "duty", "speed", "current", "power"]):
+        text = build_fallback_answer("es", [ROW], [], [], groups=groups)
+        allowed = verify_answer(text, [ROW], "", KNOWN)
+        assert allowed.ok, allowed.ungrounded
 
 
 def test_fallback_single_torque_row_is_not_labeled_onoff_or_modulating():
@@ -142,18 +156,104 @@ def test_fallback_single_torque_row_is_not_labeled_onoff_or_modulating():
     assert "torque de salida único 500 Nm" in es and "torque on/off" not in es
 
 
-def test_fallback_adds_alert_messages_and_caps_rows():
+def test_fallback_names_only_the_first_row_and_first_alert():
     rows = [{**ROW, "base_part_number": f"763B00-1130000{i}/A"} for i in range(5)]
-    text = build_fallback_answer("en", rows, ["Alert text."], [])
-    assert text.count("763B00-") == 3 and "+2 more" in text and text.endswith("Alert text.")
+    text = build_fallback_answer("en", rows, ["Alert text.", "Second."], [])
+    assert text.count("763B00-") == 1 and "+4 more" in text and text.endswith("Alert text.")
+    assert build_fallback_answer("es", rows[:2], [], [], recommend=True).startswith("Mejor opción: 763B00-")
 
 
 def test_fallback_without_rows_uses_alerts_knowledge_or_generic_message():
     assert build_fallback_answer("es", [], ["Aviso."], []) == "Aviso."
     kb = [{"status": "KNOWLEDGE_RETRIEVED", "chunks": [{"title": "T", "content": "C"}]}]
-    assert build_fallback_answer("en", [], [], kb) == "T: C"
+    assert build_fallback_answer("en", [], [], kb) == "C"
     assert "No pude verificar" in build_fallback_answer("es", [], [], [])
     assert "could not verify" in build_fallback_answer("en", [], [], [])
+
+
+# ----------------------------------------------------------------- verificador por unidad y fila (bloque B)
+PN_B = "764A00-11320000/A"
+ROW_B = {
+    "base_part_number": PN_B, "size_code": "764A", "power_supply": "220V Single Phase", "enclosure_type": "Weatherproof",
+    "on_off_torque_nm": 750, "on_off_torque_in_lbs": 6650, "modulating_torque_nm": 680, "modulating_torque_in_lbs": 6000,
+    "speed_60hz_sec": 28, "speed_50hz_sec": 33, "fla_60hz_amps": 3.0, "fla_50hz_amps": 3.0, "lra_60hz_amps": 3.6,
+    "on_off_duty_cycle_pct": 40, "cycles_per_hour": 36, "modulating_duty_cycle_pct": 40, "starts_per_hour": 960,
+    "motor_power_watts": 180,
+}
+OUT2 = [{"status": "EXACT_MATCH", "actuators": [ROW, ROW_B]}]
+KNOWN2 = known_part_keys([ROW, ROW_B])
+
+
+def check2(answer, user="compare them"):
+    return verify_answer(answer, OUT2, user, KNOWN2)
+
+
+def test_correct_value_in_wrong_row_fails():
+    # 180 W es la potencia de 764A, no de 763B
+    r = check2(f"The {PN} draws 180 W.")
+    assert r.ungrounded == ["180 W"]
+    # y 90 W es de 763B, no de 764A
+    assert check2(f"The {PN_B} draws 90 W.").ungrounded == ["90 W"]
+
+
+def test_correct_value_in_right_row_passes():
+    assert check2(f"The {PN} draws 90 W and the {PN_B} draws 180 W.").ok
+    assert check2(f"{PN}: 500 Nm on/off, 4.8 A FLA at 60 Hz. {PN_B}: 28 s at 60 Hz.").ok
+
+
+def test_wrong_unit_fails_even_if_the_number_exists():
+    assert check2(f"The {PN} turns in 90 s.").ungrounded == ["90 s"]       # 90 es W
+    assert check2(f"The {PN_B} has 28 A FLA.").ungrounded == ["28 A"]    # 28 existe, pero en velocidad
+    assert check2(f"{PN}: 4.8 W.").ungrounded == ["4.8 W"]
+
+
+def test_same_number_in_two_families_passes_for_the_right_one_only():
+    row = {**ROW, "speed_60hz_sec": 90}  # 90 s y 90 W en la misma fila
+    out = [{"actuators": [row]}]
+    assert verify_answer(f"{PN} turns in 90 s and draws 90 W.", out, "", KNOWN).ok
+    row2 = {**ROW, "speed_60hz_sec": 26}
+    assert verify_answer(f"{PN} turns in 90 s.", [{"actuators": [row2]}], "", KNOWN).ungrounded == ["90 s"]
+
+
+def test_legit_conversion_already_in_tool_output_passes_but_other_unit_does_not():
+    assert check2(f"{PN}: 500 Nm, which is 4400 in-lbs.").ok
+    assert check2(f"{PN}: 500 in-lbs.").ungrounded == ["500 in-lbs"]   # 500 existe, pero en Nm
+    assert check2(f"{PN}: 4400 Nm.").ungrounded == ["4400 Nm"]
+
+
+def test_sentence_with_several_parts_accepts_value_from_any_cited_row():
+    assert check2(f"{PN} and {PN_B} differ: 90 W versus 180 W.").ok
+    assert check2(f"Both {PN} and {PN_B} list 500 Nm.").ok  # no atribuible: existe en una de las citadas
+
+
+def test_sentence_without_part_number_uses_any_row_of_the_turn_family():
+    assert check2("The second one draws 180 W.").ok
+    assert check2("The second one draws 181 W.").ungrounded == ["181"]
+    assert check2("It turns in 180 s.").ungrounded == ["180 s"]
+
+
+def test_ranges_and_lists_share_the_trailing_unit():
+    assert check2(f"{PN_B}: 28 s at 60 Hz and 33 s at 50 Hz.").ungrounded == []
+    r = check2(f"{PN_B}: 28/33 s.")
+    assert r.ok
+    assert check2(f"{PN_B}: 28/34 s.").ungrounded == ["34"]
+
+
+def test_percent_and_rates_belong_to_their_family():
+    assert check2(f"{PN_B}: S4 40%, 36 cycles/h and 960 starts/h.").ok
+    assert check2(f"{PN_B}: 36 starts/h.").ungrounded == ["36 starts/h"]
+    assert check2(f"{PN_B}: 960 cycles per hour.").ungrounded == ["960 cycles/h"]
+    assert check2(f"{PN_B}: 36 ciclos/h y 960 arranques/h.").ok
+
+
+def test_voltage_and_frequency_families():
+    assert check2(f"{PN} runs on 110V and 60 Hz.").ok
+    assert check2(f"{PN} runs on 220V.").ungrounded == ["220 V"]        # 220V es de la otra fila (power_supply)
+    assert check2(f"{PN_B} at 50 Hz: 3.0 A.").ok
+
+
+def test_designations_are_not_quantities():
+    assert extract_quantities_units("S4 duty, T4, IIB") == []
 
 
 # ----------------------------------------------------------------- idioma y alertas
@@ -207,3 +307,7 @@ def test_cost_estimate_uses_listed_prices_and_nim_is_free():
     assert estimate_cost_usd(cfg, 1_000_000, 1_000_000) == pytest.approx(0.75)
     assert estimate_cost_usd(cfg, 4000, 200) == pytest.approx(0.00072)
     assert estimate_cost_usd(LLMConfig("nim", "https://x", "nvidia/m", pricing={}), 10**6, 10**6) == 0.0
+
+
+def extract_quantities_units(text):
+    return [(q.raw, q.unit) for q in extract_quantities(text)]
