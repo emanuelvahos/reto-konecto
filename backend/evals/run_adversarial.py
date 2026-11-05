@@ -140,7 +140,9 @@ def run_case(client: EvalClient, case: Dict[str, Any], verbose: bool) -> Dict[st
             query = opts[turn["pick_option"]]["value"]
         else:
             query = turn
-        payload: Dict[str, Any] = {"query": query, "locale": case.get("lang")}
+        payload: Dict[str, Any] = {"query": query}
+        if case.get("lang") in ("es", "en"):      # "mixed" (spanglish): sin locale, el backend lo detecta
+            payload["locale"] = case["lang"]
         if session_id:
             payload["session_id"] = session_id
         t0 = time.perf_counter()
