@@ -184,13 +184,16 @@ def main() -> int:
     ap.add_argument("--verbose", "-v", action="store_true")
     ap.add_argument("--trace-dir", default=None, help="guarda la respuesta completa de cada caso (JSON)")
     ap.add_argument("--pause", type=float, default=0.0, help="segundos entre casos (límites de tasa)")
+    ap.add_argument("--cases", default=None, help="JSON de casos alterno (p. ej. evals/heldout.json)")
+    ap.add_argument("--report", default=None, help="ruta del informe Markdown alterno")
+    ap.add_argument("--results-json", default=None, help="vuelca los resultados por caso (JSON) para comparar corridas")
     args = ap.parse_args()
 
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     global TRACE_DIR
     TRACE_DIR = Path(args.trace_dir) if args.trace_dir else None
-    cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))["cases"]
+    cases = json.loads(Path(args.cases or CASES_PATH).read_text(encoding="utf-8"))["cases"]
     if args.case:
         cases = [c for c in cases if c["id"] in set(args.case)]
     cfg = load_llm_config()
@@ -231,8 +234,11 @@ def main() -> int:
         md += ["", "## Fallos", ""]
         for r in bad:
             md.append(f"- **{r['id']}**: " + " | ".join(r["fails"]))
-    REPORT_PATH.write_text("\n".join(md) + "\n", encoding="utf-8")
-    print(f"Reporte: {REPORT_PATH}")
+    report_path = Path(args.report) if args.report else REPORT_PATH
+    report_path.write_text(chr(10).join(md) + chr(10), encoding="utf-8")
+    if args.results_json:
+        Path(args.results_json).write_text(json.dumps(results, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    print(f"Reporte: {report_path}")
     return 0 if passed == len(results) else 1
 
 
