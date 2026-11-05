@@ -30,6 +30,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 from run_evals import EvalClient  # noqa: E402  (carga .env y la app)
 from oracle_check import BY_PN, oracle_value, oracle_verify, states_value, ui_matches_oracle  # noqa: E402
 from app.config import load_llm_config  # noqa: E402
+from app.router import normalize_spoken_pn  # noqa: E402
 
 CASES_PATH = Path(__file__).resolve().parent / "adversarial.json"
 REPORT_PATH = Path(__file__).resolve().parent / "ADVERSARIAL_REPORT.md"
@@ -53,7 +54,7 @@ def check_turn(resp: Dict[str, Any], query: str) -> List[str]:
     ui = resp.get("ui_payload") or {}
     if (resp.get("verification") or {}).get("status") == "unverified":
         fails.append("verification.status=unverified")
-    res = oracle_verify(resp, query)
+    res = oracle_verify(resp, normalize_spoken_pn(query)[0])  # el número dictado ya viene normalizado por la app
     if not res.ok:
         fails.append(f"números fuera del oráculo (unidad/fila): {res.ungrounded}")
     diffs = ui_matches_oracle(resp)

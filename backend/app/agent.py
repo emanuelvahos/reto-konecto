@@ -30,7 +30,7 @@ from app.i18n import (
     t_router,
 )
 from app.postprocess import clean_text, shorten
-from app.router import Decision, route
+from app.router import Decision, normalize_spoken_pn, route
 from app.telemetry import StepRecorder
 from app.tools import (
     ALL_SERIES76_TOOLS,
@@ -41,10 +41,11 @@ from app.tools import (
     current_turn_clarification,
     current_turn_recommendation,
     current_pending_args,
+    current_grounded_pns,
     current_user_text,
     fetch_ui_actuators,
 )
-from app.verifier import VerificationResult, load_known_parts, verify_answer
+from app.verifier import VerificationResult, pn_key, load_known_parts, verify_answer
 
 SYSTEM_PROMPT_TEMPLATE = """You are the Series 76 Electric Actuators assistant for plant engineers. Every number you state must come from a tool result; never recall, compute or estimate specifications.
 
@@ -387,7 +388,8 @@ def run_agent_turn(
         if answered:
             pending_args = {**(pending.get("args") or {}), **answered}
     current_pending_args.set(pending_args)
-    current_user_text.set(" ".join(prev_users + [user_query]))
+    current_user_text.set(normalize_spoken_pn(" ".join(prev_users + [user_query]))[0])
+    current_grounded_pns.get().update(pn_key(x) for x in active_part_numbers)
     visible_filters = {k: v for k, v in active_filters.items() if k != "_pending"}
 
     cfg = load_llm_config()

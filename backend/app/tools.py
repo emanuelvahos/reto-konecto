@@ -43,6 +43,10 @@ current_pending_args: ContextVar[Dict[str, Any]] = ContextVar("current_pending_a
 # Mensajes del usuario de la sesión (solo lectura): se descartan argumentos de recommend que el usuario nunca dijo
 current_user_text: ContextVar[str] = ContextVar("current_user_text", default="")
 
+# Claves de números de parte fundamentados en el turno (activos de la sesión + devueltos por herramientas): el LLM no puede consultar
+# un número de parte que el usuario nunca mencionó (p. ej. "uno de ejemplo")
+current_grounded_pns: ContextVar[set] = ContextVar("current_grounded_pns", default=set())
+
 # Grupos de campos que el LLM puede necesitar según la intención de la pregunta
 FOCUS_GROUPS: Dict[str, List[str]] = {
     "torque": ["on_off_torque_nm", "on_off_torque_in_lbs", "modulating_torque_nm", "modulating_torque_in_lbs"],
@@ -71,6 +75,7 @@ def reset_turn_telemetry() -> None:
     current_turn_clarification.set({})
     current_pending_args.set({})
     current_user_text.set("")
+    current_grounded_pns.set(set())
 
 
 def record_tool_trace(
@@ -96,6 +101,8 @@ def register_ui_actuators(rows: List[Dict[str, Any]]) -> None:
     for r in rows:
         if "id" in r:
             store[r["id"]] = r["id"]
+        if r.get("base_part_number"):
+            current_grounded_pns.get().add(re.sub(r"[^A-Z0-9]", "", str(r["base_part_number"]).upper()))
 
 
 def record_alert(code: str, **params: Any) -> Dict[str, str]:
@@ -202,6 +209,16 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
             **({"frequency_hz": frequency_hz} if frequency_hz else {})}
     part_number = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", part_number)[:120]  # sin NUL/controles; la base rechaza NUL
     clean_input = part_number.strip().upper()
+    user_text = current_user_text.get()
+    if user_text:                                   # en el pipeline (no en llamadas directas): solo números de parte que el usuario dio
+        k = re.sub(r"[^A-Z0-9]", "", part_number.upper())
+        text_key = re.sub(r"[^A-Z0-9]", "", user_text.upper())
+        grounded = current_grounded_pns.get()
+        if not (k in text_key or (k.endswith("A") and k[:-1] in text_key) or any(k == g or k in g or g in k for g in grounded)):
+            result = {"status": "UNGROUNDED_PART_NUMBER", "queried_part_number": part_number,
+                      "instruction": "The user never mentioned this part number. Do not look up or invent part numbers; answer only about what the user asked."}
+            record_tool_trace("lookup_actuator_by_part_number", args, "", result, (time.perf_counter() - t0) * 1000)
+            return result
     norm_input = re.sub(r"[^A-Z0-9]", "", clean_input)
     # Si el usuario omitió el '/A' al final, también probamos agregando 'A' al normalizado
     norm_with_a = norm_input if norm_input.endswith("A") else norm_input + "A"
@@ -306,19 +323,20 @@ _OCR_PAIRS = {frozenset(p) for p in ("B8", "0O", "0C", "O0", "1I", "1L", "5S", "
 
 def _typo_distance(query: str, cand: str) -> Optional[int]:
     """Distancia entre un número de parte consultado y uno del catálogo si es un typo plausible, o None si no lo es.
-    Plausible = mayúsculas/separadores aparte, a lo sumo UN carácter de más o de menos, y las sustituciones solo entre pares
-    ópticamente confundibles (B/8, 0/O, 0/C...). Un dígito de tamaño distinto (768A00 vs 767A00) NO es un typo: es otro modelo."""
+    Plausible = los 3 primeros caracteres (serie y tamaño) iguales, y a lo sumo UN carácter de más/menos o UNA sustitución no óptica
+    (más las confusiones ópticas B/8, 0/O, 0/C...). Un dígito de tamaño distinto (768A00 vs 767A00) NO es un typo: es otro modelo."""
     q = re.sub(r"[^A-Z0-9]", "", query.upper())
     c = re.sub(r"[^A-Z0-9]", "", cand.upper())
     if q == c:
         return 0
     if abs(len(q) - len(c)) > 1:
         return None
+    if q[:3] != c[:3]:                         # serie/tamaño distintos: es otro modelo, no un typo
+        return None
     if len(q) == len(c):
         diffs = [(x, y) for x, y in zip(q, c) if x != y]
-        if all(frozenset((x, y)) in _OCR_PAIRS for x, y in diffs) and len(diffs) <= 2:
-            return len(diffs)
-        return None
+        non_ocr = [d for d in diffs if frozenset(d) not in _OCR_PAIRS]
+        return len(diffs) if len(non_ocr) <= 1 and len(diffs) <= 3 else None
     short, long_ = (q, c) if len(q) < len(c) else (c, q)
     for i in range(len(long_)):
         if long_[:i] + long_[i + 1:] == short:

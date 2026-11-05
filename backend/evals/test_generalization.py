@@ -98,3 +98,32 @@ def test_torque_within_the_catalog_is_unaffected():
     res = recommend_actuators.invoke({"min_torque_nm": 5000, "application_type": "On/Off", "voltage_num": 220, "phase_type": "Single Phase", "hazardous_area": False})
     assert res["status"] in ("MATCHES_FOUND", "NO_EXACT_MATCH_CONSTRAINT_RELAXATION")
     assert current_turn_actuators.get()
+
+
+# ------------------------------------------------------------------------------ typos con varias confusiones y fundamentación
+def test_garbled_part_number_with_several_ocr_confusions_still_recovers():
+    from app.tools import current_user_text
+    reset_turn_telemetry()
+    res = lookup_actuator_by_part_number.invoke({"part_number": "7640O0-1133OC00/A"})
+    assert res["status"] == "TYPO_OR_CLOSEST_MATCH_FOUND"
+    assert "764A00-11330C00/A" in [r["base_part_number"] for r in fetch_ui_actuators(list(current_turn_actuators.get()))]
+
+
+def test_llm_cannot_look_up_a_part_number_the_user_never_mentioned():
+    from app.tools import current_grounded_pns, current_user_text
+    reset_turn_telemetry()
+    current_user_text.set("Give me specs for frame size 8 actuator 768A00-11320000/A and a size 9 one.")
+    res = lookup_actuator_by_part_number.invoke({"part_number": "763B00-11300000/A"})      # inventado por el modelo
+    assert res["status"] == "UNGROUNDED_PART_NUMBER" and not current_turn_actuators.get()
+    assert lookup_actuator_by_part_number.invoke({"part_number": "768A00-11320000/A"})["status"] == "INVALID_PART_NUMBER"   # el del usuario sí
+    current_grounded_pns.get().add("763B0011300000A")                                       # parte activa de la sesión
+    assert lookup_actuator_by_part_number.invoke({"part_number": "763B00-11300000/A"})["status"] == "EXACT_MATCH"
+    reset_turn_telemetry()
+
+
+def test_part_number_without_suffix_or_in_other_case_counts_as_grounded():
+    from app.tools import current_user_text
+    reset_turn_telemetry()
+    current_user_text.set("specs for 763a00 11320000 please")
+    assert lookup_actuator_by_part_number.invoke({"part_number": "763A00-11320000/A"})["status"] == "EXACT_MATCH"
+    reset_turn_telemetry()
