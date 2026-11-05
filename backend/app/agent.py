@@ -324,6 +324,19 @@ def build_router_graph(decision: Decision):
     return g.compile()
 
 
+def _typo_without_suggestion(answer: str) -> bool:
+    """True si la herramienta devolvió un typo con sugerencias (tarjeta visible) y el texto no nombra ninguna."""
+    suggested = []
+    for tr in current_turn_tool_traces.get():
+        out = tr.get("raw_output")
+        if isinstance(out, dict) and out.get("status") == "TYPO_OR_CLOSEST_MATCH_FOUND":
+            suggested += [pn_key(str(s.get("base_part_number", ""))) for s in out.get("suggested_actuators", [])]
+    if not suggested:
+        return False
+    key = pn_key(answer)
+    return not any(s and (s in key or s.rstrip("A") in key) for s in suggested)
+
+
 def _known_keys() -> set:
     try:
         return load_known_parts()
@@ -519,6 +532,8 @@ def run_agent_turn(
         template_reason = "llm_unavailable"
     elif has_cards and len(answer.split()) > MAX_ANSWER_WORDS:
         template_reason = "too_long"          # una "frase" larga sin puntos que el recorte no puede partir
+    elif has_cards and _typo_without_suggestion(answer):
+        template_reason = "too_long"          # dice "no existe" pero no nombra el modelo cercano que muestra la tarjeta: plantilla
     else:
         v0 = time.perf_counter()
         try:

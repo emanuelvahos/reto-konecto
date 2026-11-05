@@ -143,3 +143,15 @@ def test_knowledge_fallback_keeps_only_the_sentences_about_the_question_within_4
     out = search_engineering_knowledge.invoke({"query": q})
     text = _knowledge_text([out], q)
     assert len(text.split()) <= KNOWLEDGE_MAX_WORDS and "S4" in text and "Output Torque" not in text
+
+
+def test_typo_answer_must_name_the_suggested_model():
+    from app.agent import _typo_without_suggestion
+    from app.tools import current_turn_tool_traces
+
+    reset_turn_telemetry()
+    lookup_actuator_by_part_number.invoke({"part_number": "761800-11300000/A"})
+    assert _typo_without_suggestion("The part number '761800-11300000/A' does not exist.") is True
+    assert _typo_without_suggestion("It does not exist; the closest is 761B00-11300000/A.") is False
+    reset_turn_telemetry()
+    assert _typo_without_suggestion("anything") is False
