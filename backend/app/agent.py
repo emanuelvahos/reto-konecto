@@ -433,6 +433,28 @@ def run_agent_turn(
     def _title(parts, filters):
         return make_short_title(parts, filters, lang, recommend=True)
 
+    def _error_turn(code: str, detail: str):
+        """Respuesta de error controlada: texto neutro al usuario; el detalle técnico va solo a debug_trace.error."""
+        msg = render_alert_message(code, {}, lang)
+        ui = {
+            "display_type": "EDGE_CASE_ALERT",
+            "actuators": [],
+            "engineering_warnings": [msg],
+            "alerts": [render_alert({"code": code, "params": {}}, lang)],
+            "suggested_followups": [],
+        }
+        parts = list(active_part_numbers)
+        dbg, cost = _debug([], 0, [], parts)
+        dbg["error"] = detail[:300]
+        meta = {
+            "intent": "error",
+            "verification": {"status": "fallback_template", "numbers_checked": 0, "ungrounded": []},
+            "language": lang,
+            "short_title": make_short_title(parts, visible_filters, lang),
+            "cost_usd": cost,
+        }
+        return msg, ui, dbg, parts, visible_filters, meta
+
     # ------------------------------------------------------------------ ROUTER determinista (sin LLM)
     r0 = time.perf_counter()
     decision: Optional[Decision] = None
@@ -478,27 +500,14 @@ def run_agent_turn(
         graph = build_graph(inner, decision)
         result_state = invoke_with_retry(graph, {"messages": lc_messages}, run_cfg, stats, deadline)
         all_msgs = result_state["messages"]
-    except LLMUnavailable:
+    except LLMUnavailable as exc:
         llm_failed = True
         if not current_turn_tool_traces.get() and not current_turn_clarification.get():
-            msg = render_alert_message("LLM_UNAVAILABLE", {}, lang)
-            ui_payload = {
-                "display_type": "EDGE_CASE_ALERT",
-                "actuators": [],
-                "engineering_warnings": [msg],
-                "alerts": [render_alert({"code": "LLM_UNAVAILABLE", "params": {}}, lang)],
-                "suggested_followups": [],
-            }
-            parts = list(active_part_numbers)
-            debug_trace, cost = _debug([], 0, [], parts)
-            meta = {
-                "intent": "error",
-                "verification": {"status": "fallback_template", "numbers_checked": 0, "ungrounded": []},
-                "language": lang,
-                "short_title": make_short_title(parts, visible_filters, lang),
-                "cost_usd": cost,
-            }
-            return msg, ui_payload, debug_trace, parts, visible_filters, meta
+            return _error_turn("LLM_UNAVAILABLE", str(exc))
+    except Exception as exc:  # noqa: BLE001  (fallo inesperado del grafo/herramientas: respuesta controlada, detalle solo en debug)
+        if not current_turn_tool_traces.get() and not current_turn_clarification.get():
+            return _error_turn("SERVICE_UNAVAILABLE", f"{type(exc).__name__}: {str(exc)[:200]}")
+        llm_failed = True
 
     # ------------------------------------------------------------------ ACLARACIÓN (pregunta del asistente, sin LLM)
     if current_turn_clarification.get():
@@ -562,6 +571,9 @@ def run_agent_turn(
                 result = VerificationResult(numbers_checked=0, ungrounded=first_offenders)
             rec.add_step("verifier_retry", (v1 - t0) * 1000, (time.perf_counter() - v1) * 1000)
 
+    if verifier_error and re.search(r"\d", answer):
+        # sin base de datos no se puede comprobar ninguna cifra (REGLA 4): nunca se muestra texto del LLM con números sin verificar
+        return _error_turn("SERVICE_UNAVAILABLE", "verifier unavailable (database error)")
     status = "unverified" if verifier_error else "verified"
     ui_t = time.perf_counter()
     if decision is not None and decision.oos_note:

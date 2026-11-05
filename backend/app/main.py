@@ -92,6 +92,28 @@ def login(req: LoginRequest):
     )
 
 
+def _controlled_error(req: ConversationRequest, session_id: Optional[str], t0: float, detail: str) -> ConversationResponse:
+    """Fallo interno (base de datos, agente): respuesta 200 con texto neutro; el detalle técnico solo va a debug_trace.error."""
+    from app.i18n import detect_language, render_alert, render_alert_message
+
+    lang = detect_language(req.query, req.locale, [])
+    msg = render_alert_message("SERVICE_UNAVAILABLE", {}, lang)
+    return ConversationResponse(
+        schema_version=2,
+        session_id=session_id or str(uuid.uuid4()),
+        answer=msg,
+        intent="error",
+        verification={"status": "fallback_template", "numbers_checked": 0, "ungrounded": []},
+        ui_payload={
+            "display_type": "EDGE_CASE_ALERT",
+            "actuators": [],
+            "engineering_warnings": [msg],
+            "alerts": [render_alert({"code": "SERVICE_UNAVAILABLE", "params": {}}, lang)],
+        },
+        debug_trace={"model_used": "", "total_latency_ms": round((time.perf_counter() - t0) * 1000, 2), "language": lang, "error": detail},
+    )
+
+
 # =====================================================================
 # 2. CORE CONVERSATION ENDPOINT (SECTION 4 API CONTRACT)
 # =====================================================================
@@ -101,7 +123,10 @@ def conversation_endpoint(
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user),
 ):
     request_t0 = time.perf_counter()
-    ensure_schema()
+    try:
+        ensure_schema()
+    except Exception as exc:  # noqa: BLE001  (base de datos caída)
+        return _controlled_error(req, None, request_t0, f"{type(exc).__name__}: {str(exc)[:200]}")
     user_id = current_user["id"] if current_user else None
     requested_sid = req.session_id.strip() if req.session_id else None
 
@@ -110,34 +135,45 @@ def conversation_endpoint(
     active_filters: Dict[str, Any] = {}
 
     history_t0 = time.perf_counter()
-    with get_db_cursor() as cur:
-        if requested_sid and is_valid_uuid(requested_sid):
-            cur.execute(
-                "SELECT session_id, user_id, title, active_part_numbers, active_filters FROM chat_sessions WHERE session_id = %s;",
-                (requested_sid,),
-            )
-            session_row = cur.fetchone()
-
-            if session_row:
-                # Si la sesión pertenece a otro usuario autenticado distinto, impedir acceso cruzado
-                assert_session_access(session_row["user_id"], current_user)
-                session_id = str(session_row["session_id"])
-                active_part_numbers = session_row["active_part_numbers"] or []
-                active_filters = session_row["active_filters"] or {}
-
+    try:
+        with get_db_cursor() as cur:
+            if requested_sid and is_valid_uuid(requested_sid):
                 cur.execute(
-                    """
-                    SELECT role, content
-                    FROM chat_messages
-                    WHERE session_id = %s
-                    ORDER BY created_at ASC, id ASC;
-                    """,
-                    (session_id,),
+                    "SELECT session_id, user_id, title, active_part_numbers, active_filters FROM chat_sessions WHERE session_id = %s;",
+                    (requested_sid,),
                 )
-                history_messages = cur.fetchall()
+                session_row = cur.fetchone()
+
+                if session_row:
+                    # Si la sesión pertenece a otro usuario autenticado distinto, impedir acceso cruzado
+                    assert_session_access(session_row["user_id"], current_user)
+                    session_id = str(session_row["session_id"])
+                    active_part_numbers = session_row["active_part_numbers"] or []
+                    active_filters = session_row["active_filters"] or {}
+
+                    cur.execute(
+                        """
+                        SELECT role, content
+                        FROM chat_messages
+                        WHERE session_id = %s
+                        ORDER BY created_at ASC, id ASC;
+                        """,
+                        (session_id,),
+                    )
+                    history_messages = cur.fetchall()
+                else:
+                    # Si el cliente envió un UUID nuevo que aún no existe en la BD, lo creamos con ese UUID
+                    session_id = requested_sid
+                    cur.execute(
+                        """
+                        INSERT INTO chat_sessions (session_id, user_id, title)
+                        VALUES (%s, %s, %s);
+                        """,
+                        (session_id, user_id, generate_session_title(req.query)),
+                    )
             else:
-                # Si el cliente envió un UUID nuevo que aún no existe en la BD, lo creamos con ese UUID
-                session_id = requested_sid
+                # Crear nueva conversación con nuevo UUID generado
+                session_id = str(uuid.uuid4())
                 cur.execute(
                     """
                     INSERT INTO chat_sessions (session_id, user_id, title)
@@ -145,16 +181,11 @@ def conversation_endpoint(
                     """,
                     (session_id, user_id, generate_session_title(req.query)),
                 )
-        else:
-            # Crear nueva conversación con nuevo UUID generado
-            session_id = str(uuid.uuid4())
-            cur.execute(
-                """
-                INSERT INTO chat_sessions (session_id, user_id, title)
-                VALUES (%s, %s, %s);
-                """,
-                (session_id, user_id, generate_session_title(req.query)),
-            )
+
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        return _controlled_error(req, requested_sid if is_valid_uuid(requested_sid) else None, request_t0, f"{type(exc).__name__}: {str(exc)[:200]}")
 
     history_load_ms = (time.perf_counter() - history_t0) * 1000
 
@@ -170,52 +201,53 @@ def conversation_endpoint(
             history_load_ms=history_load_ms,
         )
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLM agent failed: {type(exc).__name__}: {str(exc)[:200]}",
-        ) from exc
+        return _controlled_error(req, session_id, request_t0, f"{type(exc).__name__}: {str(exc)[:200]}")
 
     # Persistir mensaje del usuario, respuesta del agente y estado actualizado en PostgreSQL
-    with get_db_cursor() as cur:
-        cur.execute(
-            """
-            UPDATE chat_sessions
-            SET active_part_numbers = %s::jsonb,
-                active_filters = %s::jsonb,
-                short_title = COALESCE(%s, short_title),
-                cost_usd_total = cost_usd_total + %s,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE session_id = %s
-            RETURNING cost_usd_total;
-            """,
-            (
-                json.dumps(updated_parts),
-                json.dumps(updated_filters),
-                meta["short_title"],
-                meta["cost_usd"],
-                session_id,
-            ),
-        )
-        debug_trace["session_cost_usd"] = float(cur.fetchone()["cost_usd_total"])
-        cur.execute(
-            """
-            INSERT INTO chat_messages (session_id, role, content, ui_payload, debug_trace)
-            VALUES (%s, 'user', %s, '{}'::jsonb, '{}'::jsonb);
-            """,
-            (session_id, req.query),
-        )
-        cur.execute(
-            """
-            INSERT INTO chat_messages (session_id, role, content, ui_payload, debug_trace)
-            VALUES (%s, 'assistant', %s, %s::jsonb, %s::jsonb);
-            """,
-            (
-                session_id,
-                answer,
-                json.dumps(ui_payload, default=str),
-                json.dumps(debug_trace, default=str),
-            ),
-        )
+    try:
+        with get_db_cursor() as cur:
+            cur.execute(
+                """
+                UPDATE chat_sessions
+                SET active_part_numbers = %s::jsonb,
+                    active_filters = %s::jsonb,
+                    short_title = COALESCE(%s, short_title),
+                    cost_usd_total = cost_usd_total + %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE session_id = %s
+                RETURNING cost_usd_total;
+                """,
+                (
+                    json.dumps(updated_parts),
+                    json.dumps(updated_filters),
+                    meta["short_title"],
+                    meta["cost_usd"],
+                    session_id,
+                ),
+            )
+            debug_trace["session_cost_usd"] = float(cur.fetchone()["cost_usd_total"])
+            cur.execute(
+                """
+                INSERT INTO chat_messages (session_id, role, content, ui_payload, debug_trace)
+                VALUES (%s, 'user', %s, '{}'::jsonb, '{}'::jsonb);
+                """,
+                (session_id, req.query),
+            )
+            cur.execute(
+                """
+                INSERT INTO chat_messages (session_id, role, content, ui_payload, debug_trace)
+                VALUES (%s, 'assistant', %s, %s::jsonb, %s::jsonb);
+                """,
+                (
+                    session_id,
+                    answer,
+                    json.dumps(ui_payload, default=str),
+                    json.dumps(debug_trace, default=str),
+                ),
+            )
+
+    except Exception as exc:  # noqa: BLE001  (la respuesta ya está lista: no se pierde por un fallo al guardar)
+        debug_trace["error"] = f"persistence failed: {type(exc).__name__}: {str(exc)[:160]}"
 
     return ConversationResponse(
         schema_version=2,
