@@ -21,7 +21,7 @@ def test_login_returns_valid_jwt_and_rejects_bad_password():
     assert data["token"] == data["access_token"]
     assert data["user"]["email"] == EMAIL
 
-    secret = os.getenv("JWT_SECRET_KEY", "super_secret_konecto_jwt_key_change_in_prod")
+    secret = os.getenv("JWT_SECRET_KEY", "demo-only-change-me")
     claims = jwt.decode(data["token"], secret, algorithms=[os.getenv("JWT_ALGORITHM", "HS256")])
     assert claims["email"] == EMAIL
     assert claims["sub"] == data["user"]["id"]

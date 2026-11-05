@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+evals/out/
+data/extraction/page*.png
+data/extraction/crops/
+data/extraction/*.partial.json

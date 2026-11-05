@@ -28,10 +28,10 @@ python -m pytest backend/evals/test_data_integrity.py -v
      $$\text{LRA}_{f} \ge \text{FLA}_{f}$$
 4. **Rowspan Propagation Completeness (`test_motor_power_rowspans_resolved`):**
    - Zero available models have `motor_power_watts IS NULL`; all values belong to $\{15, 40, 90, 180, 700\}\text{ W}$.
-5. **Sub-Column Header Inversion Check (`test_220v_3phase_inverted_columns_and_na_rows`):**
-   - Confirms `763A00-11330000/A` has `speed_50hz_sec = 32.0` and `speed_60hz_sec = 26.0`, and verifies the 4 `N/A` models (`761A`, `761B`, `762A`, `762B` in 220V 3-Phase).
+5. **Frequency Columns & N/A Rows (`test_spot_check_3phase_frequency_columns`):**
+   - Column order is `60 Hz | 50 Hz` in every table. Confirms `763A00-11330C00/A` has `speed_60hz_sec = 26.0` and `speed_50hz_sec = 32.0`. The 4 `N/A` models (`761A`, `761B`, `762A`, `762B`, suffix `11330C00/A`) are counted in the per-table totals (`test_total_catalog_counts_per_table`).
 6. **CSA Footnote Exclusion (`test_sizes_6_and_7_not_csa_certified`):**
    - Confirms all 5 models in Frame Sizes 6 and 7 (`766A`, `766B`, `767A`, `767B`, `767C`) have `csa_certified = FALSE` and `ce_ukca_certified = TRUE`.
-7. **pgvector retired (`test_pgvector_retired`):**
+7. **No pgvector (`test_pgvector_retired`):**
    - Confirms the `vector` extension and `knowledge_chunks` table no longer exist; knowledge lives in `backend/data/knowledge.json`.
 

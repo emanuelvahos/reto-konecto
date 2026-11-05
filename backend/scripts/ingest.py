@@ -201,9 +201,9 @@ def seed_database(records: List[ActuatorRecord]) -> None:
         with conn.cursor() as cur:
             # 1. Crear usuarios de prueba para el Feature Opcional de Login
             test_users = [
-                ("engineer@konecto.io", "Konecto2026!", "Lead Plant Engineer", "plant_engineer"),
-                ("supervisor@konecto.io", "Series76Pass!", "Automation Supervisor", "supervisor"),
-                ("admin@konecto.io", "AdminKonecto!", "System Evaluator", "admin"),
+                ("engineer@konecto.io", os.getenv("DEMO_PASSWORD_ENGINEER", "Konecto2026!"), "Lead Plant Engineer", "plant_engineer"),
+                ("supervisor@konecto.io", os.getenv("DEMO_PASSWORD_SUPERVISOR", "Series76Pass!"), "Automation Supervisor", "supervisor"),
+                ("admin@konecto.io", os.getenv("DEMO_PASSWORD_ADMIN", "AdminKonecto!"), "System Evaluator", "admin"),
             ]
             for email, raw_pwd, name, role in test_users:
                 pwd_hash = bcrypt.hashpw(raw_pwd.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")

@@ -276,7 +276,7 @@ def build_scenarios() -> List[EvalScenario]:
         ),
         # 11. Semantic Knowledge & Footnote Tolerance Calculation (+/-10% Voltage)
         EvalScenario(
-            "EVAL-11", "Engineering Rules & RAG", "Checking allowable voltage tolerance (+/-10%) and hazardous location ratings",
+            "EVAL-11", "Engineering Rules & Knowledge", "Checking allowable voltage tolerance (+/-10%) and hazardous location ratings",
             ["What is the allowable motor voltage tolerance for Series 76 actuators, and what hazardous area certifications do Explosionproof models have?"],
             lambda res: (
                 assert_intent(res[-1], "knowledge"),

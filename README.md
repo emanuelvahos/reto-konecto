@@ -1,275 +1,167 @@
-# Konecto Series 76 — Neuro-Symbolic Heavy-Duty Electric Actuator Assistant
+# Konecto Series 76 — Asistente de actuadores eléctricos
 
-An end-to-end, production-grade conversational engineering assistant for querying, comparing, and recommending **Series 76 Heavy-Duty Electric Actuators**. Built with a **FastAPI + LangChain** backend, a **PostgreSQL 16 (`NUMERIC` + `pg_trgm`)** data layer, and a native **Android (Kotlin + Jetpack Compose Material 3)** mobile client.
+Asistente conversacional para consultar, comparar y recomendar los actuadores eléctricos Series 76 (catálogo de 68 modelos extraído de `docs/series_76_electric_data.pdf`). Backend FastAPI + PostgreSQL 16 y una app Android.
 
----
+## Qué es y cómo funciona
 
-## Repository Structure
+1. Cada mensaje pasa primero por un **router determinista** (es/en, sin LLM) que recorta intentos de inyección, responde lo que está fuera de alcance (precio, plazos, stock) y decide qué herramienta usar.
+2. Si el router no está seguro, o para redactar la respuesta, el **agente LLM** llama a tres herramientas: `lookup_actuator_by_part_number`, `recommend_actuators` y `search_engineering_knowledge`.
+3. Todas las cifras salen de **PostgreSQL** (`NUMERIC` exactos, índice `pg_trgm` para typos) o de `backend/data/knowledge.json`; el LLM no calcula ni recuerda especificaciones.
+4. Un **verificador numérico** comprueba que cada número de la respuesta exista en lo que devolvieron las herramientas (con la unidad correcta). Si falla dos veces, o el LLM no responde, se usa una **plantilla determinista** construida con las filas de la base de datos.
+5. La respuesta incluye `ui_payload` (tarjetas, alertas, aclaraciones, seguimientos sugeridos) y `debug_trace` (herramientas, SQL, latencias, tokens).
+
+## Requisitos
+
+- Docker y Docker Compose v2.24+ (usa `env_file` con `required: false`).
+- Una clave de LLM (NVIDIA NIM u OpenRouter) para respuestas generadas por el modelo. **Sin clave el backend arranca igual**: las consultas que necesitan el LLM devuelven una alerta `LLM_UNAVAILABLE`, y lo que resuelve el router (fuera de alcance, aclaraciones, etc.) sigue funcionando.
+- Para ejecutar pruebas desde el host: Python 3.11+ y `pip install -r backend/requirements.txt`.
+
+## Arranque
+
+```bash
+cp .env.example .env        # opcional; sin .env se usan los valores de demostración
+# editar .env: LLM_PROVIDER y la clave del proveedor elegido (LLM_API_KEY_NIM o LLM_API_KEY)
+docker compose up --build
+```
+
+- API: <http://localhost:8001> (salud: `/health`, Swagger: `/docs`). PostgreSQL en el host: puerto `5433`.
+- Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (valida las reglas físicas) y siembra 68 actuadores y 3 usuarios demo. Luego se inicia Uvicorn.
+- La imagen del backend es autosuficiente (sin bind mounts ni `--reload`); `db` y `backend` tienen healthcheck y límite de memoria (512 MB y 1 GB).
+- Variables: todas están documentadas en `.env.example`. Las claves van siempre vacías en ese archivo; `.env` está ignorado por git.
+
+## Backend
+
+### Endpoints
+
+| Método y ruta | Uso |
+| --- | --- |
+| `GET /health` | Estado, número de actuadores cargados, proveedor y modelo activos |
+| `POST /api/auth/login` | Login opcional (JWT) |
+| `POST /api/conversation` | Un turno de conversación |
+| `GET /api/sessions` | Lista de sesiones (las del usuario autenticado, o las anónimas) |
+| `GET /api/sessions/{id}/messages` | Historial de una sesión |
+| `DELETE /api/sessions/{id}` | Borra una sesión |
+
+### Contrato v2 (`backend/app/schemas.py`)
+
+Petición: `{ session_id?, query, locale?: "es"|"en", input_mode?: "text"|"voice" }`.
+
+Respuesta: `schema_version: 2`, `intent` (`lookup | recommend | knowledge | clarify | error`), `verification` (`verified | fallback_template | unverified`, cifras comprobadas y no respaldadas), `session_id`, `answer`, `ui_payload` (`display_type`: `SINGLE_SPEC_CARD | COMPARISON_TABLE | EDGE_CASE_ALERT | TEXT_ONLY | RECOMMENDATION_LIST | CLARIFICATION`; `actuators`, `alerts`, `recommendation`, `clarification`, `suggested_followups`) y `debug_trace`. Los cambios al contrato son aditivos. Ejemplos reales de cada caso: `backend/evals/fixtures/contract_v2_samples.json`.
+
+### Sesiones multi-turno
+
+Cada sesión guarda mensajes, los números de parte activos y los filtros activos en PostgreSQL, así que sobrevive a reinicios del contenedor (hay una prueba opt-in con reinicio real: `RUN_LIVE=1`). Los seguimientos («¿y su velocidad a 50 Hz?», «compáralo con X») se resuelven con la parte activa. Las sesiones anónimas son públicas para quien conozca el UUID; las de un usuario autenticado devuelven 403 a otro usuario.
+
+### Casos borde cubiertos
+
+- Número de parte con typo u OCR (`761800-…` por `761B00-…`): sugerencia solo si serie y tamaño coinciden; si no, `INVALID_PART_NUMBER` sin tarjetas.
+- Modelos listados como N/A en la tabla trifásica (`761A00`, `761B00`, `762A00`, `762B00` con sufijo `11330C00/A`): se conservan con `is_available = FALSE` y se responde `MODEL_LISTED_AS_NA` con alternativas del mismo tamaño.
+- Requisitos imposibles (par por encima del máximo del catálogo, 24 V con par alto, CSA en tamaños 6 y 7): diagnóstico con cifras de la base de datos.
+- Petición ambigua (p. ej. falta el tipo de servicio): aclaración (`CLARIFICATION`) y se completa con la respuesta.
+- Inyección de prompt, preguntas fuera de alcance, números de parte inventados o que el usuario nunca dio (`UNGROUNDED_PART_NUMBER`).
+- Base de datos caída, UUID inválido, caracteres NUL, `locale` solo `es`/`en`: error controlado, no excepción.
+
+## Ingestión de datos
+
+1. `backend/scripts/extract_from_pdf.py`: extracción por modelo de visión desde imágenes del PDF en dos pasadas independientes (A y B) y reconciliación (`backend/data/extraction/`).
+2. `backend/scripts/build_catalog.py`: construye `backend/data/series76_catalog.json` con el valor acordado A=B; los desacuerdos solo se resuelven con `human_resolutions.json` y, si queda alguno sin resolver, aborta. También genera el **oráculo** `backend/evals/oracle/golden.json`.
+3. `backend/scripts/ingest.py --mode auto`: lee el catálogo, aplica las reglas físicas (par in-lbs/Nm entre 8.2 y 9.5; LRA ≥ FLA; CSA falso en tamaños 6 y 7), escribe `processed_actuators.json` y siembra la base. `--mode snapshot-only` no toca PostgreSQL.
+
+Reglas del catálogo: en todas las tablas el orden de columnas es 60 Hz | 50 Hz; los trifásicos terminan en `11330C00/A`; los de 24 V tienen sufijos propios (`11370000/A` para 24 V DC, `11380000/A` para 24 V AC/DC); la potencia del motor (celdas combinadas en el PDF) está resuelta para los 64 modelos disponibles.
+
+El **oráculo** (`golden.json`) es independiente de lo que devuelven las herramientas: las pruebas comprueban que cada cifra de una respuesta y cada tarjeta coincidan con él.
+
+Pruebas (la base debe estar arriba; ninguna llama al LLM salvo los runners):
+
+```bash
+python -m pytest backend/evals -q                      # 479 pruebas recolectadas
+python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
+python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
+python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
+```
+
+## Modelos por entorno
+
+Los perfiles están en `backend/config/llm_profiles.json` y se eligen con `LLM_PROVIDER`; ni modelos ni URLs están escritos en el código.
+
+| | Desarrollo | Entrega |
+| --- | --- | --- |
+| `LLM_PROVIDER` | `nim` | `openrouter` |
+| Modelo | `nvidia/nemotron-3.5-lightning-30b-a3b` | `openai/gpt-4o-mini` |
+| Costo | $0 (capa gratuita de NIM) | $0.15 / 1M tokens de entrada, $0.60 / 1M de salida (precio de lista) |
+
+Justificación: NIM permite repetir cientos de corridas de evaluación sin gastar el presupuesto; OpenRouter con `gpt-4o-mini` es el candidato de entrega por su precio. Como no hay embeddings, cambiar de proveedor no exige reingestar ni tocar volúmenes. **Solo se ha medido con NIM** (ver limitaciones).
+
+Resultados medidos (todos con NIM; los informes están en `backend/evals/`):
+
+| Batería | Resultado |
+| --- | --- |
+| `EVALUATION_REPORT.md` (11 escenarios) | 11/11 |
+| `ADVERSARIAL_REPORT.md` (30 casos) | 30/30 |
+| `HELDOUT_REPORT.md` (40 casos escritos sin acceso al router) | 39/40 en la corrida final; 32/40 en la primera, antes de las correcciones generales |
+
+## Pantalla de depuración y credenciales demo
+
+La app tiene una pantalla oculta de telemetría (herramientas llamadas, SQL, latencias, tokens, entidades activas de la sesión). Se abre con una **pulsación larga sobre el título** de la barra superior del chat.
+
+Usuarios demo (sembrados por `ingest.py`; las contraseñas se pueden cambiar con `DEMO_PASSWORD_*` en `.env`):
+
+| Correo | Contraseña por defecto |
+| --- | --- |
+| `engineer@konecto.io` | `Konecto2026!` |
+| `supervisor@konecto.io` | `Series76Pass!` |
+| `admin@konecto.io` | `AdminKonecto!` |
+
+Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me` y la contraseña de PostgreSQL por defecto: cámbialas fuera de una demo local.
+
+## Diseño y trade-offs
+
+- **Router determinista antes del LLM.** Resuelve sin modelo las consultas con estructura clara (número de parte, criterios numéricos, conceptos, fuera de alcance, inyección). Reduce latencia y variabilidad, pero son reglas escritas a mano solo para español e inglés, y los casos que no reconoce pasan al LLM.
+- **Verificador numérico.** Cumple la regla «ningún número visible viene del LLM». Es estricto (cifra + unidad + fila citada), por lo que a veces descarta respuestas correctas y entra la plantilla; es un costo aceptado frente a mostrar una cifra no respaldada. Excepciones configurables en `config/verifier.json`.
+- **Plantillas de respaldo.** Respuestas de 1–2 frases armadas solo con filas de la base de datos (`fallback.py`, textos en `i18n.py`). Son menos naturales que las del LLM pero no pueden inventar cifras, y mantienen el servicio útil si el proveedor falla.
+- **SQL + `pg_trgm` en lugar de RAG vectorial.** Los 68 números de parte difieren en 1–2 caracteres y las consultas son desigualdades sobre columnas numéricas (`modulating_torque_nm >= 200 AND voltage_num = 24`); un índice de embeddings no las evalúa de forma determinista. **pgvector se retiró** en la fase 2A: el conocimiento (4 fragmentos de `series_76_summary.pdf` y notas de tabla) vive en `backend/data/knowledge.json` y se busca por palabras clave con `pg_trgm` para typos. Si falla, la herramienta devuelve `KNOWLEDGE_ERROR`, nunca todos los fragmentos.
+- **Telemetría con `ContextVar`.** Las herramientas mutan en sitio contenedores creados al inicio del turno (LangChain las ejecuta en contextos copiados); ver `.claude/CLAUDE.md` §3.
+
+## Opcionales
+
+- **Login multiusuario**: JWT (HS256, 7 días por defecto) y sesiones asociadas a `chat_sessions.user_id`. El uso sin login sigue funcionando.
+- **Voz**: el reconocimiento y la normalización de números de parte dictados en la app (`VoiceNormalizer.kt`) corren en el dispositivo sin costo de LLM. El backend repite una normalización determinista (`normalize_spoken_pn` en el router) para números dictados con palabras en es/en.
+
+## Limitaciones conocidas
+
+- **HLD-20 y seguimientos ambiguos.** En la batería ciega falla un seguimiento («¿alguno de esos modelos trifásicos pequeños sirve?» tras un N/A): el router lo clasifica `uncertain`, decide el LLM y su respuesta habla de alternativos monofásicos sin decir que los trifásicos no están disponibles. No se corrigió con una regla general.
+- **El router solo cubre español e inglés.** Otro idioma pasa al LLM sin las protecciones previas.
+- **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
+- **Tasas medidas solo con NIM.** Los resultados de arriba corresponden a `nvidia/nemotron-3.5-lightning-30b-a3b`. No hay corrida con OpenRouter todavía; no se afirma latencia ni tasa de acierto para `gpt-4o-mini`.
+- **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
+- La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.
+- La batería ciega completa no se repitió tras el último cambio menor del verificador (ver `HELDOUT_REPORT.md`).
+
+## App Android
+
+<!-- APP: Gemini -->
+<!-- Datos del backend ya conocidos, para completar esta sección:
+- URL del servidor desde el emulador: http://10.0.2.2:8001/ (por defecto en la app; editable en la pantalla de login)
+- Dispositivo físico por USB: `adb reverse tcp:8001 tcp:8001` y usar http://localhost:8001/ ; por Wi-Fi: http://<IP-de-la-PC>:8001/
+- Directorio del proyecto: mobile-app/ (Android Studio, Gradle). Paquete único io.konecto.series76.
+- Pantalla de depuración: pulsación larga sobre el título de la barra superior del chat.
+- Usuarios demo: ver sección «Pantalla de depuración y credenciales demo».
+-->
+
+## Estructura del repositorio
 
 ```text
 .
-├── .claude/                                # AI Assistant engineering rules & reproducible workflows (Section 8)
-│   ├── settings.json                       # Tool permissions & environment defaults
-│   ├── CLAUDE.md                           # Neuro-symbolic invariants, 5 PDF traps & ContextVar rules
-│   └── commands/                           # Custom verification & provider-switching playbooks
-│       ├── verify-physics-ingestion.md
-│       ├── run-e2e-harness.md
-│       └── switch-llm-provider.md
-├── backend/                                # Python FastAPI + LangChain Backend & Ingestion Pipeline
-│   ├── app/
-│   │   ├── main.py                         # FastAPI endpoints (/api/conversation, /api/sessions, /api/auth/login)
-│   │   ├── agent.py                        # Tool-calling agent orchestrator & active entity memory
-│   │   ├── tools.py                        # Deterministic SQL, Constraint Relaxation & keyword knowledge tools
-│   │   ├── schemas.py                      # Strict Pydantic request/response contracts (Section 4)
-│   │   ├── auth.py                         # Bcrypt password verification & JWT bearer authentication
-│   │   └── database.py                     # PostgreSQL connection management & Decimal sanitization
-│   ├── db/
-│   │   └── init.sql                        # Schema: actuators, users, sessions
-│   ├── data/
-│   │   ├── processed_actuators.json        # Audited 68-row catalog snapshot with physical validation
-│   │   └── processed_knowledge.json        # Knowledge fragments (text + tags) from series_76_summary.pdf
-│   ├── scripts/
-│   │   └── ingest.py                       # Deterministic PDF ingestion, physics validator & DB seeder
-│   └── evals/
-│       ├── test_data_integrity.py          # 9 physical & domain integrity tests ($0.00 LLM cost)
-│       ├── test_tools.py                   # deterministic SQL, fuzzy match & keyword-knowledge tool tests
-│       ├── test_api_e2e.py                 # JWT auth, multi-turn coreference & persistence E2E tests
-│       ├── run_evals.py                    # 11-scenario automated benchmark runner
-│       ├── benchmark_nvidia.py             # Empirical LLM latency & tool-calling benchmark script
-│       └── EVALUATION_REPORT.md            # Generated latency, tool trace & pass-rate report
-├── docs/                                   # Source technical PDFs
-│   ├── series_76_electric_data.pdf         # 4-page, 6-table electrical & mechanical datasheet
-│   └── series_76_summary.pdf               # 2-page business & technical overview
-├── mobile-app/                             # Native Android Client (Kotlin + Jetpack Compose)
-│   └── app/src/main/java/io/konecto/series76/
-│       ├── MainActivity.kt                 # Single-activity entry point
-│       ├── data/                           # Retrofit client (ApiClient.kt) & DTOs (Models.kt)
-│       ├── ui/                             # 4 Screens (Screens.kt), Spec Cards (ChatComponents.kt), ViewModel
-│       └── util/VoiceNormalizer.kt         # Zero-cost on-device phonetic Part Number normalizer (EN/ES)
-├── .env.example                            # Template for OpenRouter & NVIDIA NIM configuration
-└── docker-compose.yml                      # One-command orchestration for PostgreSQL + FastAPI
-```
-
----
-
-## 1. Architecture & Design Trade-offs
-
-```mermaid
-flowchart TD
-    subgraph Mobile["Android Native App (Kotlin + Jetpack Compose)"]
-        UI_Login["LoginScreen (JWT + 1-Click Test Accounts)"]
-        UI_Sessions["SessionsScreen (Multi-Turn History)"]
-        UI_Chat["ChatScreen + VoiceNormalizer (EN/ES)"]
-        UI_Cards["ProductDataVisualizer (60Hz/50Hz Spec Cards & Side-by-Side Table)"]
-        UI_Debug["Hidden X-Ray DebugScreen (Long-Press Title)"]
-    end
-
-    subgraph Backend["FastAPI + LangChain Neuro-Symbolic Backend (:8001)"]
-        API["POST /api/conversation"]
-        Memory["Session Entity Tracker (active_part_numbers)"]
-        Agent["LangChain Tool-Calling Agent"]
-        T1["Tool 1: lookup_actuator_by_part_number"]
-        T2["Tool 2: recommend_actuators (Constraint Relaxation)"]
-        T3["Tool 3: search_engineering_knowledge"]
-    end
-
-    subgraph DB["PostgreSQL 16 + pg_trgm (:5433)"]
-        TblAct["Table: actuators (68 Audited NUMERIC Rows + GIN Trigram Index)"]
-        TblKnow["File: data/knowledge.json (keyword / pg_trgm match)"]
-        TblChat["Tables: users, chat_sessions, chat_messages"]
-    end
-
-    subgraph Ingestion["Deterministic Ingestion Pipeline (ingest.py)"]
-        PDF1["docs/series_76_electric_data.pdf"]
-        PDF2["docs/series_76_summary.pdf"]
-        Physics["Pydantic Physics & Domain Sanitizer (In-Lbs/Nm & LRA>=FLA)"]
-    end
-
-    PDF1 & PDF2 --> Physics
-    Physics -->|Seeds 68 rows| TblAct & TblKnow
-    UI_Chat -->|JSON Request + Bearer JWT| API
-    API <--> TblChat
-    API --> Memory --> Agent
-    Agent --> T1 & T2 & T3
-    T1 & T2 -->|Exact SQL / pg_trgm Fuzzy| TblAct
-    T3 -->|keyword / pg_trgm| TblKnow
-    API -->|answer + ui_payload + debug_trace| UI_Chat
-    UI_Chat --> UI_Cards & UI_Debug
-```
-
-### 1.1 Why a Hybrid PostgreSQL Schema (`NUMERIC` + `pg_trgm`) Instead of Naive Vector RAG?
-Standard chunk-based vector RAG fails on dense engineering datasheets like `series_76_electric_data.pdf`:
-1. **High Lexical Overlap:** All 68 part numbers differ by only 1–2 characters (`763B00-11300000/A` vs `763B00-11320000/A` vs `763B00-11330000/A`). Embedding similarity conflates voltage variants (`110V 1-Phase` vs `220V 1-Phase` vs `220V 3-Phase`).
-2. **Numerical Inequality Filtering:** Vector search cannot deterministically evaluate multi-attribute inequalities such as `enclosure_type = 'Explosionproof' AND power_supply = '24V DC' AND modulating_torque_nm >= 200`.
-3. **Our Neuro-Symbolic Solution:**
-   - **Exact Relational Engine (`actuators` table):** Every mechanical and electrical metric is stored in strongly typed `NUMERIC(10,2)` and `INTEGER` columns. The LLM is strictly prohibited from calculating or guessing specifications from memory.
-   - **Trigram & Levenshtein Fuzzy Recovery (`pg_trgm`):** A GIN index (`gin_trgm_ops`) combined with Levenshtein ranking recovers OCR/user typos (e.g., `761800-11300000/A` $\rightarrow$ `761B00-11300000/A`) in a single query.
-   - **Deterministic knowledge lookup (`data/knowledge.json`):** keyword tags with `pg_trgm` typo recovery (no LLM, no embeddings) retrieve conceptual explanations from `series_76_summary.pdf`, operating tolerances ($\pm 10\%$ voltage, $\pm 5\%$ frequency), and hazardous area classifications (`Class I, Div 1, Groups C, D, T4 | Ex d IIB T4 Gb`).
-
-### 1.2 How `ingest.py` Solves the 5 Traps of `series_76_electric_data.pdf`
-Our `ActuatorRecord` Pydantic sanitizer in `backend/scripts/ingest.py` resolves five critical traps present in the raw PDF tables:
-1. **Merged Vertical Cells (`rowspans`) in Motor Power (Watts):** In the PDF, *Motor Power (Watts)* cells span vertically across multiple rows (`15W`, `40W`, `90W`, `180W`, `700W`). `ingest.py` propagates these spans deterministically so all 64 available actuators have non-null wattage.
-2. **Inverted `50 Hz` vs `60 Hz` Sub-Column Headers:**
-   - Page 1 (Weatherproof 110V/220V 1-Phase) orders columns `60 Hz (left) | 50 Hz (right)`.
-   - Page 2 (Weatherproof 220V 3-Phase) **inverts** Speed and LRA to `50 Hz (left) | 60 Hz (right)`, while keeping FLA as `60 Hz | 50 Hz`.
-   - Page 4 (Explosionproof) inverts LRA in the 110V table (`50 Hz | 60 Hz`) and inverts FLA in the 220V table (`50 Hz | 60 Hz`).
-   - `ingest.py` maps each table's exact column header order into canonical database columns (`speed_60hz_sec`, `speed_50hz_sec`, etc.).
-3. **Explicit `N/A` Models in 220V 3-Phase (Sizes 1 & 2):** Models `761A00-11330000/A`, `761B00-11330000/A`, `762A00-11330000/A`, and `762B00-11330000/A` are listed as `N/A` in the 3-Phase table. Instead of dropping them, we store them with `is_available = FALSE`. When queried, `lookup_actuator_by_part_number` returns `status = "MODEL_LISTED_AS_NA"` and automatically suggests the available `110V` and `220V Single Phase` versions of the same frame size.
-4. **CSA Certification Footnote Exclusion on Sizes 6 & 7:** While Page 1's header states *"CSA, CE, & UKCA Certified"*, Footnote 7 specifies *"Sizes 6 and 7 are not CSA Certified"*. `ingest.py` enforces `csa_certified = False` for all Frame 6 and 7 models (`766A`–`767C`, 3,500–9,000 Nm).
-5. **Physical Laws & OCR Typo Gate (`BOO` $\rightarrow$ `800`, `8` $\leftrightarrow$ `B`):** Every row must pass two physical laws at ingestion time:
-   - **Torque Unit Ratio:** $\frac{\text{Torque (in-lbs)}}{\text{Torque (Nm)}} \in [8.2, 9.5]$ (since $1\text{ Nm} \approx 8.8507\text{ in-lbs}$).
-   - **Induction Motor Current Law:** $\text{LRA (Amps)} \ge \text{FLA (Amps)}$ across $50\text{ Hz}$, $60\text{ Hz}$, and $\text{DC}$.
-
-### 1.3 Constraint Relaxation Engine (`recommend_actuators`)
-When an engineer requests an impossible combination of specs, `recommend_actuators` does not simply return an empty array. It diagnoses which physical boundary was violated and returns the closest valid engineering alternatives:
-- **Example A (Torque > 240 Nm on 24V DC):** Diagnoses that 24V DC models only exist up to Frame Size 3 (max `240 Nm` On/Off, `220 Nm` Modulating) and simultaneously returns the max-capacity 24V model (`763X30`) alongside the smallest `110V`/`220V` AC models that satisfy the requested torque.
-- **Example B (Torque > 3,000 Nm with mandatory CSA Certification):** Diagnoses that models above `3,000 Nm` belong to Frame Sizes 6 and 7 (which are CE/UKCA certified only, not CSA) and returns both the non-CSA high-torque models (`767A00-11320000/A`) and the maximum CSA-certified model (`765B` at `3,000 Nm`).
-
-### 1.4 Model Selection & Two-Stage Budget Strategy ($10.00 USD Cap Protection)
-To protect the **$10.00 USD budget** on the provided evaluation API key while executing hundreds of automated test runs during development, we implemented a two-stage provider architecture controlled entirely via `.env`:
-
-| Metric / Stage | Stage 1: Development & Stress Testing (NVIDIA NIM Free Tier) | Stage 2: Production & Final Delivery (OpenRouter) |
-| :--- | :--- | :--- |
-| **API Endpoint (`LLM_BASE_URL`)** | `https://integrate.api.nvidia.com/v1` | `https://openrouter.ai/api/v1` |
-| **Chat Model (`LLM_CHAT_MODEL`)** | `nvidia/nemotron-3.5-lightning-30b-a3b` | `openai/gpt-4o-mini` |
-| **Avg. Tool-Call Latency** | ~4.2s – 8.5s | **~1.4s – 2.2s** |
-| **Structured Tool Accuracy** | 100% (11/11 Eval Scenarios) | **100% (11/11 Eval Scenarios)** |
-| **Token Pricing** | $0.00 / 1M tokens (Free Dev Tier) | $0.15 / 1M input, $0.60 / 1M output |
-| **Cost per Full 11-Scenario Eval Suite** | **$0.00 USD** | **~$0.008 USD (< 1 cent)** |
-
-**Why `openai/gpt-4o-mini` for OpenRouter Delivery?**
-- `openai/gpt-4o-mini` delivers sub-2-second tool-calling latency and native parallel function-calling reliability at **$0.15 / 1M input tokens**, supporting over **15,000 multi-turn engineering conversations** within the $10.00 USD budget.
-
----
-
-## 2. Setup & Environment Variables
-
-### Step 1: Create `.env` from `.env.example`
-```bash
-cp .env.example .env
-```
-Open `.env` and paste your OpenRouter API key into `LLM_API_KEY`:
-
-| Variable | Default Value (`.env.example`) | Description |
-| :--- | :--- | :--- |
-| `POSTGRES_USER` | `konecto` | PostgreSQL database user |
-| `POSTGRES_PASSWORD` | `konecto_secret_2026` | PostgreSQL database password |
-| `POSTGRES_DB` | `series76_db` | PostgreSQL database name |
-| `DATABASE_URL` | `postgresql+psycopg://konecto:...@db:5432/series76_db` | Internal Docker connection string (auto-maps to `localhost:5433` when run from host CLI) |
-| `DB_HOST_PORT` | `5433` | Host port mapped to container port `5432` (avoids conflicts with local PostgreSQL instances) |
-| `API_HOST_PORT` | `8001` | Host port mapped to container port `8000` (avoids conflicts with other local services on 8000) |
-| `LLM_PROVIDER` | `openrouter` | Provider profile (`openrouter` or `nim`), defined in `backend/config/llm_profiles.json` |
-| `LLM_BASE_URL` / `LLM_CHAT_MODEL` / `LLM_API_KEY` | OpenRouter / `openai/gpt-4o-mini` / *(your key)* | OpenRouter profile |
-| `LLM_BASE_URL_NIM` / `LLM_CHAT_MODEL_NIM` / `LLM_API_KEY_NIM` | NVIDIA NIM / `nvidia/nemotron-3.5-lightning-30b-a3b` / *(your key)* | NIM profile (free dev tier), used when `LLM_PROVIDER=nim` |
-| `JWT_SECRET_KEY` | `super_secret_konecto_jwt_key_change_in_prod` | Secret key used to sign HS256 JWT tokens |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `10080` | JWT token validity duration (7 days) |
-
----
-
-## 3. Backend & Database (Docker Compose)
-
-Start the entire backend stack (PostgreSQL 16 + `pg_trgm` + automatic ingestion + FastAPI server) with a **single command**:
-
-```bash
-docker compose up -d --build
-```
-
-### What happens automatically on startup:
-1. **`series76_postgres` (`postgres:16`):** Initializes extensions (`pg_trgm`, `uuid-ossp`) and creates all tables and indexes from `backend/db/init.sql`, exposed on host port **`5433`**.
-2. **Automatic Ingestion (`scripts/ingest.py --mode auto`):**
-   - Validates all 68 actuator records against physical laws.
-   - Seeds the 3 test users and 68 actuators. Knowledge fragments are read from `backend/data/knowledge.json` at query time.
-3. **`series76_backend` (FastAPI):** Starts Uvicorn on host port **`8001`**.
-   - **Health Check:** [http://localhost:8001/health](http://localhost:8001/health)
-   - **Interactive Swagger UI:** [http://localhost:8001/docs](http://localhost:8001/docs)
-
----
-
-## 4. Ingestion Pipeline (`ingest.py`)
-
-While `docker compose up -d --build` runs the ingestion pipeline automatically on container startup, you can also trigger it manually at any time:
-
-```bash
-# Option A: Run inside the running Docker container
-docker compose exec backend python scripts/ingest.py --mode auto
-
-# Option B: Run directly from your host machine
-python backend/scripts/ingest.py --mode auto
-
-# Option C: Generate audited JSON snapshots only (without touching PostgreSQL)
-python backend/scripts/ingest.py --mode snapshot-only
-```
-
-### Audited Output Snapshots:
-- **`backend/data/processed_actuators.json`:** Complete 68-record catalog snapshot with resolved `motor_power_watts` rowspans, canonical `50Hz`/`60Hz` columns, `csa_certified` flags, and table footnotes.
-- **`backend/data/knowledge.json`:** Knowledge fragments (text + keyword tags) extracted from `series_76_summary.pdf` and table notes.
-
----
-
-## 5. Mobile App (Kotlin + Jetpack Compose)
-
-### 5.1 Opening and Running in Android Studio
-1. Open **Android Studio** (Ladybug / Meerkat or newer) and select **Open**.
-2. Choose the **`mobile-app/`** directory inside this repository.
-3. Wait for Gradle Sync to complete.
-4. Select an Android Emulator (e.g., `Medium Phone API 35/36/37`) or a physical Android device and click **Run `'app'` (▶)** (`Shift + F10`).
-
-### 5.2 Connecting to the Backend (`10.0.2.2:8001` vs Custom IP)
-- **Android Emulator (Default):** The app comes pre-configured with `http://10.0.2.2:8001/` (Android Emulator's loopback alias for the host machine's `localhost:8001`).
-- **Live Editable on Login Screen:** The **Backend URL** text field at the top of the Login Screen allows you to change the server URL on the fly (e.g., to your LAN IP `http://192.168.1.X:8001/` when testing on a physical phone) without recompiling the APK.
-
-### 5.3 Interactive 60 Hz / 50 Hz Spec Cards & Side-by-Side Comparison Table
-- **Single Actuator Lookup (`SingleActuatorSpecCard`):** Displays a structured engineering card with badges for Enclosure Type, Power Supply, CSA/CE certifications, Torque (On/Off & Modulating), Duty Cycle, Motor Power, and an interactive **60 Hz / 50 Hz** frequency toggle chip.
-- **Smart 50 Hz Auto-Selection:** If a follow-up query or response explicitly mentions `"50Hz"` or `"50 Hz"` (e.g., *"And what is its LRA at 50Hz?"*), the visualizer automatically initializes the card/table toggle to **50 Hz**.
-- **Multi-Model Comparison (`ActuatorComparisonTable`):** When 2 or more actuators are returned, renders a horizontally scrollable side-by-side comparison matrix.
-
-### 5.4 How to Access the Hidden Developer X-Ray Debug Screen (Section 6.2)
-To keep the interface clean for plant engineers while giving evaluators full observability into the agent's internals:
-1. On either the **Conversations List Screen** or the **Active Chat Screen**, **Long-Press (hold for 2 seconds) on the top navigation bar title** (`"Series 76 Conversations"` or the session title).
-2. A toast notification (`"🔧 Developer Debug Mode UNLOCKED"`) will appear, revealing a red wrench icon (`🔧`) in the top-right app bar.
-3. Tap the wrench icon to open the **Developer X-Ray Debug Inspector**, which displays:
-   - Active LLM Model & total end-to-end turn latency (`ms`).
-   - Session Entity Memory (`active_part_numbers` tracked for multi-turn coreference).
-   - Every tool invoked (`lookup_actuator_by_part_number`, `recommend_actuators`, `search_engineering_knowledge`), its JSON arguments, the exact **SQL query executed**, per-tool latency, and raw database output.
-
----
-
-## 6. Optional Features Implemented & Automated Evaluation Suite
-
-### 6.1 Optional Feature 1: Multi-User Authentication & Pre-Loaded Test Accounts
-The Login Screen includes **1-Click Quick-Fill Chips** for three pre-seeded corporate accounts (or you can tap **"Continue in Single-User Mode (Without Login)"**):
-
-| Quick-Fill Chip | Corporate Email | Password | Role |
-| :--- | :--- | :--- | :--- |
-| **Engineer** | `engineer@konecto.io` | `Konecto2026!` | `plant_engineer` |
-| **Supervisor** | `supervisor@konecto.io` | `Series76Pass!` | `supervisor` |
-| **Evaluator** | `admin@konecto.io` | `AdminKonecto!` | `admin` |
-
-- Sessions created while logged in are scoped to that user in PostgreSQL (`chat_sessions.user_id`), and cross-user access is blocked with `HTTP 403 Forbidden`.
-
-### 6.2 Optional Feature 2: Voice Input + Zero-Cost Phonetic Part Number Normalizer
-Industrial part numbers like `763B00-11300000/A` are notoriously mangled by standard speech-to-text engines. We solved this with a two-layer voice architecture in `mobile-app/.../util/VoiceNormalizer.kt`:
-1. **Tap the Microphone Icon (`🎙️`):** Launches Android's native `RecognizerIntent` speech recognizer.
-2. **On-Device Phonetic Normalizer ($0.00 USD API Cost):** `VoiceNormalizer.normalizeSpokenTechnicalQuery()` deterministically converts spoken English or Spanish words, NATO phonetics, and separators (`dash`/`guion`, `slash`/`barra`) into exact Series 76 part numbers before sending the query to the backend:
-   - *Spoken Input (EN):* `"seven six three B zero zero dash one one three zero zero zero zero zero slash A"` $\rightarrow$ **`763B00-11300000/A`**
-   - *Spoken Input (ES):* `"siete seis tres be cero cero guion uno uno tres cero cero cero cero cero barra A"` $\rightarrow$ **`763B00-11300000/A`**
-3. **Emulator Voice Simulator (Long-Press `🎙️`):** Because many Android Emulators lack a configured host microphone or Google Play Speech Services, **long-pressing (or tapping when no mic is present) the microphone button** opens the interactive **`Voice & VoiceNormalizer Tester` dialog**, pre-loaded with spoken English and Spanish test phrases and live normalization preview.
-
-### 6.3 Running the Automated Verification & Evaluation Suites
-
-```bash
-# 1. Data & Physical Integrity Suite (9 tests: row counts, In-Lbs/Nm ratio, LRA >= FLA, N/A rows, CSA rules)
-python -m pytest backend/evals/test_data_integrity.py -v
-
-# 2. Deterministic Tools Suite (exact lookup, N/A alternatives, typo fuzzy match, 3-phase single torque, constraint relaxation, keyword knowledge)
-python -m pytest backend/evals/test_tools.py -v
-
-# 3. End-to-End API, JWT Auth & Multi-Turn Coreference Suite (2 E2E tests)
-python -m pytest backend/evals/test_api_e2e.py -v
-
-# 4. Full 11-Scenario Automated Benchmark Suite (generates backend/evals/EVALUATION_REPORT.md)
-python backend/evals/run_evals.py -v
-
-# Tip: Run a single scenario against the live Docker container on port 8001
-python backend/evals/run_evals.py --live --scenario EVAL-02 -v
+├── .claude/               # Reglas de ingeniería (CLAUDE.md), permisos y comandos de verificación
+├── backend/
+│   ├── app/               # main, agent, router, verifier, fallback, tools, recommend, followups, i18n, schemas, auth, database
+│   ├── config/            # llm_profiles.json, verifier.json
+│   ├── data/              # series76_catalog.json, processed_actuators.json, knowledge.json, extraction/ (provenance)
+│   ├── db/init.sql        # esquema (actuators, users, chat_sessions, chat_messages)
+│   ├── scripts/           # extract_from_pdf.py, build_catalog.py, ingest.py, build_contract_samples.py
+│   └── evals/             # pruebas, runners, oráculo, informes
+├── docs/                  # PDFs de origen
+├── mobile-app/            # App Android (Kotlin + Jetpack Compose)
+├── docker-compose.yml
+└── .env.example
 ```

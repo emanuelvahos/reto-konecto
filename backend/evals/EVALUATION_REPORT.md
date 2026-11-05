@@ -18,6 +18,6 @@
 | `EVAL-08` | Edge Case: CSA Footnote Trap | Requesting 6,000 Nm actuator with mandatory CSA Certification | 1 | 4436 | `recommend_actuators` | ✅ PASS |
 | `EVAL-09` | Edge Case: Impossible Requirement | Requesting 1,500 Nm actuator running on 24V DC power supply | 1 | 4351 | `recommend_actuators` | ✅ PASS |
 | `EVAL-10` | Edge Case: Ambiguous Service Type | 110V Explosionproof 450 Nm without service type: clarify, then resolve | 2 | 5209 | `recommend_actuators` | ✅ PASS |
-| `EVAL-11` | Engineering Rules & RAG | Checking allowable voltage tolerance (+/-10%) and hazardous location ratings | 1 | 4239 | `search_engineering_knowledge` | ✅ PASS |
+| `EVAL-11` | Engineering Rules & Knowledge | Checking allowable voltage tolerance (+/-10%) and hazardous location ratings | 1 | 4239 | `search_engineering_knowledge` | ✅ PASS |
 
 ## Summary: **11/11 Scenarios Passed (100.0%)**
