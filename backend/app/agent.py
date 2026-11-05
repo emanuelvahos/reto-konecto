@@ -450,7 +450,7 @@ def run_agent_turn(
     rec.add_step("router", (r0 - t0) * 1000, (time.perf_counter() - r0) * 1000, detail=decision.rule if decision else "disabled")
     if decision is not None and decision.kind == "reply":
         return _reply_turn(decision, lang, visible_filters, active_part_numbers, _debug, _title)
-    llm_query = decision.clean_query if decision is not None and decision.injection else user_query
+    llm_query = decision.clean_query if decision is not None and (decision.injection or decision.normalized) else user_query
 
     sys_prompt = SYSTEM_PROMPT_TEMPLATE.format(
         active_parts=active_part_numbers if active_part_numbers else "None yet",

@@ -275,10 +275,10 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
             FROM actuators
             WHERE similarity(base_part_number, %s) > 0.42
             ORDER BY sim_score DESC, is_available DESC
-            LIMIT 4;
+            LIMIT 20;
         """
         cur.execute(sql_fuzzy, (clean_input, clean_input))
-        fuzzy_rows = sanitize_rows(cur.fetchall())
+        fuzzy_rows = _plausible_typo_rows(clean_input, sanitize_rows(cur.fetchall()))[:4]
 
     if fuzzy_rows:
         register_ui_actuators([r for r in fuzzy_rows if r["is_available"]])
@@ -298,6 +298,38 @@ def lookup_actuator_by_part_number(part_number: str, focus: Optional[List[str]] 
     record_tool_trace("lookup_actuator_by_part_number", args, sql_fuzzy, result,
                       (time.perf_counter() - t0) * 1000)
     return result
+
+
+# Confusiones ópticas/tipográficas típicas del PDF (Trampa 5): solo estas sustituciones, o un carácter de más/menos, cuentan como typo.
+_OCR_PAIRS = {frozenset(p) for p in ("B8", "0O", "0C", "O0", "1I", "1L", "5S", "2Z", "6G", "OC")}
+
+
+def _typo_distance(query: str, cand: str) -> Optional[int]:
+    """Distancia entre un número de parte consultado y uno del catálogo si es un typo plausible, o None si no lo es.
+    Plausible = mayúsculas/separadores aparte, a lo sumo UN carácter de más o de menos, y las sustituciones solo entre pares
+    ópticamente confundibles (B/8, 0/O, 0/C...). Un dígito de tamaño distinto (768A00 vs 767A00) NO es un typo: es otro modelo."""
+    q = re.sub(r"[^A-Z0-9]", "", query.upper())
+    c = re.sub(r"[^A-Z0-9]", "", cand.upper())
+    if q == c:
+        return 0
+    if abs(len(q) - len(c)) > 1:
+        return None
+    if len(q) == len(c):
+        diffs = [(x, y) for x, y in zip(q, c) if x != y]
+        if all(frozenset((x, y)) in _OCR_PAIRS for x, y in diffs) and len(diffs) <= 2:
+            return len(diffs)
+        return None
+    short, long_ = (q, c) if len(q) < len(c) else (c, q)
+    for i in range(len(long_)):
+        if long_[:i] + long_[i + 1:] == short:
+            return 1
+    return None
+
+
+def _plausible_typo_rows(query: str, rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    scored = [(d, i, r) for i, r in enumerate(rows) for d in [_typo_distance(query, r["base_part_number"])] if d is not None]
+    return [r for _, _, r in sorted(scored, key=lambda x: (x[0], x[1]))]
+
 
 
 # =====================================================================
@@ -424,6 +456,24 @@ def recommend_actuators(
     with get_db_cursor() as cur:
         cur.execute("SELECT * FROM actuators WHERE is_available = TRUE;")
         rows = sanitize_rows(cur.fetchall())
+
+        asked_nm = a.get("min_torque_nm")
+        if asked_nm is None and a.get("min_torque_in_lbs") is not None:
+            cur.execute("SELECT MIN(on_off_torque_nm / NULLIF(on_off_torque_in_lbs, 0)) AS r FROM actuators "
+                        "WHERE is_available AND on_off_torque_in_lbs IS NOT NULL;")
+            ratio = cur.fetchone()["r"]
+            asked_nm = float(ratio) * a["min_torque_in_lbs"] if ratio else None
+        if asked_nm is not None:
+            asked_nm *= float(a.get("safety_factor") or 1)
+            ceiling = _torque_ceiling(cur, "TRUE", [])
+            if ceiling is not None and asked_nm > ceiling:      # ningún modelo del catálogo llega: nada que recomendar ni preguntar
+                store = current_turn_recommendation.get()
+                store.clear()
+                store.update({"hard": [], "relaxed": [], "items": [], "status": "NO_MATCH_HARD_CONSTRAINTS"})
+                msg = record_alert("CATALOG_TORQUE_CEILING", ceiling=_num(ceiling))["message"]
+                result = {"status": "NO_MATCH_HARD_CONSTRAINTS", "count": 0, "diagnostics": [msg]}
+                record_tool_trace("recommend_actuators", args_dict, RECOMMEND_SQL, result, (time.perf_counter() - t0) * 1000)
+                return result
 
         gate = rec.gate(rows, a)
         if gate:

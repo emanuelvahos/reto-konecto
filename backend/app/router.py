@@ -32,7 +32,11 @@ _INJECTION = [re.compile(p, FLAGS) for p in (
     r"\b(?:de memoria|from memory|from your memory|desde tu memoria)\b",
     r"\b(?:sin|without)\s+(?:usar\s+|utilizar\s+|using\s+)?(?:las\s+|tus\s+|any\s+|the\s+)?(?:herramientas|tools?)\b",
     r"\b(?:no|do not|don't)\s+(?:uses?|utilices?|use)\s+(?:las |tus |any |the )?(?:herramientas|tools?)\b",
-    r"\b(?:muestra|mu[eé]strame|show|reveal|print|repite|repeat|revela|imprime|dame|give me)\b[^.?!\n:;]{0,25}?\b(?:tu|your|el|the)\s+(?:system\s+|sistema\s+)?(?:prompt|instrucciones|instructions)\b",
+    r"\b(?:muestra|mu[eé]strame|show|reveal|print|repite|repeat|revela|imprime|dame|give me)\b[^.?!\n:;]{0,25}?\b(?:tu|your|el|the)\s+(?:(?:system|sistema|hidden|secret|oculta?s?|ocultas?|internal|internas?)\s+)*(?:prompt|instrucciones|instructions)\b",
+    r"\b(?:you are now|from now on,? you|ahora eres|a partir de ahora)\b[^.?!\n]{0,80}",
+    r"\b(?:developer mode|modo desarrollador|jailbreak|sin restricciones|no restrictions|without restrictions)\b[^.?!\n]*",
+    r"\b(?:invent\w*|make up|fabricate|fabrica)\b[^.?!\n]{0,40}?\b(?:valor|value|dato|data|cifra|number|n[uú]mero|torque)\b[^.?!\n]*",
+    r"\b(?:responde|contesta|answer|reply|respond|say|di|escribe|write|a[nñ]ade|add|append|termina|end)\b[^.?!\n]{0,25}?['\"“‘«][^'\"”’»]{1,40}['\"”’»](?:\s+(?:al final|al inicio|at the end|at the start|at the beginning))?",
 )]
 
 # --------------------------------------------------------------------------------------------- fuera de alcance
@@ -47,8 +51,47 @@ _OUT_OF_SCOPE = [re.compile(p, FLAGS) for p in (
 
 # --------------------------------------------------------------------------------------------- número de parte
 _PN_TOKEN = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9]{5,7}\s?-\s?[A-Za-z0-9]{6,9}(?:\s?/\s?[A-Za-z])?(?![A-Za-z0-9])")
+_PN_SPACED = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z0-9]{2,4}[\s.]+\d[A-Za-z0-9]{5,8}(?:\s?/\s?[A-Za-z])?(?![A-Za-z0-9])")
 _PN_FLAT = re.compile(r"(?<![A-Za-z0-9])\d[A-Za-z0-9]{3,6}\d{5,8}[A-Za-z0-9]?/?[A-Za-z]?(?![A-Za-z0-9])")
 _SIZE_TOKEN = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z]\d{0,2}(?![A-Za-z0-9])")
+
+# --------------------------------------------------------------------------------------------- números de parte dictados
+_SPOKEN = {
+    "zero": "0", "cero": "0", "one": "1", "uno": "1", "two": "2", "dos": "2", "three": "3", "tres": "3", "four": "4", "cuatro": "4",
+    "five": "5", "cinco": "5", "six": "6", "seis": "6", "seven": "7", "siete": "7", "eight": "8", "ocho": "8", "nine": "9", "nueve": "9",
+    "dash": "-", "hyphen": "-", "guion": "-", "guión": "-", "menos": "-", "slash": "/", "barra": "/", "diagonal": "/",
+    "a": "A", "b": "B", "be": "B", "bee": "B", "c": "C", "ce": "C", "see": "C", "sea": "C",
+}
+_SPOKEN_DIGITS = {k for k, v in _SPOKEN.items() if v.isdigit()}
+
+
+def normalize_spoken_pn(text: str) -> (str, bool):
+    """Convierte un número de parte dictado ("siete seis tres be cero cero guion uno uno ... barra a") al número escrito.
+    Solo actúa sobre rachas de palabras de dígito/letra/guion/barra con al menos 8 palabras de dígito (no toca prosa normal)."""
+    toks = list(re.finditer(r"[^\s,;]+", text))
+    out, i, changed = [], 0, False
+    last_end = 0
+    while i < len(toks):
+        j, syms, digits = i, [], 0
+        while j < len(toks):
+            w = re.sub(r"^[^\wáéíóúñ]+|[^\wáéíóúñ]+$", "", toks[j].group(0).lower())
+            if w in _SPOKEN:
+                syms.append(_SPOKEN[w])
+                digits += w in _SPOKEN_DIGITS
+                j += 1
+            else:
+                break
+        if digits >= 8 and "-" in syms:
+            out.append(text[last_end:toks[i].start()])
+            out.append("".join(syms))
+            last_end = toks[j - 1].end()
+            changed = True
+            i = j
+        else:
+            i = max(j, i + 1)
+    out.append(text[last_end:])
+    return "".join(out), changed
+
 
 # --------------------------------------------------------------------------------------------- tipo de consulta
 _SPEC = {**_GROUP_KEYWORDS}
@@ -62,6 +105,8 @@ _CONCEPT = re.compile(
     r"qu[eé] (?:es|son|significa)\s+(?!(?:el|la|los|las|un|una|su|sus|esto|eso)\b)\w{2,}|what (?:is|are|does)\s+(?!(?:the|an?|it|its|their|this|that|these|those)\b)\w{2,}|\bdefin\w+|diferencia entre|difference between|explica\w*|explain|"
     r"c[oó]mo se calcula|how (?:is|are) .{0,30}calculated|tolerancia|tolerance|duty cycle|ciclo de trabajo|certificaciones|certifications|"
     r"\bs4\b|clasificaci\w+|classification", FLAGS)
+_COMPARE = re.compile(r"compar\w+|versus|\bvs\.?\b|frente a|contra el|against", FLAGS)
+_PRONOUN_REF = re.compile(r"\b(?:it|this one|that one|este|ese|esta|esa|[eé]ste|[eé]se|el anterior|la anterior|the previous|the same)\b", FLAGS)
 _FOLLOW_ALL = re.compile(r"compar\w+|ambos|both|todos|\ball\b|\bboth\b|them|ellos", FLAGS)
 
 _NUM = r"(\d[\d.,   ]*\d|\d)"
@@ -136,9 +181,12 @@ def focus_groups(text: str) -> List[str]:
 def find_part_numbers(text: str, known_keys: Set[str]) -> List[str]:
     """Tokens que parecen numero de parte (hasta con typos 0/O, 8/B) o codigos de tamaño conocidos."""
     found: List[str] = []
-    for rx in (_PN_TOKEN, _PN_FLAT):
+    for rx in (_PN_TOKEN, _PN_SPACED, _PN_FLAT):
         for m in rx.finditer(text):
             tok = re.sub(r"\s", "", m.group(0)).upper()
+            if rx is _PN_SPACED:
+                h, t2 = re.split(r"[\s.]+", m.group(0).strip().upper(), maxsplit=1)
+                tok = h + "-" + re.sub(r"\s", "", t2)
             if tok not in found:
                 found.append(tok)
     for m in _SIZE_TOKEN.finditer(text):
@@ -158,6 +206,7 @@ class Decision:
     oos_note: bool = False             # consulta mixta: añadir nota determinista de fuera de alcance
     injection: bool = False
     out_of_scope: bool = False
+    normalized: bool = False           # el número de parte dictado se convirtió a texto
 
 
 def _strip(text: str, patterns) -> (str, bool):
@@ -182,7 +231,8 @@ def _has_tech(text: str, count_pn: bool, known_keys: Set[str]) -> bool:
 
 
 def route(query: str, active_parts: List[str], known_keys: Set[str], pending_args: Optional[Dict[str, Any]] = None) -> Decision:
-    d = Decision(clean_query=query)
+    query, d_spoken = normalize_spoken_pn(query)
+    d = Decision(clean_query=query, normalized=d_spoken)
     rest, d.injection = _strip(query, _INJECTION)
     scope_text, oos = _strip(rest, _OUT_OF_SCOPE)
     d.out_of_scope = oos
@@ -201,6 +251,9 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
         groups = focus_groups(text)
         hz = extract_criteria(text).get("frequency_hz")
         d.kind, d.rule = "tools", "part_number"
+        if active_parts and _COMPARE.search(text) and _PRONOUN_REF.search(text):
+            keys = {pn_key(x) for x in pns}
+            pns = [a for a in active_parts[:1] if pn_key(a) not in keys] + pns
         for pn in pns[:3]:
             args: Dict[str, Any] = {"part_number": pn}
             if groups:
