@@ -593,6 +593,7 @@ def run_agent_turn(
             lang, ui_payload["actuators"], alert_msgs, outs,
             groups=infer_groups(user_query, focus),
             recommend=bool(traces) and traces[-1]["tool_name"] == "recommend_actuators",
+            query=user_query,
         )
         rec.add_step("fallback_template", (fb_t - t0) * 1000, (time.perf_counter() - fb_t) * 1000, detail=template_reason or "ungrounded")
         fallback_used = True

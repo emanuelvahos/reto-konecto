@@ -127,3 +127,19 @@ def test_part_number_without_suffix_or_in_other_case_counts_as_grounded():
     current_user_text.set("specs for 763a00 11320000 please")
     assert lookup_actuator_by_part_number.invoke({"part_number": "763A00-11320000/A"})["status"] == "EXACT_MATCH"
     reset_turn_telemetry()
+
+
+# ------------------------------------------------------------------------------ dictado con "ay" y plantilla de conocimiento corta
+def test_spoken_letter_ay_is_a():
+    text, changed = normalize_spoken_pn("speed of seven six four ay zero zero dash one one three three zero see zero zero slash ay at fifty hertz")
+    assert changed and "764A00-11330C00/A" in text
+
+
+def test_knowledge_fallback_keeps_only_the_sentences_about_the_question_within_45_words():
+    from app.fallback import KNOWLEDGE_MAX_WORDS, _knowledge_text
+    from app.tools import search_engineering_knowledge
+
+    q = "What does S4 duty mean for these actuators?"
+    out = search_engineering_knowledge.invoke({"query": q})
+    text = _knowledge_text([out], q)
+    assert len(text.split()) <= KNOWLEDGE_MAX_WORDS and "S4" in text and "Output Torque" not in text

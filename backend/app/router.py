@@ -60,7 +60,7 @@ _SPOKEN = {
     "zero": "0", "cero": "0", "one": "1", "uno": "1", "two": "2", "dos": "2", "three": "3", "tres": "3", "four": "4", "cuatro": "4",
     "five": "5", "cinco": "5", "six": "6", "seis": "6", "seven": "7", "siete": "7", "eight": "8", "ocho": "8", "nine": "9", "nueve": "9",
     "dash": "-", "hyphen": "-", "guion": "-", "guión": "-", "menos": "-", "slash": "/", "barra": "/", "diagonal": "/",
-    "a": "A", "b": "B", "be": "B", "bee": "B", "c": "C", "ce": "C", "see": "C", "sea": "C",
+    "a": "A", "ay": "A", "b": "B", "be": "B", "bee": "B", "c": "C", "ce": "C", "see": "C", "sea": "C",
 }
 _SPOKEN_DIGITS = {k for k, v in _SPOKEN.items() if v.isdigit()}
 

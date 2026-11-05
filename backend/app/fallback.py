@@ -82,12 +82,39 @@ def describe_row(lang: str, row: Dict[str, Any], groups: Sequence[str] = DEFAULT
     return f"{row['base_part_number']}: " + ", ".join(bits)
 
 
-def _knowledge_text(tool_outputs: Iterable[Any]) -> Optional[str]:
+KNOWLEDGE_MAX_WORDS = 45
+
+
+def _knowledge_text(tool_outputs: Iterable[Any], query: str = "") -> Optional[str]:
+    """Texto del fragmento de conocimiento recuperado, recortado a las frases que comparten palabras con la pregunta
+    (máx. KNOWLEDGE_MAX_WORDS palabras): el fragmento completo puede traer varias definiciones ajenas a lo preguntado."""
     texts: List[str] = []
     for out in tool_outputs:
         if isinstance(out, dict) and out.get("status") == "KNOWLEDGE_RETRIEVED":
             texts += [c["content"] for c in out.get("chunks", [])[:1]]
-    return " ".join(texts) if texts else None
+    if not texts:
+        return None
+    text = " ".join(texts)
+    if len(text.split()) <= KNOWLEDGE_MAX_WORDS:
+        return text
+    q = {w for w in re.findall(r"[a-záéíóúñ0-9]{2,}", query.lower()) if w not in _STOP}
+    sentences = [x.strip() for x in re.split(r"(?<=[.;])\s+", text) if x.strip()]
+    ranked = sorted(range(len(sentences)), key=lambda i: (-len(q & set(re.findall(r"[a-záéíóúñ0-9]{2,}", sentences[i].lower()))), i))
+    chosen, words = [], 0
+    for i in ranked:
+        n = len(sentences[i].split())
+        if chosen and words + n > KNOWLEDGE_MAX_WORDS:
+            continue
+        if not chosen and n > KNOWLEDGE_MAX_WORDS:
+            return " ".join(sentences[i].split()[:KNOWLEDGE_MAX_WORDS]).rstrip(",;:") + "…"
+        if q & set(re.findall(r"[a-záéíóúñ0-9]{2,}", sentences[i].lower())) or not chosen:
+            chosen.append(i)
+            words += n
+    return " ".join(sentences[i] for i in sorted(chosen))
+
+
+_STOP = {"what", "does", "mean", "for", "the", "these", "this", "that", "is", "are", "of", "qué", "que", "es", "son", "significa",
+         "para", "los", "las", "el", "la", "de", "del", "un", "una", "actuators", "actuator", "actuadores", "actuador", "series", "serie"}
 
 
 def build_fallback_answer(
@@ -97,6 +124,7 @@ def build_fallback_answer(
     tool_outputs: Iterable[Any],
     groups: Optional[Sequence[str]] = None,
     recommend: bool = False,
+    query: str = "",
 ) -> str:
     groups = tuple(groups or DEFAULT_GROUPS)
     if rows:
@@ -109,7 +137,7 @@ def build_fallback_answer(
         if alert_messages:
             sentence += " " + alert_messages[0]
         return sentence
-    kb = _knowledge_text(tool_outputs)
+    kb = _knowledge_text(tool_outputs, query)
     if kb:
         return kb
     if alert_messages:
