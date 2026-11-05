@@ -19,8 +19,11 @@ class StepRecorder(BaseCallbackHandler):
     def _now_ms(self) -> float:
         return (time.perf_counter() - self.t0) * 1000
 
-    def add_step(self, name: str, start_ms: float, duration_ms: float) -> None:
-        self.steps.append({"name": name, "start_ms": round(start_ms, 2), "duration_ms": round(duration_ms, 2)})
+    def add_step(self, name: str, start_ms: float, duration_ms: float, detail: Optional[str] = None) -> None:
+        step = {"name": name, "start_ms": round(start_ms, 2), "duration_ms": round(duration_ms, 2)}
+        if detail:
+            step["detail"] = detail
+        self.steps.append(step)
 
     def _start(self, run_id: Any, name: str) -> None:
         self._open[run_id] = {"name": name, "start": self._now_ms()}

@@ -45,6 +45,7 @@ class TraceStep(BaseModel):
     name: str
     start_ms: float
     duration_ms: float
+    detail: Optional[str] = Field(None, description="Extra info of the step, e.g. the router rule that fired or why the template was used.")
 
 
 class DebugTracePayload(BaseModel):

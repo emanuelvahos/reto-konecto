@@ -97,9 +97,16 @@ def test_no_tool_without_numbers_is_verified_clarify(run):
     assert meta["intent"] == "clarify"
 
 
-def test_empty_answer_is_retried_then_reported_as_error(run):
+def test_empty_answer_with_tool_results_uses_template(run):
     (answer, ui, dbg, _, _, meta), fake = run([{"tool": LOOKUP, "answer": ""}, {"answer": ""}], f"specs {PN}", locale="en")
-    assert fake.calls == 3 and dbg["token_usage"]["llm_retries"] == 2  # 1 llamada + 2 reintentos, luego intent=error
+    assert fake.calls == 3 and dbg["token_usage"]["llm_retries"] == 2  # 1 llamada + 2 reintentos, luego plantilla con la tarjeta ya obtenida
+    assert meta["intent"] == "lookup" and meta["verification"]["status"] == "fallback_template"
+    assert ui["actuators"][0]["base_part_number"] == PN and answer.startswith(PN)
+
+
+def test_empty_answer_without_tool_results_is_reported_as_error(run):
+    (answer, ui, dbg, _, _, meta), fake = run([{"answer": ""}], "hello", locale="en")
+    assert dbg["token_usage"]["llm_retries"] == 2
     assert meta["intent"] == "error" and ui["alerts"][0]["code"] == "LLM_UNAVAILABLE"
     assert "temporarily unavailable" in answer
 

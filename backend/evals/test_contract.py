@@ -71,3 +71,14 @@ def test_recommendation_sample_has_ranking_and_constraints():
     rec = r.ui_payload.recommendation
     assert r.intent == "recommend" and r.ui_payload.display_type == "RECOMMENDATION_LIST"
     assert rec.ranking[0].score >= rec.ranking[1].score and rec.hard_constraints and rec.relaxed_constraints
+
+
+def test_out_of_scope_alert_and_step_detail_are_additive():
+    from app.i18n import render_alert
+    from app.schemas import TraceStep, UIAlert
+
+    for lang in ("es", "en"):
+        alert = render_alert({"code": "OUT_OF_SCOPE", "params": {}}, lang)
+        assert alert["severity"] == "info" and UIAlert.model_validate(alert).code == "OUT_OF_SCOPE"
+    assert TraceStep(name="router", start_ms=0, duration_ms=1).detail is None   # ausente = None (compatible)
+    assert TraceStep(name="router", start_ms=0, duration_ms=1, detail="part_number").detail == "part_number"

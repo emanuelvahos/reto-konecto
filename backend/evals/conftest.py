@@ -14,3 +14,11 @@ def _no_backoff_sleep(monkeypatch):
     import app.agent as agent
 
     monkeypatch.setattr(agent, "RETRY_BASE_S", 0.0)
+
+
+@pytest.fixture(autouse=True)
+def _router_off_by_default(monkeypatch):
+    """Las pruebas del pipeline simulan al LLM decidiendo las herramientas; el router se prueba aparte (test_router.py)."""
+    import app.agent as agent
+
+    monkeypatch.setattr(agent, "ROUTER_ENABLED", False)
