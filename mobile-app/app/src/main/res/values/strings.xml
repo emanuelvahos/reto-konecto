@@ -9,14 +9,9 @@
     <string name="login_change">Change</string>
     <string name="login_email_label">Corporate Identity / Email</string>
     <string name="login_password_label">Passcode</string>
-    <string name="login_quick_profiles">QUICK DEMO PROFILES</string>
-    <string name="login_profile_engineer">Engineer</string>
-    <string name="login_profile_supervisor">Supervisor</string>
-    <string name="login_profile_evaluator">Evaluator</string>
     <string name="login_use_demo">Use Demo Account</string>
     <string name="login_continue_no_login">Continue without login</string>
     <string name="login_sign_in">Sign In</string>
-    <string name="login_single_user">Continue in Single-User Mode</string>
 
     <!-- Sessions -->
     <string name="sessions_title">Consultations</string>

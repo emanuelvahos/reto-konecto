@@ -21,7 +21,27 @@ object ServerPreferences {
     private val KEY_APP_LANGUAGE = stringPreferencesKey("app_language")
     private val KEY_TTS_ENABLED = booleanPreferencesKey("tts_enabled")
 
-    const val DEFAULT_SERVER_URL = "http://10.0.2.2:8001/"
+    val DEFAULT_SERVER_URL: String
+        get() {
+            return try {
+                val fp = android.os.Build.FINGERPRINT.orEmpty()
+                val model = android.os.Build.MODEL.orEmpty()
+                val mfg = android.os.Build.MANUFACTURER.orEmpty()
+                val hw = android.os.Build.HARDWARE.orEmpty()
+                val isEmulator = fp.startsWith("generic") ||
+                                 fp.startsWith("unknown") ||
+                                 model.contains("google_sdk") ||
+                                 model.contains("Emulator") ||
+                                 model.contains("Android SDK built for x86") ||
+                                 mfg.contains("Genymotion") ||
+                                 hw.contains("goldfish") ||
+                                 hw.contains("ranchu")
+                if (isEmulator) "http://10.0.2.2:8001/" else "http://localhost:8001/"
+            } catch (e: Throwable) {
+                "http://10.0.2.2:8001/"
+            }
+        }
+
     const val LANG_AUTO = "auto"
     const val LANG_ES = "es"
     const val LANG_EN = "en"

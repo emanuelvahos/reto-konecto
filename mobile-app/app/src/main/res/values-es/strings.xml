@@ -9,14 +9,9 @@
     <string name="login_change">Cambiar</string>
     <string name="login_email_label">Identidad Corporativa / Correo</string>
     <string name="login_password_label">Código de Acceso</string>
-    <string name="login_quick_profiles">PERFILES RÁPIDOS DE PRUEBA</string>
-    <string name="login_profile_engineer">Ingeniero</string>
-    <string name="login_profile_supervisor">Supervisor</string>
-    <string name="login_profile_evaluator">Evaluador</string>
     <string name="login_use_demo">Usar cuenta demo</string>
     <string name="login_continue_no_login">Continuar sin iniciar sesión</string>
     <string name="login_sign_in">Iniciar Sesión</string>
-    <string name="login_single_user">Continuar en Modo Usuario Único</string>
 
     <!-- Sessions -->
     <string name="sessions_title">Consultas</string>

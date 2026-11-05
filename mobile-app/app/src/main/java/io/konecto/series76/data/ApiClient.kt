@@ -31,7 +31,7 @@ interface Series76Api {
 
 object ApiClient {
     var authToken: String? = null
-    var baseUrl: String = "http://10.0.2.2:8001/"
+    var baseUrl: String = ServerPreferences.DEFAULT_SERVER_URL
         set(value) {
             field = if (value.endsWith("/")) value else "$value/"
             rebuildRetrofit()
