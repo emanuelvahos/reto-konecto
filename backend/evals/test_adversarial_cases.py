@@ -12,7 +12,7 @@ from oracle_check import BY_PN, oracle_verify, oracle_value, states_value, ui_ma
 CASES = json.loads((Path(__file__).parent / "adversarial.json").read_text(encoding="utf-8"))["cases"]
 EXPECT_KEYS = {
     "intent", "display_type", "tools_include", "tool_status_any", "alerts_any", "ui_parts_include", "ui_all_enclosure",
-    "no_ui_actuators", "options_between", "answer_any", "answer_none", "must_state", "max_words",
+    "no_ui_actuators", "options_between", "answer_any", "answer_none", "answer_none_unless", "must_state", "max_words",
 }
 REQUIRED_CATEGORIES = {
     "typo", "na_3phase", "invented_pn", "ambiguity", "impossible", "24v_weatherproof", "24v_no_hz", "cycles_vs_starts",
@@ -33,6 +33,8 @@ def test_case_is_well_formed(case):
     assert case["turns"] and set(case["expect"]) <= EXPECT_KEYS
     for pat in case["expect"].get("answer_any", []) + case["expect"].get("answer_none", []):
         re.compile(pat)
+    for forbidden, unless in case["expect"].get("answer_none_unless", []):
+        re.compile(forbidden), re.compile(unless)
     for ms in case["expect"].get("must_state", []):
         assert ms["pn"] in BY_PN and ms["field"] in BY_PN[ms["pn"]] and oracle_value(ms["pn"], ms["field"]) is not None
     for pn in case["expect"].get("ui_parts_include", []):
@@ -71,3 +73,14 @@ def test_ui_matches_oracle_detects_a_changed_field():
     assert ui_matches_oracle(ok) == []
     ok["ui_payload"]["actuators"][0]["on_off_torque_nm"] = 501
     assert len(ui_matches_oracle(ok)) == 1
+
+
+def test_answer_none_unless_adv14_accepts_clarification_and_rejects_bare_60hz_value():
+    from run_adversarial import check_expect
+
+    case = next(c for c in CASES if c["id"] == "ADV-14")
+    base = {"debug_trace": {"tool_calls": [{"tool_name": "lookup_actuator_by_part_number", "raw_output": {}}]}}
+    ok = dict(base, answer="This 24V model has a single DC current of 1.5 A; there is no separate 60 Hz or 50 Hz value.", ui_payload={"alerts": []})
+    bad = dict(base, answer="At 60 Hz the FLA is 1.5 A.", ui_payload={"alerts": []})
+    assert not [f for f in check_expect(case, ok) if "prohibido" in f]
+    assert [f for f in check_expect(case, bad) if "prohibido" in f]

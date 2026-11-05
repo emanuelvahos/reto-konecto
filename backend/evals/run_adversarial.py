@@ -108,6 +108,11 @@ def check_expect(case: Dict[str, Any], resp: Dict[str, Any]) -> List[str]:
     for p in ex.get("answer_none", []):
         if re.search(p, low):
             fails.append(f"la respuesta contiene lo prohibido /{p}/: {answer[:140]!r}")
+    for forbidden, unless in ex.get("answer_none_unless", []):
+        # En 24V la ficha trae una sola corriente (*_dc_or_fixed_*): citarla junto a "60 Hz" solo es falso si el texto
+        # NO aclara que no hay valores separados 50/60 Hz.
+        if re.search(forbidden, low) and not re.search(unless, low):
+            fails.append(f"la respuesta contiene lo prohibido /{forbidden}/ sin aclarar que no hay valores 50/60 Hz: {answer[:140]!r}")
     for ms in ex.get("must_state", []):
         v = oracle_value(ms["pn"], ms["field"])
         if v is not None and not states_value(answer, v):
@@ -115,6 +120,9 @@ def check_expect(case: Dict[str, Any], resp: Dict[str, Any]) -> List[str]:
     if "max_words" in ex and len(answer.split()) > ex["max_words"]:
         fails.append(f"más de {ex['max_words']} palabras")
     return fails
+
+
+TRACE_DIR: Optional[Path] = None
 
 
 def run_case(client: EvalClient, case: Dict[str, Any], verbose: bool) -> Dict[str, Any]:
@@ -154,6 +162,10 @@ def run_case(client: EvalClient, case: Dict[str, Any], verbose: bool) -> Dict[st
         stats["cost"] += dbg.get("cost_usd_estimate", 0.0)
         stats["verifier_retries"] += tu.get("retries", 0)
         stats["llm_retries"] += tu.get("llm_retries", 0)
+        if TRACE_DIR:
+            TRACE_DIR.mkdir(parents=True, exist_ok=True)
+            (TRACE_DIR / f"{case['id']}.json").write_text(
+                json.dumps({"query": query, "wall_ms": round(wall), "response": resp}, ensure_ascii=False, indent=2), encoding="utf-8")
         fails += [f"[turno '{query[:40]}'] {f}" for f in check_turn(resp, query)]
         prev = last = resp
         if verbose:
@@ -170,11 +182,14 @@ def main() -> int:
     ap.add_argument("--case", "-c", action="append", help="ID(s) de caso, p. ej. ADV-03")
     ap.add_argument("--base-url", default=None)
     ap.add_argument("--verbose", "-v", action="store_true")
+    ap.add_argument("--trace-dir", default=None, help="guarda la respuesta completa de cada caso (JSON)")
     ap.add_argument("--pause", type=float, default=0.0, help="segundos entre casos (límites de tasa)")
     args = ap.parse_args()
 
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    global TRACE_DIR
+    TRACE_DIR = Path(args.trace_dir) if args.trace_dir else None
     cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))["cases"]
     if args.case:
         cases = [c for c in cases if c["id"] in set(args.case)]
