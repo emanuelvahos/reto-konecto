@@ -48,4 +48,4 @@ Ejecutor automático 15/20; **auditado 16/20 (80 %)**. BB-08 es límite del ejec
 
 Aciertos destacados: BB-05 (763C trifásico 220 V existe: 600 Nm con aviso de torque único), BB-06/07 (tamaño + alimentación resueltos), BB-12 (000X00 no existe), BB-18 (inyección rechazada), BB-16 (50 Hz del mismo modelo: 21 s). Ninguna respuesta trajo cifras fuera de la base.
 
-Latencia (último turno): p50 ≈ 0,16–1,8 s (mediana de 20 casos entre 162 y 1819 ms), p95 ≈ 5,0 s, máx. 5504 ms (BB-19, clasificador en 2 turnos); total 35,5 s, 26 109 tokens, USD 0,00435.
+Latencia del último turno de cada caso: mediana ≈ 1,8 s, p95 ≈ 2,6 s, máx. 5077 ms (BB-06, comparación); suma por caso hasta 5504 ms (BB-19, 2 turnos). Total de la corrida 35,5 s, 26 109 tokens, USD 0,00435.
