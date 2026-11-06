@@ -394,3 +394,7 @@ Tasa REAL sobre mensajes no vistos: la de la **primera corrida**. El 235/235 del
 | Ciega propia (`heldout.json`) | 40/40 (USD 0,0169) |
 | Banco natural | 235/235 (no relacionada 0; `uncertain` 6,8 %; p50 480 ms; p95 4536 ms) — NO es tasa real (ver arriba) |
 | Suite pytest | 675 pasan, 1 omitida |
+
+## Set B del usuario (20 mensajes, `evals/blind_b.json`): una sola corrida, sin tocar código (2026-11-06)
+
+HTTP, OpenRouter, contenedor con el commit `ec6fd8d`. Automático 15/20; **auditado 16/20 (80 %)**. Fallos reales: BB-04 («para qué sirve esto» da «quién soy», igual que BLD-02), BB-09 («hay de 12 voltios?» dice que no existe pero no lista 24/110/220 V), BB-13 («150 Nm monofasico 110»: el 110 sin unidad tras la fase no se reconoce como voltaje y pregunta el voltaje) y BB-19 («dime lo mismo pero en inglés» devuelve el menú en español). Detalle respuesta real vs esperada en `BLIND_B_REPORT.md`; datos en `baselines/blind_b_http.json`. Esta cifra (80 % en mensajes nuevos tras los arreglos del set A) es la mejor estimación de la tasa real del sistema en entradas no vistas, junto al 82,5 % de la primera corrida del set A; el 95 % de la segunda corrida del set A es optimista.
