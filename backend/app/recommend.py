@@ -31,6 +31,8 @@ SOFT_WEIGHTS = {"torque": 3.0, "duty": 2.0, "speed": 2.0, "fla": 1.5, "csa": 2.0
 ECONOMY_SHARE = 0.1
 OVERSIZE_PCT = 100.0   # holgura de torque a partir de la cual se avisa de sobredimensionamiento
 TOP_N = 5
+# argumentos que puntúan (criterios blandos); sin ninguno solo hay restricciones duras y NO hay "mejor opción"
+SOFT_ARG_KEYS = ("min_torque_nm", "min_torque_in_lbs", "min_duty_cycle_pct", "max_speed_sec", "max_fla_amps", "require_csa_certification")
 
 SPEED_COLS = ("speed_60hz_sec", "speed_50hz_sec", "speed_dc_or_fixed_sec")
 FLA_COLS = ("fla_60hz_amps", "fla_50hz_amps", "fla_dc_or_fixed_amps")

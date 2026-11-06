@@ -13,8 +13,8 @@ DEFAULT_GROUPS = ("torque", "power")
 _GROUP_KEYWORDS = {
     "torque": r"torque|\bpar\b|\bnm\b|in-?lbs?",
     "duty": r"duty|ciclo|arranque|starts?|cycles?|por hora|per hour",
-    "speed": r"speed|velocidad|tiempo|giro|segundos|seconds|\bsec\b|travel",
-    "current": r"current|corriente|\bfla\b|\blra\b|amp|consum|draw",
+    "speed": r"speed|velocidad|tiempo|giro|segundos|seconds|\bsec\b|travel|\btarda\w*|\btardan\b|demora\w*|\bdura\b|\bgira\b|how long|rapidez|se tarda",
+    "current": r"current|corriente|\bfla\b|\blra\b|amp|consum|draw|\bgast\w*|amperaje|\bdrains?\b",
     "power": r"power|potencia|watt|vatio|\bw\b",
 }
 

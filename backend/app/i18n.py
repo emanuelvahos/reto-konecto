@@ -345,7 +345,7 @@ def render_clarification(topic: str, options: List[Dict[str, Any]], lang: str) -
 def resolve_clarification_answer(topic: str, text: str) -> Dict[str, Any]:
     """Respuesta del usuario (el `value` de una opción u otra forma natural) -> argumentos; {} si no se reconoce."""
     low = text.lower()
-    if topic == "voltage":
+    if topic in ("voltage", "supply"):
         m = re.search(r"(?<!\d)(24|110|220)(?!\d)", low)
         if not m:
             return {}
@@ -354,6 +354,10 @@ def resolve_clarification_answer(topic: str, text: str) -> Dict[str, Any]:
             out["phase_type"] = "3 Phase"
         elif re.search(r"mono-?f[aá]sic|single[- ]?phase|1[- ]?phase|1\s?ph\b", low):
             out["phase_type"] = "Single Phase"
+        elif topic == "supply" and re.search(r"\bac\s?/?\s?-?\s?dc\b", low):
+            out["phase_type"] = "AC/DC"
+        elif topic == "supply" and re.search(r"\bdc\b|\bcc\b", low):
+            out["phase_type"] = "DC"
         return out
     if topic == "service":
         if re.search(r"modul", low):
@@ -406,6 +410,22 @@ FOLLOWUPS: Dict[str, Dict[str, str]] = {
     "start_recommend": {
         "label_en": "Recommend an actuator", "label_es": "Recomendar un actuador",
         "query_en": "Help me select an actuator for my application", "query_es": "Ayúdame a seleccionar un actuador para mi aplicación",
+    },
+    "sample_spec": {
+        "label_en": "Specs of a model", "label_es": "Ficha de un modelo",
+        "query_en": "Specs of {pn}", "query_es": "Ficha del {pn}",
+    },
+    "sample_compare": {
+        "label_en": "Compare two models", "label_es": "Comparar dos modelos",
+        "query_en": "Compare {pn} with {other}", "query_es": "Compara {pn} con {other}",
+    },
+    "ask_s4": {
+        "label_en": "What is duty cycle S4?", "label_es": "¿Qué es el ciclo S4?",
+        "query_en": "What is the S4 duty cycle?", "query_es": "¿Qué es el ciclo de trabajo S4?",
+    },
+    "ask_capabilities": {
+        "label_en": "What can you do?", "label_es": "¿Qué puedes hacer?",
+        "query_en": "What can you do?", "query_es": "¿Qué puedes hacer?",
     },
     "ask_certs": {
         "label_en": "Hazardous-area certifications", "label_es": "Certificaciones de área peligrosa",

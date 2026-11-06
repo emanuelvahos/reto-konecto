@@ -1,0 +1,23 @@
+{
+  "_doc": "Listas de la capa conversacional determinista (app/acts.py). Los patrones se evalúan sobre el texto en minúsculas y SIN tildes. attributes: datos que el catálogo Serie 76 NO trae (se responde «no figura en el catálogo»); para añadir uno basta una entrada nueva. off_topic: temas ajenos al catálogo. application: palabras de contexto de aplicación (válvula, presión...) por las que se pide el par requerido en lugar de recomendar.",
+  "attributes": [
+    {"key": "weight", "pattern": "\\b(?:pes[ao]s?|pesan?|weigh\\w*|weight|kilos?|kilogramos?|kg)\\b", "label": {"es": "el peso", "en": "the weight"}},
+    {"key": "dimensions", "pattern": "\\b(?:dimension\\w*|medidas|cuanto mide|mide|altura|ancho|largo del|height|width|how (?:big|tall|large)|milimetros)\\b", "label": {"es": "las dimensiones", "en": "the dimensions"}},
+    {"key": "material", "pattern": "\\b(?:material(?:es)?|de que (?:esta )?(?:hecho|hecha|fabricad[oa])|acero|stainless|inoxidable|aluminio|aluminum|aluminium|hierro|cast iron|made of)\\b", "label": {"es": "el material", "en": "the material"}},
+    {"key": "coating", "pattern": "\\b(?:recubrimientos?|pintura|coating|paint\\w*|galvaniz\\w*)\\b", "label": {"es": "el recubrimiento", "en": "the coating"}},
+    {"key": "corrosion", "pattern": "\\b(?:corros\\w*|salin\\w*|marin[oa]s?|salt (?:water|spray|fog)|chemical resistance)\\b", "label": {"es": "la resistencia a la corrosión", "en": "corrosion resistance"}},
+    {"key": "ingress", "pattern": "\\b(?:ip ?\\d{2}|grado ip|ip rating|ingress|nema ?\\w*|proteccion ip)\\b", "label": {"es": "el grado de protección IP/NEMA", "en": "the IP/NEMA rating"}},
+    {"key": "lifetime", "pattern": "\\b(?:vida util|lifespan|life ?time|life expectancy|mtbf|durabilidad|how long (?:does it|will it) last)\\b", "label": {"es": "la vida útil", "en": "the service life"}},
+    {"key": "temperature", "pattern": "\\b(?:temperaturas?|temperature)\\b", "label": {"es": "la temperatura de operación", "en": "the operating temperature"}},
+    {"key": "noise", "pattern": "\\b(?:ruido|noise|decibel\\w*)\\b", "label": {"es": "el nivel de ruido", "en": "the noise level"}},
+    {"key": "environment", "pattern": "\\b(?:humedad|humidity|altitud|altitude|vibraci\\w+|vibration)\\b", "label": {"es": "las condiciones ambientales", "en": "the environmental limits"}},
+    {"key": "controls", "pattern": "\\b(?:modbus|profibus|fieldbus|protocol\\w*|4-?20 ?ma|handwheel|volante|manual override|limit switch\\w*|finales? de carrera)\\b", "label": {"es": "los protocolos y accesorios de control", "en": "control protocols and accessories"}}
+  ],
+  "off_topic": [
+    "\\b(?:chistes?|jokes?|poemas?|poems?|recetas?|recipes?|cuentos?|stories|story|horoscopo|bitcoin|criptomonedas?)\\b",
+    "\\b(?:clima|weather|mundial|world cup|futbol|football|soccer|pelicula|movie|cancion|song|elecciones|presidente)\\b",
+    "\\b(?:capital de|capital of|tarea de|homework|quien gano|who won|cuentame un|tell me a|traduce|translate)\\b",
+    "\\b(?:escribe|write|redacta)\\b[^.?!]{0,20}\\b(?:poema|cuento|ensayo|codigo|code|essay|poem|story)\\b"
+  ],
+  "application": "\\b(?:valvulas?|valves?|compuertas?|dampers?|mariposa|butterfly|ball valve|gate valve|pulgadas?|inch(?:es)?|psi|presion|pressure|caudal)\\b"
+}

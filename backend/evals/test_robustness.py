@@ -162,7 +162,7 @@ def test_llm_down_invalid_base_url_is_fast_and_controlled(monkeypatch):
     monkeypatch.setattr(agent, "ROUTER_ENABLED", True)
     with TestClient(app) as c:
         t0 = time.perf_counter()
-        r1 = post(c, "hola, necesito ayuda", locale="es").json()                  # sin herramienta: error neutro
+        r1 = post(c, "blorp zindle quarbit", locale="es").json()                  # ambiguo, sin herramienta: error neutro (los actos conversacionales ya no usan LLM)
         r2 = post(c, f"¿Qué torque tiene el {PNS[0]}?", locale="es").json()       # el router ya obtuvo la tarjeta: plantilla con datos
         elapsed = time.perf_counter() - t0
     assert elapsed < 2 * agent.TURN_BUDGET_S, elapsed

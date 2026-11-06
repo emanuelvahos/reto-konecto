@@ -528,9 +528,10 @@ def recommend_actuators(
         if a.get("max_fla_amps") is not None:
             focus.append("current")
 
+        soft = any(a.get(k) not in (None, False) for k in rec.SOFT_ARG_KEYS)
         store = current_turn_recommendation.get()
         store.clear()
-        store.update({"hard": hard, "relaxed": [], "items": [], "status": ""})
+        store.update({"hard": hard, "relaxed": [], "items": [], "status": "", "soft": soft, "candidates": len(candidates)})
 
         if not candidates:
             alert = _hard_failure_alert(rows, a)
@@ -574,6 +575,7 @@ def recommend_actuators(
             result: Dict[str, Any] = {
                 "status": "MATCHES_FOUND",
                 "count": len(full),
+                "has_soft_criteria": soft,
                 "recommended_actuators": _compact_rows([x["row"] for x in shown], focus),
                 "ranking": ranking_for_llm,
             }

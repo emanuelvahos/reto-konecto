@@ -15,9 +15,10 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, create_react_agent
 
+from app import acts
 from app.config import estimate_cost_usd, load_llm_config
 from app.fallback import build_fallback_answer, infer_groups
-from app.followups import build_followups, relaxed_labels
+from app.followups import _row_torque, build_followups, describe_requirements, neutral_reco_followups, relaxed_labels
 from app.i18n import (
     LANG_NAMES,
     detect_language,
@@ -30,8 +31,10 @@ from app.i18n import (
     resolve_clarification_answer,
     t_router,
 )
+from app.i18n_acts import t_act
 from app.postprocess import clean_text, shorten
-from app.router import Decision, normalize_spoken_pn, route
+from app.database import get_db_cursor
+from app.router import Decision, find_part_numbers, normalize_spoken_pn, route
 from app.telemetry import StepRecorder
 from app.tools import (
     ALL_SERIES76_TOOLS,
@@ -299,6 +302,7 @@ def _clarification_turn(clar: Dict[str, Any], lang: str, visible_filters: Dict[s
         "language": lang,
         "short_title": rec_title(parts, updated_filters),
         "cost_usd": cost,
+        "technical": True,
     }
     return payload["question"], ui_payload, debug_trace, parts, updated_filters, meta
 
@@ -346,13 +350,33 @@ def _known_keys() -> set:
         return set()
 
 
+ACT_REPLIES = {"greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
+CONVERSATIONAL_ACTS = {"greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
+FILTER_MAX_IDLE_TURNS = 3   # los filtros de una recomendación caducan tras este nº de turnos sin usarse
+
+
+def _neutral_reco() -> bool:
+    """Recomendación solo con restricciones duras (sin torque/velocidad/etc.): no hay «mejor opción» ni «% ajuste»."""
+    st = current_turn_recommendation.get()
+    return bool(st) and st.get("status") == "MATCHES_FOUND" and not st.get("soft", True) and bool(current_turn_actuators.get())
+
+
+def _aged_filters(filters: Dict[str, Any], idle: int) -> Dict[str, Any]:
+    """Un turno que no usa los filtros (acto conversacional) no los toca, pero caducan tras FILTER_MAX_IDLE_TURNS turnos sin usarse."""
+    if not filters or idle + 1 >= FILTER_MAX_IDLE_TURNS:
+        return {}
+    return {**filters, "_idle": idle + 1}
+
+
 def _reply_turn(decision: Decision, lang: str, visible_filters: Dict[str, Any], active_part_numbers: List[str],
-                make_debug, title) -> Tuple[Any, ...]:
+                make_debug, title, idle: int = 0) -> Tuple[Any, ...]:
     """Respuesta determinista del router (fuera de alcance / inyección): sin LLM, sin herramientas."""
     if decision.reply == "ambiguous_size":   # aclaración: no es fuera de alcance, no lleva alerta ni tarjetas
         answer = t_router(lang, "ambiguous_size")
         ui_payload = {"display_type": "TEXT_ONLY", "actuators": [], "engineering_warnings": [], "alerts": []}
         intent = "clarify"
+    elif decision.reply in ACT_REPLIES:      # acto conversacional determinista: sin LLM, sin herramientas, sin cifras ajenas a la base
+        answer, ui_payload, intent = acts.render_act(decision.reply, lang, decision.attr_label)
     else:
         alert = render_alert({"code": "OUT_OF_SCOPE", "params": {}}, lang)
         answer = t_router(lang, "injection" if decision.reply == "injection" else "out_of_scope")
@@ -372,8 +396,79 @@ def _reply_turn(decision: Decision, lang: str, visible_filters: Dict[str, Any], 
         "language": lang,
         "short_title": title(parts, visible_filters),
         "cost_usd": cost,
+        "technical": False,
     }
-    return answer, ui_payload, debug_trace, parts, visible_filters, meta
+    new_filters = _aged_filters(visible_filters, idle) if decision.reply in CONVERSATIONAL_ACTS else visible_filters
+    return answer, ui_payload, debug_trace, parts, new_filters, meta
+
+
+def _history_parts(history_messages: List[Dict[str, Any]], active_parts: List[str], known_keys: set) -> List[str]:
+    """Números de parte completos que el usuario escribió antes en la sesión (más reciente primero), sin los activos:
+    «el anterior» / «compáralos» necesitan el modelo previo, que active_part_numbers (solo el último turno) ya no guarda."""
+    active = {pn_key(a) for a in active_parts}
+    active |= {a[:-1] for a in active if a.endswith("A")}
+    out: List[str] = []
+    for m in reversed(history_messages):
+        if m.get("role") != "user":
+            continue
+        for pn in find_part_numbers(str(m.get("content", "")), known_keys):
+            k = pn_key(pn)
+            if "-" not in pn or k in active:
+                continue
+            if all(pn_key(o) != k for o in out):
+                out.append(pn)
+    return out
+
+
+def _resolve_decision(decision: Decision, active_parts: List[str], lang: str):
+    """kind="resolve" -> Decision con herramientas (un modelo) o un dict de aclaración de alimentación (varios)."""
+    r = decision.resolve
+    focus = r.get("focus") or []
+    hz = r.get("frequency_hz")
+
+    def lookup(pn: str) -> Decision:
+        args: Dict[str, Any] = {"part_number": pn}
+        if focus:
+            args["focus"] = focus
+        if hz:
+            args["frequency_hz"] = hz
+        current_grounded_pns.get().add(pn_key(pn))               # el usuario lo nombró abreviado: el modelo resuelto es suyo
+        return Decision(kind="tools", rule=decision.rule, act="spec_lookup", calls=[{"name": "lookup_actuator_by_part_number", "args": args}],
+                        clean_query=decision.clean_query)
+
+    if r["what"] == "size_reference":
+        res = acts.resolve_size_reference(r["size"], r.get("voltage"), r.get("phase"), lang)
+        if res["kind"] == "lookup":
+            return lookup(res["pn"])
+        if res["kind"] == "clarify":
+            return res
+        return lookup(r["size"])                                  # tamaño sin filas: el lookup responde typo/INVALID como siempre
+    if r["what"] == "next_size":
+        from app.followups import _next_size_part
+        with get_db_cursor() as cur:
+            cur.execute("SELECT * FROM actuators WHERE base_part_number = %s LIMIT 1;", (active_parts[0],))
+            row = cur.fetchone()
+        nxt = _next_size_part(row) if row else None
+        return lookup(nxt or active_parts[0])
+    return Decision(rule="uncertain")
+
+
+def _supply_turn(res: Dict[str, Any], lang: str, visible_filters: Dict[str, Any], active_part_numbers: List[str],
+                 make_debug, title) -> Tuple[Any, ...]:
+    """Aclaración de alimentación de un código de tamaño: opciones REALES de la base; sin LLM, sin recomendaciones."""
+    answer, ui_payload = acts.render_supply_clarification(res, lang)
+    parts = list(active_part_numbers)
+    debug_trace, cost = make_debug([], 0, [], parts)
+    filters = {**visible_filters, "_pending": {"topic": "supply", "args": {"size_code": res["size"]}}}
+    meta = {
+        "intent": "clarify",
+        "verification": {"status": "verified", "numbers_checked": 0, "ungrounded": []},
+        "language": lang,
+        "short_title": title(parts, visible_filters),
+        "cost_usd": cost,
+        "technical": True,
+    }
+    return answer, ui_payload, debug_trace, parts, filters, meta
 
 
 def run_agent_turn(
@@ -404,16 +499,20 @@ def run_agent_turn(
     # Aclaración pendiente del turno anterior: el valor elegido por el usuario se resuelve en el mismo contexto
     pending = active_filters.get("_pending") if isinstance(active_filters.get("_pending"), dict) else None
     pending_args: Dict[str, Any] = {}
+    size_pending: Optional[Dict[str, Any]] = None     # «¿qué alimentación del 763B?»: la respuesta completa la referencia de tamaño
     if pending and pending.get("topic"):
         answered = resolve_clarification_answer(pending["topic"], user_query)
-        if answered:
+        if answered and pending["topic"] == "supply":
+            size_pending = {**(pending.get("args") or {}), **answered}
+        elif answered:
             pending_args = {**(pending.get("args") or {}), **answered}
     current_pending_args.set(pending_args)
+    prev_idle = int(active_filters["_idle"]) if isinstance(active_filters.get("_idle"), (int, float)) else 0
     current_user_text.set(normalize_spoken_pn(" ".join(prev_users + [user_query]))[0])
     current_grounded_pns.get().update(pn_key(x) for x in active_part_numbers)
     for m in history_messages:                       # números mencionados antes en la misma sesión (usuario o asistente)
         current_grounded_pns.get().update(pn_key(x) for x in extract_part_numbers_from_text(str(m.get("content", ""))))
-    visible_filters = {k: v for k, v in active_filters.items() if k != "_pending"}
+    visible_filters = {k: v for k, v in active_filters.items() if k not in ("_pending", "_idle")}
 
     cfg = load_llm_config()
     stats: Dict[str, int] = {"llm_retries": 0}
@@ -461,20 +560,62 @@ def run_agent_turn(
             "language": lang,
             "short_title": make_short_title(parts, visible_filters, lang),
             "cost_usd": cost,
+            "technical": False,
         }
         return msg, ui, dbg, parts, visible_filters, meta
+
+    def _neutral_reco_turn(all_msgs):
+        """Recomendación sin criterios blandos: «Hay N modelos que cumplen X», orden neutro por torque y botones con torques reales."""
+        ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang, user_query)
+        shown = ui_payload["actuators"]
+        shown.sort(key=lambda r: ((_row_torque(r) if _row_torque(r) is not None else 0.0), r["base_part_number"]))
+        recommendation, _extras = build_recommendation_payload(lang)
+        if recommendation is not None:
+            recommendation["ranking"] = []          # sin puntajes: la app no puede mostrar «% ajuste»
+            ui_payload["recommendation"] = recommendation
+        traces = list(current_turn_tool_traces.get())
+        args = next((tr["arguments"] for tr in reversed(traces) if tr["tool_name"] == "recommend_actuators"), {}) or {}
+        n = int(current_turn_recommendation.get().get("candidates") or len(shown))
+        req = describe_requirements(args, lang)
+        key = "reco_neutral_one" if n == 1 else ("reco_neutral" if req else "reco_neutral_all")
+        answer = t_act(lang, key, n=n, req=req)
+        ui_payload["suggested_followups"] = neutral_reco_followups(shown, args, lang)
+        parts = [a["base_part_number"] for a in shown]
+        filters = dict(visible_filters)
+        filters.update(args)
+        debug_trace, cost = _debug(all_msgs, 0, traces, parts)
+        meta = {
+            "intent": "recommend",
+            "verification": {"status": "verified", "numbers_checked": 1, "ungrounded": []},   # el único número (N) sale de la base
+            "language": lang,
+            "short_title": make_short_title(parts, filters, lang, recommend=True),
+            "cost_usd": cost,
+            "technical": True,
+        }
+        return answer, ui_payload, debug_trace, parts, filters, meta
 
     # ------------------------------------------------------------------ ROUTER determinista (sin LLM)
     r0 = time.perf_counter()
     decision: Optional[Decision] = None
     if ROUTER_ENABLED:
         try:
-            decision = route(user_query, active_part_numbers, _known_keys(), pending_args)
+            known = _known_keys()
+            decision = route(user_query, active_part_numbers, known, pending_args,
+                             history_parts=_history_parts(history_messages, active_part_numbers, known), size_pending=size_pending)
         except Exception:  # noqa: BLE001  (una regla defectuosa nunca tumba el turno: cae al camino con LLM)
             decision = None
+    if decision is not None and decision.kind == "resolve":     # referencias de tamaño / siguiente tamaño: se resuelven contra la base
+        try:
+            resolved = _resolve_decision(decision, active_part_numbers, lang)
+        except Exception:  # noqa: BLE001  (base caída: cae al camino con LLM, que maneja el error)
+            resolved = Decision(rule="uncertain")
+        if isinstance(resolved, dict):                           # aclaración de alimentación (opciones reales de la base)
+            rec.add_step("router", (r0 - t0) * 1000, (time.perf_counter() - r0) * 1000, detail=decision.rule)
+            return _supply_turn(resolved, lang, visible_filters, active_part_numbers, _debug, _title)
+        decision = resolved
     rec.add_step("router", (r0 - t0) * 1000, (time.perf_counter() - r0) * 1000, detail=decision.rule if decision else "disabled")
     if decision is not None and decision.kind == "reply":
-        return _reply_turn(decision, lang, visible_filters, active_part_numbers, _debug, _title)
+        return _reply_turn(decision, lang, visible_filters, active_part_numbers, _debug, _title, prev_idle)
     llm_query = decision.clean_query if decision is not None and (decision.injection or decision.normalized) else user_query
 
     sys_prompt = SYSTEM_PROMPT_TEMPLATE.format(
@@ -500,18 +641,19 @@ def run_agent_turn(
     retry_cfg = {"callbacks": [rec]}
 
     llm_failed = False
+    inner = None
     all_msgs: List[BaseMessage] = []
     try:
         pre_msgs = lc_messages
         if decision is not None and decision.kind == "tools":   # las herramientas del router corren SIN LLM, antes de construirlo
             pre_msgs = build_router_graph(decision).invoke({"messages": lc_messages}, config={"callbacks": [rec]})["messages"]
-        try:
-            inner = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
-        except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
-            raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
-        if current_turn_clarification.get():          # la pregunta de aclaración la arma la app, sin LLM
-            all_msgs = pre_msgs
+        if current_turn_clarification.get() or (decision is not None and decision.kind == "tools" and _neutral_reco()):
+            all_msgs = pre_msgs                        # la pregunta de aclaración / el texto sin criterios blandos los arma la app, sin LLM
         else:
+            try:
+                inner = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
+            except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
+                raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
             result_state = invoke_with_retry(inner, {"messages": pre_msgs}, run_cfg, stats, deadline)
             all_msgs = result_state["messages"]
     except LLMUnavailable as exc:
@@ -527,6 +669,9 @@ def run_agent_turn(
     if current_turn_clarification.get():
         return _clarification_turn(current_turn_clarification.get(), lang, visible_filters, active_part_numbers,
                                    all_msgs, 0, _debug, _title)
+
+    if _neutral_reco():
+        return _neutral_reco_turn(all_msgs)
 
     has_cards = bool(current_turn_actuators.get())
     answer = "" if llm_failed else _polish(_last_ai_text(all_msgs), has_cards)
@@ -645,7 +790,10 @@ def run_agent_turn(
             new_active_parts.append(bpn)
     updated_parts = new_active_parts if new_active_parts else list(active_part_numbers)
 
-    updated_filters = dict(visible_filters)
+    # Higiene de estado: los filtros solo viven mientras la conversación sigue recomendando; una ficha, un concepto o una
+    # comparación los hacen caducar (no se arrastran a «¿en qué puedes ayudarme?» ni a la siguiente consulta no relacionada).
+    used_reco = any(tr["tool_name"] == "recommend_actuators" and tr.get("arguments") for tr in traces)
+    updated_filters = dict(visible_filters) if used_reco else {}
     for tr in traces:
         if tr["tool_name"] == "recommend_actuators" and tr.get("arguments"):
             updated_filters.update(tr["arguments"])
@@ -666,5 +814,6 @@ def run_agent_turn(
         "language": lang,
         "short_title": make_short_title(updated_parts, updated_filters, lang, recommend=(intent == "recommend")),
         "cost_usd": cost,
+        "technical": bool(traces),
     }
     return answer, ui_payload, debug_trace, updated_parts, updated_filters, meta

@@ -49,9 +49,9 @@ def test_two_part_numbers_two_lookups():
     assert [c["name"] for c in d.calls] == [LOOKUP, LOOKUP] and len(d.calls) == 2
 
 
-def test_size_code_alone_is_a_lookup():
+def test_size_code_alone_is_resolved_against_the_database():
     d = go("¿qué torque tiene el 763B?")
-    assert d.rule == "part_number" and d.calls[0]["args"]["part_number"] == "763B"
+    assert d.kind == "resolve" and d.rule == "size_reference" and d.resolve["size"] == "763B" and d.resolve["focus"] == ["torque"]
 
 
 def test_unknown_size_code_is_not_a_part_number():
@@ -176,9 +176,14 @@ def test_mixed_language():
     assert d.rule == "selection_criteria" and d.calls[0]["args"]["voltage_num"] == 24
 
 
-@pytest.mark.parametrize("q", ["hola", "gracias", "ok", "good morning"])
-def test_smalltalk_is_uncertain_and_goes_to_llm(q):
+@pytest.mark.parametrize("q,act", [("hola", "greeting"), ("gracias", "thanks"), ("good morning", "greeting")])
+def test_smalltalk_is_a_deterministic_act_without_llm(q, act):
     d = go(q)
+    assert d.kind == "reply" and d.reply == act and d.rule == f"act:{act}"
+
+
+def test_unintelligible_text_is_still_uncertain():
+    d = go("ok")
     assert d.kind == "none" and d.rule == "uncertain"
 
 

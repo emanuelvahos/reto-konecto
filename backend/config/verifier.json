@@ -1,7 +1,8 @@
 {
-  "_doc": "Excepciones del verificador numerico (REGLA 4). free_patterns: expresiones cuyo numero se permite sin respaldo en herramientas (p. ej. la definicion de giro de 90 grados); se evaluan sin distinguir mayusculas.",
+  "_doc": "Excepciones del verificador numerico (REGLA 4). free_patterns: expresiones cuyo numero se permite sin respaldo en herramientas (p. ej. la definicion de giro de 90 grados); se evaluan sin distinguir mayusculas. 'Serie 76' / 'Series 76' es el nombre del producto, no una cifra de catálogo.",
   "free_patterns": [
-    "\\b90\\s*(?:°|º|-?\\s?deg(?:ree)?s?\\b|-?\\s?grados?\\b)"
+    "\\b90\\s*(?:°|º|-?\\s?deg(?:ree)?s?\\b|-?\\s?grados?\\b)",
+    "\\bseries?\\s+76\\b"
   ],
   "skip_list_markers": true
 }

@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
+from app import acts
 from app.fallback import _GROUP_KEYWORDS
 from app.verifier import pn_key
 
@@ -41,7 +42,7 @@ _INJECTION = [re.compile(p, FLAGS) for p in (
 
 # --------------------------------------------------------------------------------------------- fuera de alcance
 _OUT_OF_SCOPE = [re.compile(p, FLAGS) for p in (
-    r"\b(?:precios?|prices?|pricing|cuest\w+|costs?|costos?|cotizaci\w+|quote|presupuesto)\b",
+    r"\b(?:precios?|prices?|pricing|cuesta|cuestan|costs?|costos?|cotiz\w+|quote|presupuesto)\b",
     r"\b(?:plazos?\s+de\s+entrega|tiempos?\s+de\s+entrega|lead[- ]?times?|delivery\s+(?:time|date)s?|fecha\s+de\s+entrega|shipping|env[ií]o)\b",
     r"\b(?:stock|en existencia|inventario|inventory|in stock)\b",
     r"\b(?:descuentos?|discounts?|promoci[oó]n|promotion)\b",
@@ -55,12 +56,17 @@ _PN_SPACED = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z0-9]{2,4}[\s.]+\d[A-Za-z0-
 _PN_FLAT = re.compile(r"(?<![A-Za-z0-9])\d[A-Za-z0-9]{3,6}\d{5,8}[A-Za-z0-9]?/?[A-Za-z]?(?![A-Za-z0-9])")
 _SIZE_ONLY = re.compile(r"76\d[A-Z]")
 _SIZE_TOKEN = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z]\d{0,2}(?![A-Za-z0-9])")
+# «763B», «763B00», «763 b 00», «761X30»: código de tamaño con sufijo opcional (00 / 30), se resuelve contra la base
+_SIZE_REF = re.compile(
+    r"(?<![A-Za-z0-9\-/])(?:(76[1-7])\s?([ABCXYabcxy])\s?(00|30)|(76[1-7])([ABCXYabcxy])|(76[1-7])\s([ABCXY]))(?![A-Za-z0-9])")
+_SIZE_REF_KEY = re.compile(r"76[1-7][A-Z](?:00|30)?")
 
 # --------------------------------------------------------------------------------------------- números de parte dictados
 _SPOKEN = {
     "zero": "0", "cero": "0", "one": "1", "uno": "1", "two": "2", "dos": "2", "three": "3", "tres": "3", "four": "4", "cuatro": "4",
     "five": "5", "cinco": "5", "six": "6", "seis": "6", "seven": "7", "siete": "7", "eight": "8", "ocho": "8", "nine": "9", "nueve": "9",
     "dash": "-", "hyphen": "-", "guion": "-", "guión": "-", "menos": "-", "slash": "/", "barra": "/", "diagonal": "/",
+    "equis": "X", "ex": "X", "x": "X", "ye": "Y", "why": "Y",
     "a": "A", "ay": "A", "b": "B", "be": "B", "bee": "B", "c": "C", "ce": "C", "see": "C", "sea": "C",
 }
 _SPOKEN_DIGITS = {k for k, v in _SPOKEN.items() if v.isdigit()}
@@ -105,10 +111,11 @@ _RECO_VERB = re.compile(
 _CONCEPT = re.compile(
     r"qu[eé] (?:es|son|significa)\s+(?!(?:el|la|los|las|un|una|su|sus|esto|eso)\b)\w{2,}|what (?:is|are|does)\s+(?!(?:the|an?|it|its|their|this|that|these|those)\b)\w{2,}|\bdefin\w+|diferencia entre|difference between|explica\w*|explain|"
     r"c[oó]mo se calcula|how (?:is|are) .{0,30}calculated|tolerancia|tolerance|duty cycle|ciclo de trabajo|certificaciones|certifications|"
+    r"(?:what is|qu[eé] es)\s+(?:the |la )?series?\s*76|"
     r"\bs4\b|clasificaci\w+|classification", FLAGS)
-_COMPARE = re.compile(r"compar\w+|versus|\bvs\.?\b|frente a|contra el|against", FLAGS)
-_PRONOUN_REF = re.compile(r"\b(?:it|this one|that one|este|ese|esta|esa|[eé]ste|[eé]se|el anterior|la anterior|the previous|the same)\b", FLAGS)
-_FOLLOW_ALL = re.compile(r"compar\w+|ambos|both|todos|\ball\b|\bboth\b|them|ellos", FLAGS)
+_COMPARE = re.compile(r"comp[aá]r\w+|versus|\bvs\.?\b|frente a|contra el|against", FLAGS)
+_PRONOUN_REF = re.compile(r"\b(?:it|this one|that one|este|ese|esta|esa|[eé]ste|[eé]se|el anterior|la anterior|the previous|the same)\b|comp[aá]r[aá]l[oa]s?\b", FLAGS)
+_FOLLOW_ALL = re.compile(r"comp[aá]r\w+|ambos|both|todos|\ball\b|\bboth\b|them|ellos", FLAGS)
 
 _NUM = r"(\d[\d.,   ]*\d|\d)"
 
@@ -132,13 +139,13 @@ def extract_criteria(text: str) -> Dict[str, Any]:
     m = re.search(r"(?<![\d.])(\d{2,3})\s?(?:v\b|vac\b|vdc\b|volts?\b|voltios?\b)", text, FLAGS)
     if m:
         a["voltage_num"] = int(m.group(1))
-    if re.search(r"trif[aá]sic\w*|three[- ]?phase|\b3\s?[- ]?(?:ph|phase|fases?)\b|\b3\s?φ", text, FLAGS):
+    if re.search(r"trif[aá]sic\w*|three[- ]?phase|\b3\s?[- ]?(?:ph|phase|fases?)\b|\b3\s?φ|\b3f\b", text, FLAGS):
         a["phase_type"] = "3 Phase"
     elif re.search(r"monof[aá]sic\w*|single[- ]?phase|\b1\s?[- ]?(?:ph|phase|fase)\b", text, FLAGS):
         a["phase_type"] = "Single Phase"
     if re.search(r"explosion[- ]?proof|antiexplos\w*|a prueba de explosi\w+|ex[- ]proof", text, FLAGS):
         a["enclosure_type"] = "Explosionproof"
-    elif re.search(r"weather[- ]?proof|intemperie", text, FLAGS):
+    elif re.search(r"weather[- ]?proof|intemperie|exterior(?:es)?\b|outdoors?\b|al aire libre", text, FLAGS):
         a["enclosure_type"] = "Weatherproof"
     neg = re.search(r"\bno\s+(?:es\s+|est[aá]\s+)?(?:un[ao]?\s+)?(?:[aá]rea\s+|zona\s+)?peligros\w*|non[- ]?hazard\w*|not\s+(?:a\s+)?hazard\w*|[aá]rea segura|safe area", text, FLAGS)
     if neg:
@@ -194,20 +201,27 @@ def find_part_numbers(text: str, known_keys: Set[str]) -> List[str]:
         tok = m.group(0).upper()
         if pn_key(tok) in known_keys and tok not in found and not any(tok in f for f in found):
             found.append(tok)
+    for m in _SIZE_REF.finditer(text):
+        tok = "".join(g for g in m.groups() if g).upper()
+        if pn_key(tok[:4]) in known_keys and tok not in found and not any(tok[:4] in f.replace(" ", "") for f in found):
+            found.append(tok)
     return found
 
 
 @dataclass
 class Decision:
-    kind: str = "none"                 # "tools" | "reply" | "none"
+    kind: str = "none"                 # "tools" | "reply" | "resolve" | "none"
     rule: str = "none"
     calls: List[Dict[str, Any]] = field(default_factory=list)   # [{"name", "args"}]
-    reply: Optional[str] = None        # "out_of_scope" | "injection"
+    reply: Optional[str] = None        # "out_of_scope" | "injection" | "ambiguous_size" | acto determinista (ver acts.py)
     clean_query: str = ""
     oos_note: bool = False             # consulta mixta: añadir nota determinista de fuera de alcance
     injection: bool = False
     out_of_scope: bool = False
     normalized: bool = False           # el número de parte dictado se convirtió a texto
+    act: str = ""                      # acto identificado (telemetría): greeting, spec_lookup, recommend...
+    attr_label: Optional[Dict[str, str]] = None   # atributo ausente del catálogo (etiqueta es/en)
+    resolve: Dict[str, Any] = field(default_factory=dict)   # kind="resolve": {"what": "size_reference|next_size|previous_part", ...}
 
 
 def _strip(text: str, patterns) -> (str, bool):
@@ -231,7 +245,31 @@ def _has_tech(text: str, count_pn: bool, known_keys: Set[str]) -> bool:
     )
 
 
-def route(query: str, active_parts: List[str], known_keys: Set[str], pending_args: Optional[Dict[str, Any]] = None) -> Decision:
+_SUPERLATIVE = re.compile(
+    r"m[aá]s (?:potente|r[aá]pid\w*|lent\w*|peque\w*|grande|econ\w*|eficien\w*)|menos (?:consum\w*|gast\w*)|mayor (?:torque|potencia|par)|menor (?:consumo|torque|par)|"
+    r"most powerful|fastest|slowest|smallest|biggest|largest|highest|lowest|least|strongest|more powerful", FLAGS)
+_FOLLOW_CUE = re.compile(r"^\s*y\b|\bsu(?:s)?\b|\bits?\b|\bese\b|\besa\b|\beste\b|\besta\b|\bthat\b|\bthis\b|\bthe same\b|\bel mismo\b|\band\b", FLAGS)
+_NEXT_SIZE = re.compile(r"siguiente tama[nñ]o|\bnext size\b|\bel siguiente\b|\bthe next one\b|tama[nñ]o (?:m[aá]s grande|mayor|superior)|bigger size|larger size|un tama[nñ]o (?:arriba|m[aá]s)", FLAGS)
+_PREVIOUS = re.compile(r"\bel anterior\b|\bla anterior\b|\bthe previous(?: one)?\b|\bprevious one\b|\bel de antes\b|\bthe one before\b", FLAGS)
+_AC_DC = re.compile(r"\bac\s?/?\s?-?\s?dc\b", FLAGS)
+_DC = re.compile(r"\bdc\b|\bcc\b|corriente continua|direct current", FLAGS)
+
+
+def _size_ref_args(text: str, token: str, pending: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    crit = extract_criteria(text)
+    phase = crit.get("phase_type")
+    if not phase:
+        phase = "AC/DC" if _AC_DC.search(text) else ("DC" if _DC.search(text) else None)
+    ref = {"what": "size_reference", "size": pn_key(token)[:4], "voltage": crit.get("voltage_num"), "phase": phase,
+           "focus": focus_groups(text), "frequency_hz": crit.get("frequency_hz")}
+    if pending:                                  # respuesta a «¿qué alimentación?»: completa lo que faltaba
+        ref["voltage"] = pending.get("voltage_num", ref["voltage"])
+        ref["phase"] = pending.get("phase_type", ref["phase"])
+    return ref
+
+
+def route(query: str, active_parts: List[str], known_keys: Set[str], pending_args: Optional[Dict[str, Any]] = None,
+          history_parts: Optional[List[str]] = None, size_pending: Optional[Dict[str, Any]] = None) -> Decision:
     query, d_spoken = normalize_spoken_pn(query)
     d = Decision(clean_query=query, normalized=d_spoken)
     rest, d.injection = _strip(query, _INJECTION)
@@ -242,19 +280,52 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
     if (d.injection or oos) and not _has_tech(scope_text if oos else rest, count_pn=not oos, known_keys=known_keys):
         d.kind, d.reply = "reply", ("injection" if d.injection and not oos else "out_of_scope")
         d.rule = "injection_only" if d.reply == "injection" else "out_of_scope"
+        d.act = "off_topic" if d.reply == "injection" else "out_of_scope"
         return d
     d.oos_note = oos
     text = scope_text if oos else rest
     d.clean_query = text if (oos or d.injection) else query
 
+    # Respuesta a «¿qué alimentación necesitas?» de una referencia de tamaño: se completa y se resuelve contra la base
+    if size_pending:
+        d.kind, d.rule, d.act = "resolve", "size_reference", "spec_lookup"
+        d.resolve = _size_ref_args(text, size_pending["size_code"], size_pending)
+        return d
+
     pns = find_part_numbers(text, known_keys)
+    crit0 = extract_criteria(text)
+    # contenido técnico duro (la palabra suelta «datos» o «ficha» no basta: «qué datos manejas» es una pregunta de capacidades)
+    tech = bool(pns or any(k in crit0 for k in _NUMERIC_CRITERIA) or _RECO_VERB.search(text) or _CONCEPT.search(text) or focus_groups(text))
+
+    # ---------------------------------------------------------------- actos conversacionales (sin LLM, sin herramientas)
+    if not tech:
+        act = acts.detect_conversational(text)
+        if act:
+            d.kind, d.reply, d.rule, d.act = "reply", act, f"act:{act}", act
+            return d
+    if not _SPEC_GENERIC.search(text) and not _RECO_VERB.search(text) and not focus_groups(text):
+        attr = acts.detect_attribute(text)
+        if attr:
+            d.kind, d.reply, d.rule, d.act, d.attr_label = "reply", "attribute", "act:attribute", "out_of_catalog_attribute", attr
+            return d
+    if acts.is_application_context(text) and not pns and "min_torque_nm" not in crit0 and "min_torque_in_lbs" not in crit0:
+        d.kind, d.reply, d.rule, d.act = "reply", "application", "act:application", "application_context"
+        return d
+
     if pns:
         groups = focus_groups(text)
-        hz = extract_criteria(text).get("frequency_hz")
-        d.kind, d.rule = "tools", "part_number"
+        hz = crit0.get("frequency_hz")
+        d.kind, d.rule, d.act = "tools", "part_number", "spec_lookup"
+        size_refs = [p for p in pns if _SIZE_REF_KEY.fullmatch(pn_key(p))]
+        if len(pns) == 1 and size_refs and not _COMPARE.search(text):
+            # «763B00», «763 b 00 de 110 voltios»: se resuelve contra la base (un modelo -> ficha; varios -> opciones reales)
+            d.kind, d.rule = "resolve", "size_reference"
+            d.resolve = _size_ref_args(text, pns[0])
+            return d
         if active_parts and _COMPARE.search(text) and _PRONOUN_REF.search(text):
             keys = {pn_key(x) for x in pns}
             pns = [a for a in active_parts[:1] if pn_key(a) not in keys] + pns
+        d.act = "compare" if len(pns) >= 2 and _COMPARE.search(text) else "spec_lookup"
         if len(pns) >= 2 and _COMPARE.search(text) and any(_SIZE_ONLY.fullmatch(pn_key(x)) for x in pns):
             # «763B y 763C»: un código de tamaño agrupa varias alimentaciones; comparar sin elegir mostraría modelos que
             # el usuario no nombró. Se pide el número de parte completo o la alimentación (respuesta fija, sin cifras).
@@ -270,26 +341,43 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
         return d
 
     if pending_args:
-        d.kind, d.rule = "tools", "pending_clarification"
+        d.kind, d.rule, d.act = "tools", "pending_clarification", "recommend"
         d.calls = [{"name": "recommend_actuators", "args": {}}]
         return d
 
-    crit = extract_criteria(text)
-    if any(k in crit for k in _NUMERIC_CRITERIA) or _RECO_VERB.search(text):
-        d.kind, d.rule = "tools", "selection_criteria"
+    crit = crit0
+    if any(k in crit for k in _NUMERIC_CRITERIA) or (_RECO_VERB.search(text) and not _SUPERLATIVE.search(text)):
+        d.kind, d.rule, d.act = "tools", "selection_criteria", "recommend"
         d.calls = [{"name": "recommend_actuators", "args": crit}]
         return d
 
     if _CONCEPT.search(text):
-        d.kind, d.rule = "tools", "concept"
+        d.kind, d.rule, d.act = "tools", "concept", "knowledge"
         d.calls = [{"name": "search_engineering_knowledge", "args": {"query": text}}]
         return d
+
+    if _SUPERLATIVE.search(text):          # «el más potente»: no es un seguimiento de la parte activa (lo atiende el clasificador)
+        d.rule, d.act = "uncertain", "ranking"
+        return d
+
+    if active_parts and _NEXT_SIZE.search(text):
+        d.kind, d.rule, d.act = "resolve", "next_size", "spec_lookup"
+        d.resolve = {"what": "next_size", "focus": focus_groups(text), "frequency_hz": crit.get("frequency_hz")}
+        return d
+
+    if _PREVIOUS.search(text) and (focus_groups(text) or _SPEC_GENERIC.search(text) or history_parts):
+        if history_parts:
+            groups = focus_groups(text)
+            args = {"part_number": history_parts[0], **({"focus": groups} if groups else {})}
+            d.kind, d.rule, d.act = "tools", "previous_part", "spec_lookup"
+            d.calls = [{"name": "lookup_actuator_by_part_number", "args": args}]
+            return d
 
     if active_parts and (focus_groups(text) or _SPEC_GENERIC.search(text)):
         groups = focus_groups(text)
         hz = crit.get("frequency_hz")
         parts = active_parts[:3] if _FOLLOW_ALL.search(text) else active_parts[:1]
-        d.kind, d.rule = "tools", "followup_active_part"
+        d.kind, d.rule, d.act = "tools", "followup_active_part", "spec_lookup"
         for pn in parts:
             args = {"part_number": pn}
             if groups:
@@ -299,5 +387,21 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
             d.calls.append({"name": "lookup_actuator_by_part_number", "args": args})
         return d
 
+    if _COMPARE.search(text) and not pns and len(text.split()) <= 8:
+        pair = list(dict.fromkeys(active_parts[:1] + (history_parts or [])[:1]))
+        if len(pair) >= 2:                  # «compáralos»: el modelo activo y el anterior de la conversación
+            d.kind, d.rule, d.act = "tools", "compare_previous", "compare"
+            d.calls = [{"name": "lookup_actuator_by_part_number", "args": {"part_number": pn}} for pn in pair]
+            return d
+        d.kind, d.reply, d.rule, d.act = "reply", "clarify_which", "act:clarify_which", "compare"
+        return d
+
+    if (not active_parts and (focus_groups(text) or _SPEC_GENERIC.search(text)) and _FOLLOW_CUE.search(text) and len(text.split()) <= 8
+            and not re.search(r"\bqu[eé] (?:es|son)\b|\bwhat (?:is|are)\b|\bdime\b", text, FLAGS)):
+        # «cuánto tarda ese?» sin ningún modelo en la conversación: se pregunta de cuál, no se elige uno
+        d.kind, d.reply, d.rule, d.act = "reply", "clarify_which", "act:clarify_which", "spec_lookup"
+        return d
+
     d.rule = "uncertain"
+    d.act = "unclear"
     return d

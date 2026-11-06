@@ -122,6 +122,10 @@ def check_expect(ex: Dict[str, Any], resp: Dict[str, Any]) -> List[str]:
         bad = [p for p in parts if BY_PN[p]["enclosure_type"] != ex["ui_all_enclosure"]]
         if not parts or bad:
             fails.append(f"enclosure: se esperaban solo {ex['ui_all_enclosure']} y hay {parts[:4]} (mal: {bad[:3]})")
+    if "enclosure_if_cards" in ex and parts:
+        bad = [p for p in parts if BY_PN[p]["enclosure_type"] != ex["enclosure_if_cards"]]
+        if bad:
+            fails.append(f"enclosure: se esperaban solo {ex['enclosure_if_cards']} y hay {bad[:3]}")
     if "options_between" in ex:
         n = len((ui.get("clarification") or {}).get("options") or [])
         lo, hi = ex["options_between"]

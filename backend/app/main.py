@@ -23,7 +23,10 @@ from app.schemas import (
     SessionHistoryResponse,
     MessageRecord,
 )
+from app import acts
 from app.agent import run_agent_turn
+from app.i18n import detect_language
+from app.i18n_acts import NEW_TITLE, truncate_title
 
 app = FastAPI(
     title="Konecto Series 76 Technical Assistant API",
@@ -97,9 +100,15 @@ def is_valid_uuid(val: Optional[str]) -> bool:
         return False
 
 
-def generate_session_title(query: str) -> str:
-    clean = " ".join(query.strip().split())
-    return clean[:60] + ("..." if len(clean) > 60 else "")
+def generate_session_title(query: str, locale: Optional[str] = None) -> str:
+    """Título de sesión: nunca corta una palabra (límite de palabra + «…») y no nace de un saludo: un mensaje conversacional
+    (hola, gracias, «¿qué puedes hacer?») deja «Nueva consulta» hasta el primer mensaje técnico."""
+    try:
+        if acts.is_conversational_only(query):
+            return NEW_TITLE.get(detect_language(query, locale), NEW_TITLE["en"])
+    except Exception:  # noqa: BLE001
+        pass
+    return truncate_title(query)
 
 
 def assert_session_access(session_user_id: Any, current_user: Optional[Dict[str, Any]]) -> None:
@@ -231,7 +240,7 @@ def conversation_endpoint(
                         INSERT INTO chat_sessions (session_id, user_id, title)
                         VALUES (%s, %s, %s);
                         """,
-                        (session_id, user_id, generate_session_title(req.query)),
+                        (session_id, user_id, generate_session_title(req.query, req.locale)),
                     )
             else:
                 # Crear nueva conversación con nuevo UUID generado
@@ -241,7 +250,7 @@ def conversation_endpoint(
                     INSERT INTO chat_sessions (session_id, user_id, title)
                     VALUES (%s, %s, %s);
                     """,
-                    (session_id, user_id, generate_session_title(req.query)),
+                    (session_id, user_id, generate_session_title(req.query, req.locale)),
                 )
 
     except HTTPException:
@@ -274,6 +283,7 @@ def conversation_endpoint(
                 SET active_part_numbers = %s::jsonb,
                     active_filters = %s::jsonb,
                     short_title = COALESCE(%s, short_title),
+                    title = CASE WHEN %s AND title IN (%s, %s) THEN %s ELSE title END,
                     cost_usd_total = cost_usd_total + %s,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE session_id = %s
@@ -283,6 +293,7 @@ def conversation_endpoint(
                     json.dumps(updated_parts),
                     json.dumps(updated_filters),
                     meta["short_title"],
+                    bool(meta.get("technical")), NEW_TITLE["es"], NEW_TITLE["en"], truncate_title(req.query),
                     meta["cost_usd"],
                     session_id,
                 ),

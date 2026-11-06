@@ -6,7 +6,8 @@ como siguiente mensaje del usuario, asi que debe ser autocontenido (lleva el num
 from typing import Any, Dict, List, Optional
 
 from app.database import get_db_cursor
-from app.i18n import render_followup, render_rank_text
+from app.i18n import PHASE_WORD, render_followup, render_rank_text
+from app.i18n_acts import RECO_LABEL, RECO_QUERY
 
 MAX_FOLLOWUPS = 3
 
@@ -84,3 +85,51 @@ def build_followups(
 
 def relaxed_labels(items: List[Dict[str, Any]], lang: str) -> List[str]:
     return [render_rank_text(c["code"], c.get("params"), lang) for c in items]
+
+
+def _row_torque(row: Dict[str, Any]) -> Optional[float]:
+    vals = [float(v) for v in (row.get("on_off_torque_nm"), row.get("modulating_torque_nm")) if v is not None]
+    return min(vals) if vals else None
+
+
+def _fmt_num(v: float) -> str:
+    return str(int(v)) if float(v).is_integer() else f"{v:g}"
+
+
+def _hard_phrase(args: Dict[str, Any], lang: str) -> str:
+    bits: List[str] = []
+    if args.get("voltage_num") is not None:
+        bits.append((" de " if lang == "es" else " ") + f"{int(args['voltage_num'])}V")
+    if args.get("phase_type") in PHASE_WORD:
+        bits.append(" " + PHASE_WORD[args["phase_type"]][lang])
+    if args.get("hazardous_area") or args.get("enclosure_type") == "Explosionproof":
+        bits.append(" Explosionproof")
+    elif args.get("enclosure_type") == "Weatherproof":
+        bits.append(" Weatherproof")
+    return "".join(bits)
+
+
+def neutral_reco_followups(rows: List[Dict[str, Any]], args: Dict[str, Any], lang: str) -> List[Dict[str, str]]:
+    """Recomendación sin criterios blandos: botones «Al menos X Nm» con X tomado de los torques REALES de los modelos mostrados
+    (el más bajo, uno intermedio y el más alto) para afinar la elección."""
+    vals = [v for v in (_row_torque(r) for r in rows) if v is not None]
+    if not vals:
+        return []
+    vals = sorted(set(vals))
+    picks = sorted({vals[0], vals[len(vals) // 2], vals[-1]})
+    hard = _hard_phrase(args, lang)
+    return [{"label": RECO_LABEL[lang].format(nm=_fmt_num(v)), "query": RECO_QUERY[lang].format(hard=hard, nm=_fmt_num(v))} for v in picks][:MAX_FOLLOWUPS]
+
+
+def describe_requirements(args: Dict[str, Any], lang: str) -> str:
+    """Restricciones duras en una frase corta: «220 V, trifásico, Explosionproof» (vacío si no hay ninguna)."""
+    bits: List[str] = []
+    if args.get("voltage_num") is not None:
+        bits.append(f"{int(args['voltage_num'])} V")
+    if args.get("phase_type") in PHASE_WORD:
+        bits.append(PHASE_WORD[args["phase_type"]][lang])
+    if args.get("hazardous_area") or args.get("enclosure_type") == "Explosionproof":
+        bits.append("Explosionproof")
+    elif args.get("enclosure_type") == "Weatherproof":
+        bits.append("Weatherproof")
+    return ", ".join(bits)

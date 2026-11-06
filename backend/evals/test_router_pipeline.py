@@ -111,7 +111,7 @@ def test_turn_budget_returns_template_with_the_card_already_obtained(turn, monke
 
 
 def test_uncertain_query_falls_back_to_llm_path(turn):
-    (answer, _, dbg, _, _, meta), fake = turn("Hello! Which voltage do you need?", "hello")
+    (answer, _, dbg, _, _, meta), fake = turn("Hello! Which voltage do you need?", "blorp zindle quarbit")
     assert fake.calls == 1 and steps(dbg)["router"]["detail"] == "uncertain" and meta["intent"] == "clarify"
 
 
@@ -163,5 +163,8 @@ def test_incomplete_names_in_a_comparison_ask_instead_of_showing_other_models(tu
 def test_full_names_and_single_size_code_are_not_ambiguous(turn):
     (_, ui, _, _, _, meta), _ = turn("x", f"Compare {PN} and {PN_C}")
     assert meta["intent"] == "lookup" and len(ui["actuators"]) == 2
-    (_, ui, _, _, _, meta), _ = turn("x", "specs of 763B")
-    assert meta["intent"] == "lookup" and ui["actuators"]
+    (_, ui, _, _, _, meta), _ = turn("x", "specs of 763B")      # varias alimentaciones: se pregunta con las opciones reales, sin elegir
+    assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and not ui["actuators"]
+    assert len(ui["clarification"]["options"]) == 3
+    (_, ui, _, _, _, meta), _ = turn("x", "specs of 767C")      # un solo modelo disponible: ficha directa
+    assert meta["intent"] == "lookup" and [a["base_part_number"] for a in ui["actuators"]] == ["767C00-11320000/A"]
