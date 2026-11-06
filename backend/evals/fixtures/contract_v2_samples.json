@@ -68,14 +68,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 294.38,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 298.33,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "763B00-11300000/A"
@@ -107,43 +108,43 @@
               }
             ]
           },
-          "execution_time_ms": 33.19
+          "execution_time_ms": 44.39
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 34.27,
+          "duration_ms": 32.8,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 35.79,
-          "duration_ms": 43.88,
+          "start_ms": 33.98,
+          "duration_ms": 31.68,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 113.17,
-          "duration_ms": 36.51,
+          "start_ms": 82.36,
+          "duration_ms": 46.7,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 187.75,
-          "duration_ms": 45.12,
+          "start_ms": 176.28,
+          "duration_ms": 27.28,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 232.87,
-          "duration_ms": 27.66,
+          "start_ms": 203.57,
+          "duration_ms": 46.38,
           "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -253,14 +254,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 208.91,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 232.2,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "763B00-11300000/A",
@@ -290,7 +292,7 @@
               }
             ]
           },
-          "execution_time_ms": 31.93
+          "execution_time_ms": 25.41
         },
         {
           "tool_name": "lookup_actuator_by_part_number",
@@ -315,49 +317,49 @@
               }
             ]
           },
-          "execution_time_ms": 31.03
+          "execution_time_ms": 34.55
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 26.05,
+          "duration_ms": 26.53,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 26.82,
-          "duration_ms": 24.73,
+          "start_ms": 27.05,
+          "duration_ms": 27.04,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 56.94,
-          "duration_ms": 33.62,
+          "start_ms": 58.36,
+          "duration_ms": 27.4,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 58.14,
-          "duration_ms": 32.91,
+          "start_ms": 59.84,
+          "duration_ms": 36.01,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 120.53,
-          "duration_ms": 32.22,
+          "start_ms": 121.65,
+          "duration_ms": 37.04,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 152.76,
-          "duration_ms": 29.43,
+          "start_ms": 158.7,
+          "duration_ms": 45.28,
           "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -642,14 +644,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 221.16,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 209.02,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 1,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "761X30-11380000/A",
@@ -725,55 +728,55 @@
               "speed"
             ]
           },
-          "execution_time_ms": 36.26
+          "execution_time_ms": 45.15
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 26.11,
+          "duration_ms": 27.13,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 26.9,
-          "duration_ms": 27.82,
+          "start_ms": 27.73,
+          "duration_ms": 24.77,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 59.53,
-          "duration_ms": 38.05,
+          "start_ms": 56.93,
+          "duration_ms": 46.43,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 132.88,
-          "duration_ms": 26.18,
+          "start_ms": 130.84,
+          "duration_ms": 25.93,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 159.09,
-          "duration_ms": 28.92,
+          "start_ms": 156.78,
+          "duration_ms": 26.45,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 188.02,
-          "duration_ms": 32.87,
+          "start_ms": 183.23,
+          "duration_ms": 25.46,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 220.91,
-          "duration_ms": 0.13,
+          "start_ms": 208.7,
+          "duration_ms": 0.21,
           "detail": "ungrounded"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -788,7 +791,7 @@
       "ungrounded": []
     },
     "session_id": "00000000-0000-4000-8000-000000000076",
-    "answer": "¿Qué voltaje de alimentación necesita el actuador?",
+    "answer": "Anotado: 450 Nm. ¿Qué voltaje de alimentación necesita el actuador?",
     "ui_payload": {
       "display_type": "CLARIFICATION",
       "actuators": [],
@@ -796,7 +799,7 @@
       "alerts": [],
       "recommendation": null,
       "clarification": {
-        "question": "¿Qué voltaje de alimentación necesita el actuador?",
+        "question": "Anotado: 450 Nm. ¿Qué voltaje de alimentación necesita el actuador?",
         "options": [
           {
             "label": "110 V monofásico",
@@ -815,14 +818,15 @@
       "suggested_followups": []
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 111.74,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 106.85,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [],
       "tool_calls": [
@@ -837,31 +841,31 @@
             "missing": "voltage",
             "instruction": "The app now asks the user this question with buttons. Do not recommend or state any figure; reply with one short neutral sentence."
           },
-          "execution_time_ms": 42.7
+          "execution_time_ms": 27.63
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 32.54,
+          "duration_ms": 25.76,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 33.33,
-          "duration_ms": 27.16,
+          "start_ms": 26.3,
+          "duration_ms": 44.27,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 66.27,
-          "duration_ms": 44.6,
+          "start_ms": 75.95,
+          "duration_ms": 29.76,
           "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -878,7 +882,7 @@
       ]
     },
     "session_id": "00000000-0000-4000-8000-000000000076",
-    "answer": "761A00-11300000/A: on/off torque 80 Nm (700 in-lbs), modulating torque 65 Nm (580 in-lbs). 763A00-11300000/A: on/off torque 300 Nm (2650 in-lbs), modulating torque 220 Nm (1950 in-lbs). 762A00-11300000/A: on/off torque 150 Nm (1330 in-lbs), modulating torque 130 Nm (1150 in-lbs).",
+    "answer": "761A00-11300000/A: on/off torque 80 Nm (700 in-lbs), modulating torque 65 Nm (580 in-lbs). 762A00-11300000/A: on/off torque 150 Nm (1330 in-lbs), modulating torque 130 Nm (1150 in-lbs). 763A00-11300000/A: on/off torque 300 Nm (2650 in-lbs), modulating torque 220 Nm (1950 in-lbs).",
     "ui_payload": {
       "display_type": "COMPARISON_TABLE",
       "actuators": [
@@ -911,6 +915,41 @@
           "lra_50hz_amps": 1.3,
           "lra_dc_or_fixed_amps": null,
           "motor_power_watts": 15,
+          "csa_certified": true,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A=B"
+        },
+        {
+          "id": 3,
+          "base_part_number": "762A00-11300000/A",
+          "size_code": "762A",
+          "frame_size": 2,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "110V Single Phase",
+          "voltage_num": 110,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 150.0,
+          "on_off_torque_in_lbs": 1330.0,
+          "modulating_torque_nm": 130.0,
+          "modulating_torque_in_lbs": 1150.0,
+          "on_off_duty_cycle_pct": 50,
+          "cycles_per_hour": 42,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 18.0,
+          "speed_50hz_sec": 21.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 2.3,
+          "fla_50hz_amps": 2.3,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 2.5,
+          "lra_50hz_amps": 2.4,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 40,
           "csa_certified": true,
           "ce_ukca_certified": true,
           "hazardous_classification": null,
@@ -951,41 +990,6 @@
           "hazardous_classification": null,
           "source_page": 1,
           "source_method": "A+B+humano"
-        },
-        {
-          "id": 3,
-          "base_part_number": "762A00-11300000/A",
-          "size_code": "762A",
-          "frame_size": 2,
-          "enclosure_type": "Weatherproof",
-          "power_supply": "110V Single Phase",
-          "voltage_num": 110,
-          "phase_type": "Single Phase",
-          "service_support": "Both On/Off & Modulating",
-          "is_available": true,
-          "on_off_torque_nm": 150.0,
-          "on_off_torque_in_lbs": 1330.0,
-          "modulating_torque_nm": 130.0,
-          "modulating_torque_in_lbs": 1150.0,
-          "on_off_duty_cycle_pct": 50,
-          "cycles_per_hour": 42,
-          "modulating_duty_cycle_pct": 40,
-          "starts_per_hour": 960,
-          "speed_60hz_sec": 18.0,
-          "speed_50hz_sec": 21.0,
-          "speed_dc_or_fixed_sec": null,
-          "fla_60hz_amps": 2.3,
-          "fla_50hz_amps": 2.3,
-          "fla_dc_or_fixed_amps": null,
-          "lra_60hz_amps": 2.5,
-          "lra_50hz_amps": 2.4,
-          "lra_dc_or_fixed_amps": null,
-          "motor_power_watts": 40,
-          "csa_certified": true,
-          "ce_ukca_certified": true,
-          "hazardous_classification": null,
-          "source_page": 1,
-          "source_method": "A=B"
         }
       ],
       "engineering_warnings": [],
@@ -1008,48 +1012,22 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 257.51,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 251.78,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 1,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "761A00-11300000/A",
-        "763A00-11300000/A",
-        "762A00-11300000/A"
+        "762A00-11300000/A",
+        "763A00-11300000/A"
       ],
       "tool_calls": [
-        {
-          "tool_name": "lookup_actuator_by_part_number",
-          "arguments": {
-            "part_number": "761A00-11300000/A",
-            "focus": [
-              "torque"
-            ]
-          },
-          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
-          "raw_output": {
-            "status": "EXACT_MATCH",
-            "count": 1,
-            "actuators": [
-              {
-                "base_part_number": "761A00-11300000/A",
-                "power_supply": "110V Single Phase",
-                "enclosure_type": "Weatherproof",
-                "on_off_torque_nm": 80,
-                "on_off_torque_in_lbs": 700,
-                "modulating_torque_nm": 65,
-                "modulating_torque_in_lbs": 580,
-                "motor_power_watts": 15
-              }
-            ]
-          },
-          "execution_time_ms": 26.81
-        },
         {
           "tool_name": "lookup_actuator_by_part_number",
           "arguments": {
@@ -1075,7 +1053,7 @@
               }
             ]
           },
-          "execution_time_ms": 30.29
+          "execution_time_ms": 30.71
         },
         {
           "tool_name": "lookup_actuator_by_part_number",
@@ -1102,67 +1080,94 @@
               }
             ]
           },
-          "execution_time_ms": 44.01
+          "execution_time_ms": 34.18
+        },
+        {
+          "tool_name": "lookup_actuator_by_part_number",
+          "arguments": {
+            "part_number": "761A00-11300000/A",
+            "focus": [
+              "torque"
+            ]
+          },
+          "sql_executed": "SELECT * FROM actuators\n        WHERE UPPER(base_part_number) = %s\n           OR normalized_part_number IN (%s, %s)\n           OR size_code = %s\n        ORDER BY is_available DESC, voltage_num ASC;",
+          "raw_output": {
+            "status": "EXACT_MATCH",
+            "count": 1,
+            "actuators": [
+              {
+                "base_part_number": "761A00-11300000/A",
+                "power_supply": "110V Single Phase",
+                "enclosure_type": "Weatherproof",
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "motor_power_watts": 15
+              }
+            ]
+          },
+          "execution_time_ms": 37.54
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 28.76,
+          "duration_ms": 27.02,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 29.77,
-          "duration_ms": 23.99,
+          "start_ms": 27.67,
+          "duration_ms": 30.45,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 57.98,
-          "duration_ms": 28.49,
+          "start_ms": 64.41,
+          "duration_ms": 39.92,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 59.06,
-          "duration_ms": 45.83,
+          "start_ms": 65.96,
+          "duration_ms": 36.25,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 60.99,
-          "duration_ms": 32.12,
+          "start_ms": 68.36,
+          "duration_ms": 33.12,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 131.61,
-          "duration_ms": 26.14,
+          "start_ms": 136.12,
+          "duration_ms": 28.7,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 157.77,
-          "duration_ms": 26.44,
+          "start_ms": 164.84,
+          "duration_ms": 28.51,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 184.22,
-          "duration_ms": 43.91,
+          "start_ms": 193.36,
+          "duration_ms": 27.07,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 228.16,
-          "duration_ms": 0.37,
+          "start_ms": 220.45,
+          "duration_ms": 0.4,
           "detail": "ungrounded"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "en",
       "error": null
@@ -1246,14 +1251,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 231.69,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 210.94,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "763A00-11330C00/A"
@@ -1289,43 +1295,43 @@
               }
             ]
           },
-          "execution_time_ms": 31.71
+          "execution_time_ms": 32.55
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 29.99,
+          "duration_ms": 30.95,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 30.67,
-          "duration_ms": 31.96,
+          "start_ms": 31.7,
+          "duration_ms": 29.97,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 69.24,
-          "duration_ms": 34.13,
+          "start_ms": 66.14,
+          "duration_ms": 35.39,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 138.75,
-          "duration_ms": 30.85,
+          "start_ms": 137.09,
+          "duration_ms": 27.8,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 169.61,
-          "duration_ms": 35.0,
+          "start_ms": 164.9,
+          "duration_ms": 22.18,
           "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -1446,14 +1452,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 271.09,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 272.04,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 1,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "761A00-11300000/A",
@@ -1521,55 +1528,55 @@
               }
             ]
           },
-          "execution_time_ms": 31.85
+          "execution_time_ms": 36.25
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 43.94,
+          "duration_ms": 46.36,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 44.62,
-          "duration_ms": 25.84,
+          "start_ms": 47.04,
+          "duration_ms": 35.87,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 75.94,
-          "duration_ms": 33.95,
+          "start_ms": 88.61,
+          "duration_ms": 38.67,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 140.68,
-          "duration_ms": 29.97,
+          "start_ms": 162.1,
+          "duration_ms": 31.23,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 170.66,
-          "duration_ms": 28.49,
+          "start_ms": 193.34,
+          "duration_ms": 27.53,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 199.2,
-          "duration_ms": 25.3,
+          "start_ms": 220.88,
+          "duration_ms": 27.68,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 224.51,
-          "duration_ms": 0.13,
+          "start_ms": 248.58,
+          "duration_ms": 0.11,
           "detail": "ungrounded"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -1580,7 +1587,7 @@
     "intent": "recommend",
     "verification": {
       "status": "verified",
-      "numbers_checked": 3,
+      "numbers_checked": 2,
       "ungrounded": []
     },
     "session_id": "00000000-0000-4000-8000-000000000076",
@@ -1620,14 +1627,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 149.14,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 134.5,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [],
       "tool_calls": [
@@ -1645,43 +1653,43 @@
               "There are no 24V Weatherproof models in Series 76; 24V is only offered as Explosionproof."
             ]
           },
-          "execution_time_ms": 27.75
+          "execution_time_ms": 43.65
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 25.35,
+          "duration_ms": 24.35,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 26.06,
-          "duration_ms": 45.63,
+          "start_ms": 24.94,
+          "duration_ms": 32.33,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 77.27,
-          "duration_ms": 29.83,
+          "start_ms": 61.49,
+          "duration_ms": 45.74,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 108.58,
-          "duration_ms": 40.45,
+          "start_ms": 108.87,
+          "duration_ms": 25.51,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 149.04,
-          "duration_ms": 0.04,
+          "start_ms": 134.39,
+          "duration_ms": 0.05,
           "detail": null
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -1725,14 +1733,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 58.71,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 70.11,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [],
       "tool_calls": [],
@@ -1740,18 +1749,18 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 29.94,
+          "duration_ms": 44.24,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 30.54,
-          "duration_ms": 28.09,
+          "start_ms": 44.97,
+          "duration_ms": 25.09,
           "detail": "out_of_scope"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -1759,41 +1768,53 @@
   },
   "llm_error": {
     "schema_version": 2,
-    "intent": "error",
+    "intent": "clarify",
     "verification": {
-      "status": "fallback_template",
+      "status": "verified",
       "numbers_checked": 0,
       "ungrounded": []
     },
     "session_id": "00000000-0000-4000-8000-000000000076",
-    "answer": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos.",
+    "answer": "Claro, te guío. ¿Qué quieres hacer?",
     "ui_payload": {
-      "display_type": "EDGE_CASE_ALERT",
+      "display_type": "CLARIFICATION",
       "actuators": [],
-      "engineering_warnings": [
-        "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos."
-      ],
-      "alerts": [
-        {
-          "code": "LLM_UNAVAILABLE",
-          "severity": "error",
-          "title": "No se pudo completar la consulta",
-          "message": "No pude completar la consulta en este momento. Inténtalo de nuevo en unos segundos."
-        }
-      ],
+      "engineering_warnings": [],
+      "alerts": [],
       "recommendation": null,
-      "clarification": null,
+      "clarification": {
+        "question": "Claro, te guío. ¿Qué quieres hacer?",
+        "options": [
+          {
+            "label": "Ficha de un modelo",
+            "value": "Ficha del 761A00-11300000/A"
+          },
+          {
+            "label": "Comparar dos modelos",
+            "value": "Compara 761A00-11300000/A con 761B00-11300000/A"
+          },
+          {
+            "label": "Recomendar un actuador",
+            "value": "Ayúdame a seleccionar un actuador para mi aplicación"
+          },
+          {
+            "label": "Explicar un concepto (S4, FLA, LRA)",
+            "value": "¿Qué es el ciclo de trabajo S4?"
+          }
+        ]
+      },
       "suggested_followups": []
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 68.64,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 130.11,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 2
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [],
       "tool_calls": [],
@@ -1801,21 +1822,21 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 41.43,
+          "duration_ms": 53.34,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 42.05,
-          "duration_ms": 25.94,
-          "detail": "uncertain"
+          "start_ms": 53.91,
+          "duration_ms": 26.2,
+          "detail": "act:help_request"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
-      "error": "ConnectionError: simulated outage"
+      "error": null
     }
   },
   "degraded_lookup": {
@@ -1894,14 +1915,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 152.32,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 163.01,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 0,
-        "llm_retries": 2
+        "llm_retries": 2,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "763B00-11300000/A"
@@ -1933,43 +1955,43 @@
               }
             ]
           },
-          "execution_time_ms": 24.88
+          "execution_time_ms": 24.87
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 29.65,
+          "duration_ms": 38.94,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 30.45,
-          "duration_ms": 27.3,
+          "start_ms": 39.56,
+          "duration_ms": 25.23,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 63.63,
-          "duration_ms": 27.02,
+          "start_ms": 68.94,
+          "duration_ms": 26.69,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 93.35,
-          "duration_ms": 29.48,
+          "start_ms": 97.14,
+          "duration_ms": 25.78,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 122.85,
-          "duration_ms": 0.12,
+          "start_ms": 122.93,
+          "duration_ms": 0.05,
           "detail": "llm_unavailable"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "es",
       "error": null
@@ -2090,14 +2112,15 @@
       ]
     },
     "debug_trace": {
-      "model_used": "nvidia/nemotron-3.5-lightning-30b-a3b",
-      "total_latency_ms": 297.47,
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 234.32,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
         "total_tokens": 0,
         "retries": 1,
-        "llm_retries": 0
+        "llm_retries": 0,
+        "classifier_tokens": 0
       },
       "active_context_part_numbers": [
         "761B00-11300000/A",
@@ -2162,57 +2185,769 @@
               }
             ]
           },
-          "execution_time_ms": 38.65
+          "execution_time_ms": 28.29
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 28.59,
+          "duration_ms": 31.41,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 29.31,
-          "duration_ms": 33.63,
+          "start_ms": 32.24,
+          "duration_ms": 24.68,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 69.9,
-          "duration_ms": 39.68,
+          "start_ms": 63.05,
+          "duration_ms": 29.17,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 144.59,
-          "duration_ms": 35.12,
+          "start_ms": 122.62,
+          "duration_ms": 28.79,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 179.72,
-          "duration_ms": 58.33,
+          "start_ms": 151.42,
+          "duration_ms": 30.71,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 238.06,
-          "duration_ms": 31.06,
+          "start_ms": 182.13,
+          "duration_ms": 28.17,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 269.13,
-          "duration_ms": 0.2,
+          "start_ms": 210.32,
+          "duration_ms": 0.12,
           "detail": "ungrounded"
         }
       ],
       "cost_usd_estimate": 0.0,
-      "provider": "nim",
+      "provider": "openrouter",
       "session_cost_usd": 0.0,
       "language": "en",
+      "error": null
+    }
+  },
+  "greeting": {
+    "schema_version": 2,
+    "intent": "knowledge",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "¡Hola! Soy el asistente técnico de los actuadores eléctricos Serie 76: consulto el catálogo para darte fichas, comparaciones y recomendaciones. ¿Por dónde empezamos?",
+    "ui_payload": {
+      "display_type": "TEXT_ONLY",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Ficha de un modelo",
+          "query": "Ficha del 761A00-11300000/A"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        },
+        {
+          "label": "Comparar dos modelos",
+          "query": "Compara 761A00-11300000/A con 761B00-11300000/A"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 124.87,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 28.51,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 29.26,
+          "duration_ms": 26.5,
+          "detail": "act:greeting"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "capabilities": {
+    "schema_version": 2,
+    "intent": "knowledge",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Puedo darte la ficha de un modelo a partir de su número de parte, comparar modelos, recomendar actuadores según voltaje, torque, zona clasificada, tipo de servicio y otros requisitos, y explicar conceptos como el ciclo S4, FLA y LRA. No tengo precios, plazos de entrega, stock, garantía ni datos de otras marcas.",
+    "ui_payload": {
+      "display_type": "TEXT_ONLY",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Ficha de un modelo",
+          "query": "Ficha del 761A00-11300000/A"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        },
+        {
+          "label": "Comparar dos modelos",
+          "query": "Compara 761A00-11300000/A con 761B00-11300000/A"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 185.04,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 43.79,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 44.4,
+          "duration_ms": 42.42,
+          "detail": "act:capabilities"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "help_menu": {
+    "schema_version": 2,
+    "intent": "clarify",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Claro, te guío. ¿Qué quieres hacer?",
+    "ui_payload": {
+      "display_type": "CLARIFICATION",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": {
+        "question": "Claro, te guío. ¿Qué quieres hacer?",
+        "options": [
+          {
+            "label": "Ficha de un modelo",
+            "value": "Ficha del 761A00-11300000/A"
+          },
+          {
+            "label": "Comparar dos modelos",
+            "value": "Compara 761A00-11300000/A con 761B00-11300000/A"
+          },
+          {
+            "label": "Recomendar un actuador",
+            "value": "Ayúdame a seleccionar un actuador para mi aplicación"
+          },
+          {
+            "label": "Explicar un concepto (S4, FLA, LRA)",
+            "value": "¿Qué es el ciclo de trabajo S4?"
+          }
+        ]
+      },
+      "suggested_followups": []
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 141.53,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 37.26,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 37.86,
+          "duration_ms": 27.49,
+          "detail": "act:help_request"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "catalog_overview": {
+    "schema_version": 2,
+    "intent": "knowledge",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 6,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Los modelos disponibles se ofrecen en 24 V (10), 110 V (21) y 220 V (33) (entre paréntesis, nº de modelos).",
+    "ui_payload": {
+      "display_type": "TEXT_ONLY",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Ficha de un modelo",
+          "query": "Ficha del 761A00-11300000/A"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        },
+        {
+          "label": "¿Qué puedes hacer?",
+          "query": "¿Qué puedes hacer?"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 176.21,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [
+        {
+          "tool_name": "catalog_overview",
+          "arguments": {
+            "aspect": "voltages"
+          },
+          "sql_executed": "SELECT voltage_num v, COUNT(*) n FROM actuators WHERE is_available GROUP BY voltage_num ORDER BY voltage_num;",
+          "raw_output": {
+            "status": "CATALOG_OVERVIEW",
+            "aspect": "voltages",
+            "values": [
+              {
+                "value": 24,
+                "models": 10
+              },
+              {
+                "value": 110,
+                "models": 21
+              },
+              {
+                "value": 220,
+                "models": 33
+              }
+            ]
+          },
+          "execution_time_ms": 27.71
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 35.91,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 36.67,
+          "duration_ms": 47.32,
+          "detail": "catalog_overview"
+        },
+        {
+          "name": "tool:catalog_overview",
+          "start_ms": 88.21,
+          "duration_ms": 28.84,
+          "detail": null
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "ranking": {
+    "schema_version": 2,
+    "intent": "lookup",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 3,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "Criterio: mayor potencia de motor, solo modelos disponibles. Hay 5 modelos empatados con la mayor potencia de motor: 700 W; muestro 4.",
+    "ui_payload": {
+      "display_type": "COMPARISON_TABLE",
+      "actuators": [
+        {
+          "id": 23,
+          "base_part_number": "766A00-11320000/A",
+          "size_code": "766A",
+          "frame_size": 6,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V Single Phase",
+          "voltage_num": 220,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 3500.0,
+          "on_off_torque_in_lbs": 31000.0,
+          "modulating_torque_nm": 3500.0,
+          "modulating_torque_in_lbs": 30975.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 18,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 33.0,
+          "speed_50hz_sec": 39.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 11.2,
+          "fla_50hz_amps": 11.2,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 17.0,
+          "lra_50hz_amps": 17.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 700,
+          "csa_certified": false,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
+        },
+        {
+          "id": 24,
+          "base_part_number": "766B00-11320000/A",
+          "size_code": "766B",
+          "frame_size": 6,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V Single Phase",
+          "voltage_num": 220,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 4000.0,
+          "on_off_torque_in_lbs": 35400.0,
+          "modulating_torque_nm": 4000.0,
+          "modulating_torque_in_lbs": 35400.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 12,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 49.0,
+          "speed_50hz_sec": 58.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 11.2,
+          "fla_50hz_amps": 11.2,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 17.0,
+          "lra_50hz_amps": 17.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 700,
+          "csa_certified": false,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
+        },
+        {
+          "id": 25,
+          "base_part_number": "767A00-11320000/A",
+          "size_code": "767A",
+          "frame_size": 7,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V Single Phase",
+          "voltage_num": 220,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 6000.0,
+          "on_off_torque_in_lbs": 53100.0,
+          "modulating_torque_nm": 6000.0,
+          "modulating_torque_in_lbs": 53100.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 9,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 66.0,
+          "speed_50hz_sec": 78.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 9.0,
+          "fla_50hz_amps": 9.0,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 17.0,
+          "lra_50hz_amps": 17.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 700,
+          "csa_certified": false,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
+        },
+        {
+          "id": 26,
+          "base_part_number": "767B00-11320000/A",
+          "size_code": "767B",
+          "frame_size": 7,
+          "enclosure_type": "Weatherproof",
+          "power_supply": "220V Single Phase",
+          "voltage_num": 220,
+          "phase_type": "Single Phase",
+          "service_support": "Both On/Off & Modulating",
+          "is_available": true,
+          "on_off_torque_nm": 8000.0,
+          "on_off_torque_in_lbs": 70800.0,
+          "modulating_torque_nm": 8000.0,
+          "modulating_torque_in_lbs": 70800.0,
+          "on_off_duty_cycle_pct": 40,
+          "cycles_per_hour": 6,
+          "modulating_duty_cycle_pct": 40,
+          "starts_per_hour": 960,
+          "speed_60hz_sec": 98.0,
+          "speed_50hz_sec": 116.0,
+          "speed_dc_or_fixed_sec": null,
+          "fla_60hz_amps": 9.0,
+          "fla_50hz_amps": 9.0,
+          "fla_dc_or_fixed_amps": null,
+          "lra_60hz_amps": 17.0,
+          "lra_50hz_amps": 17.0,
+          "lra_dc_or_fixed_amps": null,
+          "motor_power_watts": 700,
+          "csa_certified": false,
+          "ce_ukca_certified": true,
+          "hazardous_classification": null,
+          "source_page": 1,
+          "source_method": "A+B+humano"
+        }
+      ],
+      "engineering_warnings": [
+        "El modelo 766A00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA).",
+        "El modelo 766B00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA).",
+        "El modelo 767A00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA).",
+        "El modelo 767B00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
+      ],
+      "alerts": [
+        {
+          "code": "CSA_NOT_CERTIFIED",
+          "severity": "warning",
+          "title": "Sin certificación CSA",
+          "message": "El modelo 766A00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA)."
+        },
+        {
+          "code": "CSA_NOT_CERTIFIED",
+          "severity": "warning",
+          "title": "Sin certificación CSA",
+          "message": "El modelo 766B00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA)."
+        },
+        {
+          "code": "CSA_NOT_CERTIFIED",
+          "severity": "warning",
+          "title": "Sin certificación CSA",
+          "message": "El modelo 767A00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
+        },
+        {
+          "code": "CSA_NOT_CERTIFIED",
+          "severity": "warning",
+          "title": "Sin certificación CSA",
+          "message": "El modelo 767B00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
+        }
+      ],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Ficha de un modelo",
+          "query": "Ficha del 761A00-11300000/A"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        },
+        {
+          "label": "¿Qué puedes hacer?",
+          "query": "¿Qué puedes hacer?"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 197.48,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [
+        "766A00-11320000/A",
+        "766B00-11320000/A",
+        "767A00-11320000/A",
+        "767B00-11320000/A"
+      ],
+      "tool_calls": [
+        {
+          "tool_name": "rank_actuators",
+          "arguments": {
+            "metric": "power",
+            "order": "max"
+          },
+          "sql_executed": "WITH r AS (SELECT id, base_part_number, motor_power_watts AS v FROM actuators WHERE is_available AND motor_power_watts IS NOT NULL) SELECT id, base_part_number, v FROM r WHERE v = (SELECT MAX(v) FROM r) ORDER BY base_part_number;",
+          "raw_output": {
+            "status": "RANKED",
+            "metric": "power",
+            "order": "max",
+            "unit": "W",
+            "value": 700,
+            "ties": 5,
+            "part_numbers": [
+              "766A00-11320000/A",
+              "766B00-11320000/A",
+              "767A00-11320000/A",
+              "767B00-11320000/A"
+            ],
+            "filters": {}
+          },
+          "execution_time_ms": 27.0
+        }
+      ],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 28.43,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 29.11,
+          "duration_ms": 27.48,
+          "detail": "ranking"
+        },
+        {
+          "name": "tool:rank_actuators",
+          "start_ms": 61.08,
+          "duration_ms": 27.76,
+          "detail": null
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "attribute_not_included": {
+    "schema_version": 2,
+    "intent": "knowledge",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "El peso no figura en el catálogo de la Serie 76, así que no puedo confirmarlo. Lo que sí tengo: tipo de carcasa (Weatherproof o Explosionproof), certificaciones (CSA, CE/UKCA y ATEX/IECEx en Explosionproof), torque, ciclo S4, velocidad, corriente y potencia.",
+    "ui_payload": {
+      "display_type": "TEXT_ONLY",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": null,
+      "suggested_followups": [
+        {
+          "label": "Ficha de un modelo",
+          "query": "Ficha del 761A00-11300000/A"
+        },
+        {
+          "label": "Certificaciones de área peligrosa",
+          "query": "¿Qué certificaciones de área peligrosa tienen los modelos Explosionproof?"
+        },
+        {
+          "label": "Recomendar un actuador",
+          "query": "Ayúdame a seleccionar un actuador para mi aplicación"
+        }
+      ]
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 145.37,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 25.6,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 26.38,
+          "duration_ms": 25.22,
+          "detail": "act:attribute"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
+      "error": null
+    }
+  },
+  "size_clarification": {
+    "schema_version": 2,
+    "intent": "clarify",
+    "verification": {
+      "status": "verified",
+      "numbers_checked": 0,
+      "ungrounded": []
+    },
+    "session_id": "00000000-0000-4000-8000-000000000076",
+    "answer": "El 763B existe con varias alimentaciones. ¿Cuál necesitas?",
+    "ui_payload": {
+      "display_type": "CLARIFICATION",
+      "actuators": [],
+      "engineering_warnings": [],
+      "alerts": [],
+      "recommendation": null,
+      "clarification": {
+        "question": "El 763B existe con varias alimentaciones. ¿Cuál necesitas?",
+        "options": [
+          {
+            "label": "110 V monofásico",
+            "value": "763B00 110V monofásico"
+          },
+          {
+            "label": "220 V trifásico",
+            "value": "763B00 220V trifásico"
+          },
+          {
+            "label": "220 V monofásico",
+            "value": "763B00 220V monofásico"
+          }
+        ]
+      },
+      "suggested_followups": []
+    },
+    "debug_trace": {
+      "model_used": "openai/gpt-4o-mini",
+      "total_latency_ms": 113.59,
+      "token_usage": {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "total_tokens": 0,
+        "retries": 0,
+        "llm_retries": 0,
+        "classifier_tokens": 0
+      },
+      "active_context_part_numbers": [],
+      "tool_calls": [],
+      "steps": [
+        {
+          "name": "history_load",
+          "start_ms": 0.0,
+          "duration_ms": 36.71,
+          "detail": null
+        },
+        {
+          "name": "router",
+          "start_ms": 37.28,
+          "duration_ms": 76.27,
+          "detail": "size_reference"
+        }
+      ],
+      "cost_usd_estimate": 0.0,
+      "provider": "openrouter",
+      "session_cost_usd": 0.0,
+      "language": "es",
       "error": null
     }
   }

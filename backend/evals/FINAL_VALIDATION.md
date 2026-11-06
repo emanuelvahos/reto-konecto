@@ -334,3 +334,28 @@ Fallos (texto del arnés, sin editar):
 
 - Una corrida por batería. La ciega repite el único fallo conocido (HLD-20, ver `HELDOUT_REPORT.md`).
 - Con OpenRouter no hubo reintentos de transporte (0) en ninguna batería; los de NIM fueron 52 y 73 en las secciones anteriores.
+
+## Corrida 6D: fase 6 (comprensión conversacional), 2026-11-06
+
+- **Commit base:** `46d54ae` (6C). Los cambios de 6D sin commitear al medir son solo muestras de contrato, pruebas, README y CLAUDE.md; el código de `app/` es el de `46d54ae`.
+- **OpenRouter (`openai/gpt-4o-mini`), por HTTP:** contra el contenedor reconstruido con `docker compose up -d --build backend` (`/health` ok, 68 actuadores). Es lo que ve la app.
+- **NIM (`nvidia/nemotron-3.5-lightning-30b-a3b`), en proceso (TestClient):** no por HTTP; el contenedor sigue con OpenRouter. Costo USD 0 (capa gratuita).
+- **Memoria libre:** ~1,6 GB al empezar (la regla pide >2,5 GB; Chrome/Edge/WSL seguían abiertos). Se corrió igualmente.
+- **Banco natural:** 235 casos; 21 de la categoría `parafrasis` los escribí yo durante 6C y corregí fallos que mostraron: es un set de desarrollo, no ciego.
+
+| Batería | OpenRouter (HTTP) | NIM (en proceso) |
+| --- | --- | --- |
+| Evals (11) | 11/11 | no corrida |
+| Adversarial (30) | 30/30 (57,8 s total, 68 801 tokens, USD 0,01116) | 30/30 (71,7 s, 108 945 tokens) |
+| Ciega (40) | 39/40 (fallo HLD-32; 2 corridas, ambas 39/40; USD 0,0174) | **35/40** (fallan HLD-16, 20, 32, 33, 39) |
+| Banco natural (235) | 235/235, no relacionada 0, `uncertain` 16 (6,8 %), p50 117 ms, p95 3653 ms, USD 0,04317 | 235/235, `uncertain` 16, p50 235 ms, p95 3857 ms |
+| Suite sin LLM (pytest) | 616 pasan, 1 omitida (antes de añadir las pruebas de 6D) | — |
+
+### Casos que fallan y por qué
+- **HLD-32 (OpenRouter y NIM):** 24 V «velocidad fija»; el LLM redacta con palabras que la comprobación no acepta. Fallo de redacción, no de datos.
+- **NIM, ciega 35/40, por debajo del umbral 38:** HLD-16 (intent `knowledge` en vez de `recommend`/`clarify`), HLD-20 (seguimiento ambiguo, ya conocido), HLD-33 (la respuesta cita un fragmento de conocimiento sin decir que el tamaño no existe), HLD-39 (respuesta de 67 palabras) y HLD-32. NIM daba 36–39/40 en corridas anteriores (README); 35 queda bajo ese rango. El umbral 38/40 se fijó para OpenRouter, que lo cumple. Una sola pasada, sin repetir.
+
+### Lectura
+- Con OpenRouter por HTTP se cumplen las puertas (EVAL 11/11, ADV 30/30, ciega 39/40).
+- El 100 % del banco natural incluye el set de desarrollo; la tasa sobre casos no vistos se mide con el set ciego del usuario (informe aparte).
+- Resultados por caso: `backend/evals/baselines/*_6D_*.json`; informes `NATURAL_REPORT.md`, `ADVERSARIAL_REPORT.md`, `HELDOUT_REPORT.md`, `EVALUATION_REPORT.md`.

@@ -59,6 +59,14 @@ SAMPLES = {
     "llm_error": ("hola, necesito ayuda con un actuador", "es", True),
     "degraded_lookup": ("¿Cuánto torque y qué potencia tiene el 763B00-11300000/A?", "es", True),
     "typo_correction": ("Give me the specs of 761800-11300000/A", "en", False),
+    # Fase 6: actos conversacionales y herramientas de catálogo (textos deterministas, sin redactor LLM)
+    "greeting": ("Hola", "es", False),
+    "capabilities": ("¿En qué puedes ayudarme?", "es", False),
+    "help_menu": ("estoy perdido, por dónde empiezo", "es", False),
+    "catalog_overview": ("¿Cuántos modelos hay y qué voltajes manejan?", "es", False),
+    "ranking": ("¿Cuál es el más potente?", "es", False),
+    "attribute_not_included": ("¿Cuánto pesa el 763B00-11300000/A?", "es", False),
+    "size_clarification": ("Dame las specs del 763B", "es", False),
 }
 
 
@@ -70,6 +78,8 @@ def build() -> dict:
     out = {}
     orig_create, orig_llm, orig_sleep, orig_base = agent.create_react_agent, agent.build_llm, agent._sleep, agent.RETRY_BASE_S
     agent.build_llm = lambda: None
+    orig_clf = agent.build_llm_for_classifier
+    agent.build_llm_for_classifier = lambda: (_ for _ in ()).throw(RuntimeError("sin clasificador: muestras deterministas"))
     agent._sleep = lambda s: None
     agent.RETRY_BASE_S = 0.0
     try:
@@ -83,6 +93,7 @@ def build() -> dict:
                 out[name] = body
     finally:
         agent.create_react_agent, agent.build_llm, agent._sleep, agent.RETRY_BASE_S = orig_create, orig_llm, orig_sleep, orig_base
+        agent.build_llm_for_classifier = orig_clf
     return out
 
 

@@ -15,6 +15,8 @@ PN_RX = re.compile(r"\b\d{3}[A-Z]\d{2}-\d{8}(?:/[A-Z])?\b|\b\d{3}[A-Z]\d{2}-\d{4
 EXPECTED = {
     "single_spec_card", "comparison_table", "comparison_table_3", "three_phase_single_torque", "model_listed_as_na",
     "recommendation_with_relaxation", "recommendation_no_match", "clarification", "out_of_scope", "llm_error", "degraded_lookup", "typo_correction",
+    # Fase 6
+    "greeting", "capabilities", "help_menu", "catalog_overview", "ranking", "attribute_not_included", "size_clarification",
 }
 
 
@@ -70,7 +72,20 @@ def test_scenarios_cover_what_they_claim():
     d = S["degraded_lookup"]   # sin LLM: tarjeta + texto de plantilla + aviso informativo (no error)
     assert d["intent"] == "lookup" and d["ui_payload"]["display_type"] == "SINGLE_SPEC_CARD" and d["verification"]["status"] == "fallback_template"
     assert [(a["code"], a["severity"]) for a in d["ui_payload"]["alerts"]] == [("LLM_UNAVAILABLE", "info")]
-    assert S["llm_error"]["intent"] == "error" and S["llm_error"]["ui_payload"]["alerts"][0]["code"] == "LLM_UNAVAILABLE"
+    # Fase 6: sin agente libre, un texto ambiguo con el LLM caído da el menú neutro (no un error ni una recomendación al azar)
+    e = S["llm_error"]
+    assert e["intent"] == "clarify" and e["ui_payload"]["display_type"] == "CLARIFICATION" and not e["ui_payload"]["actuators"] and len(e["ui_payload"]["clarification"]["options"]) == 4
+    for k in ("greeting", "capabilities"):
+        assert S[k]["ui_payload"]["display_type"] == "TEXT_ONLY" and not S[k]["ui_payload"]["actuators"] and len(S[k]["ui_payload"]["suggested_followups"]) == 3
+    assert S["help_menu"]["ui_payload"]["display_type"] == "CLARIFICATION" and len(S["help_menu"]["ui_payload"]["clarification"]["options"]) == 4
+    co = S["catalog_overview"]
+    assert co["intent"] == "knowledge" and co["ui_payload"]["display_type"] == "TEXT_ONLY" and co["verification"]["numbers_checked"] > 0 and not co["ui_payload"]["actuators"]
+    rk = S["ranking"]
+    assert rk["intent"] == "lookup" and rk["answer"].startswith("Criterio:") and rk["verification"]["numbers_checked"] > 0 and 1 <= len(rk["ui_payload"]["actuators"]) <= 4
+    ab = S["attribute_not_included"]
+    assert ab["ui_payload"]["display_type"] == "TEXT_ONLY" and not ab["ui_payload"]["actuators"] and "no figura" in ab["answer"]
+    sc = S["size_clarification"]
+    assert sc["intent"] == "clarify" and sc["ui_payload"]["display_type"] == "CLARIFICATION" and 2 <= len(sc["ui_payload"]["clarification"]["options"]) <= 4
     assert "TYPO_OR_CLOSEST_MATCH_FOUND" in [a["code"] for a in S["typo_correction"]["ui_payload"]["alerts"]]
 
 

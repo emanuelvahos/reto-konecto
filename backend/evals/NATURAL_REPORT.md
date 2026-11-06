@@ -1,7 +1,7 @@
 # Banco de comprensión natural
 
-- Fecha: `2026-11-06 20:43:50 UTC` · 6C OpenRouter gpt-4o-mini, en proceso
-- Modo: en proceso · proveedor/modelo: `openrouter` / `openai/gpt-4o-mini`
+- Fecha: `2026-11-06 22:09:20 UTC`
+- Modo: HTTP http://localhost:8001 · proveedor/modelo: `openrouter` / `openai/gpt-4o-mini`
 - Casos: 235 (reales de chat_messages: 32)
 
 ## Resumen
@@ -11,36 +11,35 @@
 | Comprensión correcta | **235/235 (100.0%)** |
 | Respuesta no relacionada (tool/tarjetas/texto no pedidos) | 0 (0.0%) |
 | Caída en `uncertain` del router | 16 (6.8%) |
-| Latencia último turno p50 / p95 | 253 ms / 3790 ms |
-| Costo total (estimado) | USD 0.04327 (por caso 0.000184) |
+| Latencia último turno p50 / p95 | 117 ms / 3653 ms |
+| Costo total (estimado) | USD 0.04317 (por caso 0.000184) |
 
 ## Por categoría
 
-| Categoría | Antes | Ahora |
+| Categoría | Aciertos | Tasa |
 |---|---|---|
-| saludo | 10/10 | 10/10 |
-| gracias | 8/8 | 8/8 |
-| despedida | 5/5 | 5/5 |
-| capacidades | 12/12 | 12/12 |
-| about | 9/9 | 9/9 |
-| ayuda_vaga | 11/11 | 11/11 |
-| ficha_abreviada | 20/20 | 20/20 |
-| comparacion | 9/9 | 9/9 |
-| seguimiento | 14/14 | 14/14 |
-| superlativo | 1/10 | 10/10 |
-| catalogo | 3/10 | 10/10 |
-| atributo_ausente | 12/12 | 12/12 |
-| contexto_aplicacion | 8/8 | 8/8 |
-| seleccion | 12/12 | 12/12 |
-| concepto | 10/10 | 10/10 |
-| fuera_alcance | 13/13 | 13/13 |
-| inyeccion | 8/8 | 8/8 |
-| off_topic | 8/8 | 8/8 |
-| typo | 12/12 | 12/12 |
-| dictado | 7/7 | 7/7 |
-| mixto | 6/6 | 6/6 |
-| parafrasis | - | 21/21 |
-| **Global** | 198/214 (92.5%) | 235/235 (100.0%) |
+| saludo | 10/10 | 100.0% |
+| gracias | 8/8 | 100.0% |
+| despedida | 5/5 | 100.0% |
+| capacidades | 12/12 | 100.0% |
+| about | 9/9 | 100.0% |
+| ayuda_vaga | 11/11 | 100.0% |
+| ficha_abreviada | 20/20 | 100.0% |
+| comparacion | 9/9 | 100.0% |
+| seguimiento | 14/14 | 100.0% |
+| superlativo | 10/10 | 100.0% |
+| catalogo | 10/10 | 100.0% |
+| atributo_ausente | 12/12 | 100.0% |
+| contexto_aplicacion | 8/8 | 100.0% |
+| seleccion | 12/12 | 100.0% |
+| concepto | 10/10 | 100.0% |
+| fuera_alcance | 13/13 | 100.0% |
+| inyeccion | 8/8 | 100.0% |
+| off_topic | 8/8 | 100.0% |
+| typo | 12/12 | 100.0% |
+| dictado | 7/7 | 100.0% |
+| mixto | 6/6 | 100.0% |
+| parafrasis | 21/21 | 100.0% |
 
 ## Por caso
 

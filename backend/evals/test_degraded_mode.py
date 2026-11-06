@@ -29,6 +29,7 @@ def provider_down(monkeypatch):
             raise ConnectionError("provider down")
 
     monkeypatch.setattr(agent, "build_llm", lambda: None)
+    monkeypatch.setattr(agent, "build_llm_for_classifier", lambda: Down())       # el clasificador también ve el proveedor caído
     monkeypatch.setattr(agent, "create_react_agent", lambda llm, tools: Down())
     monkeypatch.setattr(agent, "MAX_LLM_RETRIES", 0)
 
@@ -128,3 +129,25 @@ def test_unroutable_query_without_key_gets_the_neutral_help_menu(no_key):
     answer, ui, _, _, _, meta = turn("tell me something interesting", "en")
     assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and len(ui["clarification"]["options"]) >= 2
     assert not ui["actuators"] and meta["technical"] is False
+
+
+# ------------------------------------------------------------------ 6D: actos deterministas y herramientas de catálogo sin LLM
+@pytest.mark.parametrize("q,needle", [("hola", "Hola"), ("gracias", "gusto"), ("en qué puedes ayudarme?", "ficha"), ("cuánto pesa el 763B00-11300000/A?", "no figura"),
+                                      ("cuánto cuesta el 763B00-11300000/A?", "catálogo")])
+def test_deterministic_acts_work_without_llm(nollm, q, needle):
+    answer, ui, dbg, _, _, meta = turn(q, "es")
+    assert needle in answer and meta["intent"] != "error" and not degraded_alerts(ui) and len(ui["suggested_followups"]) <= 3
+
+
+def test_ranking_and_catalog_questions_work_without_llm(nollm):
+    answer, ui, dbg, parts, _, meta = turn("cuál es el más potente?", "es")
+    assert answer.startswith("Criterio:") and parts and meta["verification"]["status"] == "verified"
+    answer, ui, dbg, *_ = turn("cuántos modelos hay?", "es")
+    assert "68" in answer and not ui["actuators"]
+
+
+@pytest.mark.parametrize("q", ["blorp zindle quarbit", "no sé qué ocupo, algo para mi planta pero distinto"])
+def test_ambiguous_text_gets_the_neutral_menu_without_llm(nollm, q):
+    answer, ui, dbg, _, _, meta = turn(q, "es")
+    assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and len(ui["clarification"]["options"]) >= 2
+    assert not ui["actuators"] and not dbg["tool_calls"]
