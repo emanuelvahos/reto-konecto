@@ -211,6 +211,10 @@ ROUTER_TEXT: Dict[str, Dict[str, str]] = {
         "en": "That is not in the technical catalog: I have no prices, lead times, stock, warranty or other brands. I can help with specifications, selection and technical rules.",
         "es": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas.",
     },
+    "ambiguous_size": {
+        "en": "Those names are frame-size codes, and each size comes in several power supplies, so comparing them as written would show models you did not name. Give me the full part number of each one, or tell me the power supply and phase you want to compare.",
+        "es": "Esos nombres son códigos de tamaño y cada tamaño existe con varias alimentaciones; compararlos así mostraría modelos que no nombraste. Dame el número de parte completo de cada uno, o dime la alimentación y la fase con las que quieres compararlos.",
+    },
     "injection": {
         "en": "I can't skip my rules or share my instructions: every figure I give comes from the technical catalog. Ask me about a part number or your requirements.",
         "es": "No puedo saltarme mis reglas ni mostrar mis instrucciones: cada cifra que doy sale del catálogo técnico. Pregúntame por un número de parte o por tus requisitos.",

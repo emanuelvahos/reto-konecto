@@ -45,6 +45,7 @@ from app.tools import (
     current_grounded_pns,
     current_user_text,
     fetch_ui_actuators,
+    order_by_mention,
 )
 from app.verifier import VerificationResult, pn_key, load_known_parts, verify_answer
 
@@ -194,9 +195,9 @@ def derive_intent(traces: List[Dict[str, Any]], fallback_used: bool, clarificati
     return TOOL_NAME_TO_INTENT.get(last["tool_name"], "lookup")
 
 
-def build_ui_payload(actuator_ids: List[Any], lang: str = "en") -> Dict[str, Any]:
+def build_ui_payload(actuator_ids: List[Any], lang: str = "en", query: str = "") -> Dict[str, Any]:
     """ui_payload construido solo con filas de PostgreSQL y alertas de las tools; nada sale del texto del LLM."""
-    actuators = fetch_ui_actuators(actuator_ids)
+    actuators = order_by_mention(fetch_ui_actuators(actuator_ids), query)   # orden en que el usuario nombró los modelos
     internal: List[Dict[str, Any]] = [dict(a) for a in current_turn_alerts.get()]
 
     for act in actuators:
@@ -348,19 +349,25 @@ def _known_keys() -> set:
 def _reply_turn(decision: Decision, lang: str, visible_filters: Dict[str, Any], active_part_numbers: List[str],
                 make_debug, title) -> Tuple[Any, ...]:
     """Respuesta determinista del router (fuera de alcance / inyección): sin LLM, sin herramientas."""
-    alert = render_alert({"code": "OUT_OF_SCOPE", "params": {}}, lang)
-    answer = t_router(lang, "injection" if decision.reply == "injection" else "out_of_scope")
-    ui_payload = {
-        "display_type": "EDGE_CASE_ALERT",
-        "actuators": [],
-        "engineering_warnings": [alert["message"]],
-        "alerts": [alert],
-        "suggested_followups": build_followups("knowledge", {"actuators": []}, lang),
-    }
+    if decision.reply == "ambiguous_size":   # aclaración: no es fuera de alcance, no lleva alerta ni tarjetas
+        answer = t_router(lang, "ambiguous_size")
+        ui_payload = {"display_type": "TEXT_ONLY", "actuators": [], "engineering_warnings": [], "alerts": []}
+        intent = "clarify"
+    else:
+        alert = render_alert({"code": "OUT_OF_SCOPE", "params": {}}, lang)
+        answer = t_router(lang, "injection" if decision.reply == "injection" else "out_of_scope")
+        ui_payload = {
+            "display_type": "EDGE_CASE_ALERT",
+            "actuators": [],
+            "engineering_warnings": [alert["message"]],
+            "alerts": [alert],
+            "suggested_followups": build_followups("knowledge", {"actuators": []}, lang),
+        }
+        intent = "knowledge"
     parts = list(active_part_numbers)
     debug_trace, cost = make_debug([], 0, [], parts)
     meta = {
-        "intent": "knowledge",
+        "intent": intent,
         "verification": {"status": "verified", "numbers_checked": 0, "ungrounded": []},
         "language": lang,
         "short_title": title(parts, visible_filters),
@@ -587,7 +594,7 @@ def run_agent_turn(
     ui_t = time.perf_counter()
     if decision is not None and decision.oos_note:
         current_turn_alerts.get().append({"code": "OUT_OF_SCOPE", "params": {}})
-    ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang)
+    ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang, user_query)
     recommendation, rec_extras = build_recommendation_payload(lang)
     if recommendation is not None:
         ui_payload["recommendation"] = recommendation

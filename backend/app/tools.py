@@ -114,6 +114,25 @@ def record_alert(code: str, **params: Any) -> Dict[str, str]:
     return {"code": code, "message": render_alert_message(code, params, "en")}
 
 
+def order_by_mention(rows: List[Dict[str, Any]], text: str) -> List[Dict[str, Any]]:
+    """Reordena las filas según el orden en que el usuario nombró los modelos en `text` (número de parte completo o código de
+    tamaño). Las filas no nombradas conservan su orden y van al final. Las tools pueden correr en paralelo, así que el orden
+    de llegada no es fiable."""
+    key = re.sub(r"[^A-Z0-9]", "", (text or "").upper())
+    if not key or len(rows) < 2:
+        return list(rows)
+
+    def pos(r: Dict[str, Any]) -> int:
+        pn = re.sub(r"[^A-Z0-9]", "", str(r.get("base_part_number", "")).upper())
+        for cand in (pn, pn[:-1] if pn.endswith("A") else pn, str(r.get("size_code") or "").upper()):
+            i = key.find(cand) if cand else -1
+            if i >= 0:
+                return i
+        return 10**9
+
+    return sorted(rows, key=pos)    # sorted es estable
+
+
 def fetch_ui_actuators(ids: List[Any]) -> List[Dict[str, Any]]:
     """Filas de la tarjeta móvil leídas de PostgreSQL, en el orden en que las tools las devolvieron."""
     if not ids:

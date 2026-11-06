@@ -113,3 +113,55 @@ def test_turn_budget_returns_template_with_the_card_already_obtained(turn, monke
 def test_uncertain_query_falls_back_to_llm_path(turn):
     (answer, _, dbg, _, _, meta), fake = turn("Hello! Which voltage do you need?", "hello")
     assert fake.calls == 1 and steps(dbg)["router"]["detail"] == "uncertain" and meta["intent"] == "clarify"
+
+
+# --------------------------------------------------------------------------------------------- 4H: orden y nombres incompletos
+PN_C = "763C00-11300000/A"
+
+
+@pytest.mark.parametrize("query,expected", [
+    (f"Compare {PN} and {PN_C}", [PN, PN_C]),
+    (f"Compare {PN_C} and {PN}", [PN_C, PN]),
+    (f"Compara el {PN_C} con el {PN}", [PN_C, PN]),
+])
+def test_comparison_cards_follow_the_order_the_user_named_the_models(turn, query, expected):
+    # con LLM redactando (el texto es verificable) y con la plantilla (texto con cifras inventadas: el verificador lo rechaza)
+    for answer in (f"{expected[0]} and {expected[1]} compared.", "Torque 12345 Nm."):
+        (_, ui, _, parts, _, _), _ = turn(answer, query, locale="en")
+        got = [a["base_part_number"] for a in ui["actuators"]]
+        assert got == expected and parts == expected
+
+
+def test_template_text_names_models_in_the_user_order(turn):
+    (text, ui, _, _, _, meta), _ = turn("Torque 12345 Nm.", f"Compare {PN_C} and {PN}", locale="en")
+    assert meta["verification"]["status"] == "fallback_template"
+    assert text.find(PN_C) != -1 and text.find(PN_C) < text.find(PN)
+
+
+def test_order_by_mention_is_general_and_stable():
+    from app.tools import order_by_mention
+    rows = [{"base_part_number": "763C00-11300000/A", "size_code": "763C"},
+            {"base_part_number": "763A00-11300000/A", "size_code": "763A"},
+            {"base_part_number": "763B00-11300000/A", "size_code": "763B"}]
+    got = [r["size_code"] for r in order_by_mention(rows, "compare 763B, 763C and then 763A")]
+    assert got == ["763B", "763C", "763A"]
+    assert [r["size_code"] for r in order_by_mention(rows, "nothing named")] == ["763C", "763A", "763B"]
+
+
+@pytest.mark.parametrize("locale,query", [
+    ("en", "Compare 763B and 763C"), ("es", "Compara 763B y 763C"), ("en", "763C vs 763B"),
+    ("es", "compara 761A y 762B"),
+])
+def test_incomplete_names_in_a_comparison_ask_instead_of_showing_other_models(turn, locale, query):
+    (answer, ui, dbg, _, _, meta), fake = turn("SHOULD NOT BE USED", query, locale=locale)
+    assert fake.calls == 0 and dbg["tool_calls"] == [] and ui["actuators"] == []
+    assert meta["intent"] == "clarify" and ui["display_type"] == "TEXT_ONLY" and ui["alerts"] == []
+    assert not any(ch.isdigit() for ch in answer) and "SHOULD" not in answer
+    assert steps(dbg)["router"]["detail"] == "ambiguous_size"
+
+
+def test_full_names_and_single_size_code_are_not_ambiguous(turn):
+    (_, ui, _, _, _, meta), _ = turn("x", f"Compare {PN} and {PN_C}")
+    assert meta["intent"] == "lookup" and len(ui["actuators"]) == 2
+    (_, ui, _, _, _, meta), _ = turn("x", "specs of 763B")
+    assert meta["intent"] == "lookup" and ui["actuators"]

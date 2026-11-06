@@ -53,6 +53,7 @@ _OUT_OF_SCOPE = [re.compile(p, FLAGS) for p in (
 _PN_TOKEN = re.compile(r"(?<![A-Za-z0-9])[A-Za-z0-9]{5,7}\s?-\s?[A-Za-z0-9]{6,9}(?:\s?/\s?[A-Za-z])?(?![A-Za-z0-9])")
 _PN_SPACED = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z0-9]{2,4}[\s.]+\d[A-Za-z0-9]{5,8}(?:\s?/\s?[A-Za-z])?(?![A-Za-z0-9])")
 _PN_FLAT = re.compile(r"(?<![A-Za-z0-9])\d[A-Za-z0-9]{3,6}\d{5,8}[A-Za-z0-9]?/?[A-Za-z]?(?![A-Za-z0-9])")
+_SIZE_ONLY = re.compile(r"76\d[A-Z]")
 _SIZE_TOKEN = re.compile(r"(?<![A-Za-z0-9])\d{3}[A-Za-z]\d{0,2}(?![A-Za-z0-9])")
 
 # --------------------------------------------------------------------------------------------- números de parte dictados
@@ -254,6 +255,11 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
         if active_parts and _COMPARE.search(text) and _PRONOUN_REF.search(text):
             keys = {pn_key(x) for x in pns}
             pns = [a for a in active_parts[:1] if pn_key(a) not in keys] + pns
+        if len(pns) >= 2 and _COMPARE.search(text) and any(_SIZE_ONLY.fullmatch(pn_key(x)) for x in pns):
+            # «763B y 763C»: un código de tamaño agrupa varias alimentaciones; comparar sin elegir mostraría modelos que
+            # el usuario no nombró. Se pide el número de parte completo o la alimentación (respuesta fija, sin cifras).
+            d.kind, d.rule, d.reply, d.calls = "reply", "ambiguous_size", "ambiguous_size", []
+            return d
         for pn in pns[:3]:
             args: Dict[str, Any] = {"part_number": pn}
             if groups:
