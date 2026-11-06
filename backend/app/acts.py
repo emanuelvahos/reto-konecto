@@ -40,7 +40,7 @@ def load_config() -> Dict[str, Any]:
 
 # --------------------------------------------------------------------------------------------- patrones de actos
 _GREETING = re.compile(
-    r"^(?:hola+|hello|hi|hey|buen[oa]s?(?:\s+(?:dias|tardes|noches))?|good\s+(?:morning|afternoon|evening)|saludos|que tal|ola)\b"
+    r"^(?:hola+|hello|hi|hey|howdy|sup|wass?up|what['’]?s up|whats up|buen[oa]s?(?:\s+(?:dias|tardes|noches))?|good\s+(?:morning|afternoon|evening)|saludos|que tal|ola)\b"
     r"[\s,!.¡¿?]*(?:(?:amigo|amiga|ingeniero|ingeniera|ing|asistente|there|bot|friend|a todos|que tal|como estas|como andas|como te va|"
     r"how are you|how's it going|what's up|todo bien)[\s,!.¡¿?]*)*$", FLAGS)
 _BYE = re.compile(r"\b(?:adios|chao|chau|hasta luego|hasta pronto|nos vemos|bye|goodbye|see you|eso es todo|that'?s all|that is all)\b", FLAGS)
@@ -167,6 +167,7 @@ _FOLLOW_KEYS = {
     "attribute": ["sample_spec", "ask_certs", "start_recommend"],
     "application": ["start_recommend", "ask_s4", "ask_capabilities"],
     "clarify_which": ["sample_spec", "start_recommend"],
+    "ask_criteria": ["start_recommend", "sample_compare"],
 }
 
 
@@ -189,6 +190,8 @@ def render_act(act: str, lang: str, attr_label: Optional[Dict[str, str]] = None)
         ui = _payload("CLARIFICATION", [])
         ui["clarification"] = {"question": text, "options": help_menu(lang)}
         return text, ui, "clarify"
+    if act == "ask_criteria":
+        return t_act(lang, "ask_criteria"), _payload("TEXT_ONLY", _followups(_FOLLOW_KEYS["ask_criteria"], lang)), "clarify"
     if act == "clarify_which":
         return t_act(lang, "clarify_which"), _payload("TEXT_ONLY", _followups(_FOLLOW_KEYS["clarify_which"], lang)), "clarify"
     kw: Dict[str, Any] = {}
@@ -264,7 +267,16 @@ def new_session_title(lang: str) -> str:
     return NEW_TITLE.get(lang, NEW_TITLE["en"])
 
 
-def data_followups(lang: str) -> List[Dict[str, str]]:
+def data_followups(lang: str, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
+    v = (filters or {}).get("voltage_num")
+    if v:   # «¿hay de 24 V?»: botones útiles sobre ese voltaje (ranking, recomendación) en vez de los genéricos
+        if lang == "es":
+            return [{"label": f"Recomendar de {v} V", "query": f"Ayúdame a elegir un actuador de {v} V"},
+                    {"label": f"Más rápido en {v} V", "query": f"¿Cuál es el más rápido en {v} V?"},
+                    {"label": f"Más potente en {v} V", "query": f"¿Cuál es el más potente en {v} V?"}]
+        return [{"label": f"Recommend a {v} V", "query": f"Help me choose a {v} V actuator"},
+                {"label": f"Fastest at {v} V", "query": f"Which is the fastest at {v} V?"},
+                {"label": f"Most powerful at {v} V", "query": f"Which is the most powerful at {v} V?"}]
     return _followups(_FOLLOW_KEYS["data"], lang)
 
 

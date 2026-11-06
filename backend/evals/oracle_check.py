@@ -167,6 +167,10 @@ def catalog_oracle(resp: Dict[str, Any]) -> List[str]:
                 if (out["models"], out["available"]) != (g["models"], g["available"]):
                     fails.append(f"oracle_overview: count {out['models']}/{out['available']} vs {g['models']}/{g['available']}")
                 allowed = {float(g["models"]), float(g["available"])}
+                # desglose por carcasa y sufijos de número de parte (de golden.json) que se muestran en «¿hay de 24 V?»
+                for enc in ("Weatherproof", "Explosionproof"):
+                    allowed.add(float(golden_counts({**args, "enclosure_type": enc})["available"]))
+                allowed |= {float(x) for r in GOLDEN for x in re.findall(r"\d+", r["base_part_number"].split("-")[1].split("/")[0])}
             elif asp in ("voltages", "phases", "enclosures"):
                 col = {"voltages": "voltage_num", "phases": "phase_type", "enclosures": "enclosure_type"}[asp]
                 exp: Dict[Any, int] = {}

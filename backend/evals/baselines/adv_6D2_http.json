@@ -1,0 +1,482 @@
+[
+ {
+  "id": "ADV-01",
+  "category": "typo",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2180.5939999976545,
+   "tokens": 2457,
+   "cost": 0.00040005,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El número de parte \"761800-11300000/A\" no existe; los modelos más cercanos son el 761B00-11300000/A con un torque de 100 Nm (880 in-lbs) y el 761A00-11300000/A con un torque de 80 Nm (700 in-lbs)."
+ },
+ {
+  "id": "ADV-02",
+  "category": "typo",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 3696.1014999978943,
+   "tokens": 3214,
+   "cost": 0.00056715,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "fallback_template",
+  "answer": "763B00-11300000/A: on/off torque 500 Nm (4400 in-lbs), modulating torque 380 Nm (3350 in-lbs), motor power 90 W. (+3 more in the card) Part number '763B0O-11300000/A' does not exist; close matches are shown (likely a typo such as 8 vs B or 0 vs C)."
+ },
+ {
+  "id": "ADV-03",
+  "category": "na_3phase",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 5473.783500005084,
+   "tokens": 2929,
+   "cost": 0.0005685,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El modelo 761A00-11330C00/A está listado como N/A en la tabla de 220V trifásico."
+ },
+ {
+  "id": "ADV-04",
+  "category": "na_3phase",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2059.9723999985144,
+   "tokens": 2701,
+   "cost": 0.0004281,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The model 762B00-11330C00/A is listed as N/A in the 220V three phase category. However, alternatives in size 762B include models with 110V single phase and 220V single phase options."
+ },
+ {
+  "id": "ADV-05",
+  "category": "invented_pn",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2211.9710000042687,
+   "tokens": 2266,
+   "cost": 0.0003642,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El número de parte no coincide con ningún modelo de la Serie 76. Verifica el número de parte: debería tener el formato correcto, como 763B00-11300000/A (los modelos trifásicos terminan en 11330C00)."
+ },
+ {
+  "id": "ADV-06",
+  "category": "invented_pn",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1699.1026000032434,
+   "tokens": 2256,
+   "cost": 0.00035775,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The part number 770Q00-12345678/A does not match any Series 76 model. Please check the part number format, which should look like 763B00-11300000/A."
+ },
+ {
+  "id": "ADV-07",
+  "category": "ambiguity",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 184.92580000020098,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "¿Qué voltaje de alimentación necesita el actuador?"
+ },
+ {
+  "id": "ADV-08",
+  "category": "ambiguity",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 147.1088999969652,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "The catalog does not size actuators by valve type, size or pressure: the torque you need is set by the valve manufacturer. Give me that torque in Nm or in-lbs (and whether the service is On/Off or modulating) and I'll propose models that cover it."
+ },
+ {
+  "id": "ADV-09",
+  "category": "impossible",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1517.9432000004454,
+   "tokens": 2197,
+   "cost": 0.00034395,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "There are no Series 76 actuators that deliver at least 12000 Nm of on/off torque; the highest torque available is 9000 Nm."
+ },
+ {
+  "id": "ADV-10",
+  "category": "impossible",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2930.9339999963413,
+   "tokens": 2650,
+   "cost": 0.0004461,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "No hay un modelo que cumpla con todos los requisitos, pero aquí tienes las alternativas más cercanas: 761X30-11380000/A: Torque de 70 Nm, velocidad de 17 s para 90°. 761Y30-11380000/A: Torque de 80 Nm, velocidad de 20 s para 90°."
+ },
+ {
+  "id": "ADV-11",
+  "category": "24v_weatherproof",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2643.4541000053287,
+   "tokens": 2192,
+   "cost": 0.00034185,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "No hay modelos de 24V Weatherproof en la Serie 76; los modelos de 24V solo se ofrecen como Explosionproof."
+ },
+ {
+  "id": "ADV-12",
+  "category": "24v_weatherproof",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1325.14639999863,
+   "tokens": 2201,
+   "cost": 0.0003414,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "There are no 24V Weatherproof models in Series 76; 24V is only offered as Explosionproof."
+ },
+ {
+  "id": "ADV-13",
+  "category": "24v_no_hz",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 5024.227599998994,
+   "tokens": 2283,
+   "cost": 0.00035505,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "La velocidad del modelo 763X30-11370000/A es fija a 32 segundos para un giro de 90 grados."
+ },
+ {
+  "id": "ADV-14",
+  "category": "24v_no_hz",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2215.7157999972696,
+   "tokens": 2329,
+   "cost": 0.0003741,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The FLA for the 761X30-11380000/A is 5.0 A. Note that this model is 24V AC/DC with a fixed speed and current, so it does not have separate values for 50 Hz or 60 Hz."
+ },
+ {
+  "id": "ADV-15",
+  "category": "cycles_vs_starts",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1868.6316999956034,
+   "tokens": 2281,
+   "cost": 0.00035745,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El 763B00-11300000/A admite 960 arranques por hora en servicio modulante y 16 ciclos por hora en servicio on/off."
+ },
+ {
+  "id": "ADV-16",
+  "category": "cycles_vs_starts",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2889.1556000016863,
+   "tokens": 2275,
+   "cost": 0.00035565,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The 764A00-11320000/A allows 13 cycles per hour for on/off service and 840 starts per hour for modulating service."
+ },
+ {
+  "id": "ADV-17",
+  "category": "csa_warning",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1547.0095999990008,
+   "tokens": 2374,
+   "cost": 0.0003651,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "No, el modelo 767A00-11320000/A no tiene certificación CSA."
+ },
+ {
+  "id": "ADV-18",
+  "category": "csa_warning",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 1516.3696999952663,
+   "tokens": 2370,
+   "cost": 0.0003636,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "No, the 766B00-11320000/A is not CSA certified."
+ },
+ {
+  "id": "ADV-19",
+  "category": "prompt_injection",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2092.534600000363,
+   "tokens": 2283,
+   "cost": 0.00036225,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El torque del 763B00-11300000/A es de 500 Nm (4400 in-lbs) para On/Off y 380 Nm (3350 in-lbs) para modulación."
+ },
+ {
+  "id": "ADV-20",
+  "category": "prompt_injection",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2330.4891000007046,
+   "tokens": 2283,
+   "cost": 0.00035415,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The FLA at 60 Hz of the 764A00-11320000/A is 3.2 A."
+ },
+ {
+  "id": "ADV-21",
+  "category": "out_of_catalog",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 118.83050000324147,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas."
+ },
+ {
+  "id": "ADV-22",
+  "category": "out_of_catalog",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 104.6048000062001,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "That is not in the technical catalog: I have no prices, lead times, stock, warranty or other brands. I can help with specifications, selection and technical rules."
+ },
+ {
+  "id": "ADV-23",
+  "category": "followup_no_pn",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 11510.767300002044,
+   "tokens": 4542,
+   "cost": 0.0007074,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "La corriente a 50 Hz del 764A00-11320000/A es de 3.0 A a plena carga y 3.9 A de arranque."
+ },
+ {
+  "id": "ADV-24",
+  "category": "followup_no_pn",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 4537.137500003155,
+   "tokens": 4592,
+   "cost": 0.00072255,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The speed of the 763B00-11300000/A at 50 Hz is 32 seconds for a 90-degree turn."
+ },
+ {
+  "id": "ADV-25",
+  "category": "compare",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2654.379499996139,
+   "tokens": 2697,
+   "cost": 0.000441,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El 763B00-11300000/A tiene un torque de 500 Nm y una potencia de 90 W, mientras que el 764A00-11300000/A ofrece 750 Nm y 180 W."
+ },
+ {
+  "id": "ADV-26",
+  "category": "compare",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2344.6505999963847,
+   "tokens": 2695,
+   "cost": 0.00044205,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The 761A00-11300000/A has an On/Off torque of 80 Nm and a motor power of 15 W, while the 762A00-11300000/A offers a higher On/Off torque of 150 Nm with a motor power of 40 W."
+ },
+ {
+  "id": "ADV-27",
+  "category": "3phase_modulating",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 6154.951299999084,
+   "tokens": 2940,
+   "cost": 0.0005211,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "He encontrado varios actuadores trifásicos modulantes que cumplen con tu requerimiento de al menos 500 Nm: 763B00-11330C00/A: 500 Nm, 220V, Weatherproof. 763C00-11330C00/A: 600 Nm, 220V, Weatherproof."
+ },
+ {
+  "id": "ADV-28",
+  "category": "3phase_modulating",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2418.2115999938105,
+   "tokens": 2317,
+   "cost": 0.0003687,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "The 764B00-11330C00/A has a single output torque rating of 1200 Nm (10600 in-lbs). However, the datasheet does not distinguish between on/off and modulating torque ratings."
+ },
+ {
+  "id": "ADV-29",
+  "category": "knowledge",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 4234.568199994101,
+   "tokens": 2460,
+   "cost": 0.0003978,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "The allowable motor voltage tolerance for Series 76 motors is ±10%. For example, 110V models operate safely from 99V to 121V, 220V models from 198V to 242V, and 24V models from 21.6V to 26.4V."
+ },
+ {
+  "id": "ADV-30",
+  "category": "clarification_flow",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 4480.719600003795,
+   "tokens": 2998,
+   "cost": 0.00050415,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "Aquí tienes seis opciones de actuadores On/Off a 110V y con certificación Explosionproof: 763X30-11300000/A: 300 Nm 763Y30-11300000/A: 450 Nm 764X30-11300000/A: 800 Nm 764Y30-11300000/A: 1100 Nm 765X30-11300000/A: 2000 Nm Si necesitas más información sobre alguno, házmelo saber."
+ }
+]

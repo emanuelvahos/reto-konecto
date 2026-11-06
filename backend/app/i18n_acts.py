@@ -50,6 +50,10 @@ ACT_TEXT: Dict[str, Dict[str, str]] = {
         "en": "The catalog does not size actuators by valve type, size or pressure: the torque you need is set by the valve manufacturer. Give me that torque in Nm or in-lbs (and whether the service is On/Off or modulating) and I'll propose models that cover it.",
         "es": "El catálogo no dimensiona el actuador por tipo de válvula, tamaño o presión: el par que necesitas lo define el fabricante de la válvula. Dime ese par en Nm o in-lbs (y si el servicio es On/Off o modulante) y te propongo modelos que lo cubran.",
     },
+    "ask_criteria": {
+        "en": "With only one model there is nothing to weigh it against. Tell me what matters for your application (torque, speed, current draw, enclosure or voltage) or name a second model to compare.",
+        "es": "Con un solo modelo no hay contra qué compararlo. Dime qué te importa en tu aplicación (par, velocidad, consumo, carcasa o voltaje) o nombra otro modelo para compararlos.",
+    },
     "clarify_which": {
         "en": "Which model do you mean? Give me its part number (or size code) and I'll answer.",
         "es": "¿De qué modelo hablas? Dame su número de parte (o el código de tamaño) y te respondo.",

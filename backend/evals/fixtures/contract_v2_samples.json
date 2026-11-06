@@ -69,7 +69,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 298.33,
+      "total_latency_ms": 528.69,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -108,38 +108,38 @@
               }
             ]
           },
-          "execution_time_ms": 44.39
+          "execution_time_ms": 50.08
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 32.8,
+          "duration_ms": 115.28,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 33.98,
-          "duration_ms": 31.68,
+          "start_ms": 118.38,
+          "duration_ms": 85.63,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 82.36,
-          "duration_ms": 46.7,
+          "start_ms": 261.84,
+          "duration_ms": 54.32,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 176.28,
-          "duration_ms": 27.28,
+          "start_ms": 375.55,
+          "duration_ms": 52.89,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 203.57,
-          "duration_ms": 46.38,
+          "start_ms": 428.46,
+          "duration_ms": 50.94,
           "detail": null
         }
       ],
@@ -255,7 +255,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 232.2,
+      "total_latency_ms": 424.33,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -292,7 +292,7 @@
               }
             ]
           },
-          "execution_time_ms": 25.41
+          "execution_time_ms": 57.78
         },
         {
           "tool_name": "lookup_actuator_by_part_number",
@@ -317,44 +317,44 @@
               }
             ]
           },
-          "execution_time_ms": 34.55
+          "execution_time_ms": 54.95
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 26.53,
+          "duration_ms": 69.14,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 27.05,
-          "duration_ms": 27.04,
+          "start_ms": 71.37,
+          "duration_ms": 48.57,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 58.36,
-          "duration_ms": 27.4,
+          "start_ms": 140.01,
+          "duration_ms": 60.65,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 59.84,
-          "duration_ms": 36.01,
+          "start_ms": 143.44,
+          "duration_ms": 59.42,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 121.65,
-          "duration_ms": 37.04,
+          "start_ms": 252.25,
+          "duration_ms": 47.89,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 158.7,
-          "duration_ms": 45.28,
+          "start_ms": 300.15,
+          "duration_ms": 48.95,
           "detail": null
         }
       ],
@@ -645,7 +645,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 209.02,
+      "total_latency_ms": 466.99,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -728,50 +728,50 @@
               "speed"
             ]
           },
-          "execution_time_ms": 45.15
+          "execution_time_ms": 82.01
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 27.13,
+          "duration_ms": 80.57,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 27.73,
-          "duration_ms": 24.77,
+          "start_ms": 81.88,
+          "duration_ms": 55.93,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 56.93,
-          "duration_ms": 46.43,
+          "start_ms": 154.29,
+          "duration_ms": 84.73,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 130.84,
-          "duration_ms": 25.93,
+          "start_ms": 296.14,
+          "duration_ms": 52.02,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 156.78,
-          "duration_ms": 26.45,
+          "start_ms": 348.19,
+          "duration_ms": 57.93,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 183.23,
-          "duration_ms": 25.46,
+          "start_ms": 406.12,
+          "duration_ms": 60.28,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 208.7,
-          "duration_ms": 0.21,
+          "start_ms": 466.43,
+          "duration_ms": 0.35,
           "detail": "ungrounded"
         }
       ],
@@ -819,7 +819,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 106.85,
+      "total_latency_ms": 197.83,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -841,26 +841,26 @@
             "missing": "voltage",
             "instruction": "The app now asks the user this question with buttons. Do not recommend or state any figure; reply with one short neutral sentence."
           },
-          "execution_time_ms": 27.63
+          "execution_time_ms": 51.61
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 25.76,
+          "duration_ms": 81.88,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 26.3,
-          "duration_ms": 44.27,
+          "start_ms": 82.9,
+          "duration_ms": 45.49,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 75.95,
-          "duration_ms": 29.76,
+          "start_ms": 140.7,
+          "duration_ms": 54.79,
           "detail": null
         }
       ],
@@ -1013,7 +1013,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 251.78,
+      "total_latency_ms": 480.37,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1031,7 +1031,7 @@
         {
           "tool_name": "lookup_actuator_by_part_number",
           "arguments": {
-            "part_number": "763A00-11300000/A",
+            "part_number": "761A00-11300000/A",
             "focus": [
               "torque"
             ]
@@ -1042,18 +1042,18 @@
             "count": 1,
             "actuators": [
               {
-                "base_part_number": "763A00-11300000/A",
+                "base_part_number": "761A00-11300000/A",
                 "power_supply": "110V Single Phase",
                 "enclosure_type": "Weatherproof",
-                "on_off_torque_nm": 300,
-                "on_off_torque_in_lbs": 2650,
-                "modulating_torque_nm": 220,
-                "modulating_torque_in_lbs": 1950,
-                "motor_power_watts": 40
+                "on_off_torque_nm": 80,
+                "on_off_torque_in_lbs": 700,
+                "modulating_torque_nm": 65,
+                "modulating_torque_in_lbs": 580,
+                "motor_power_watts": 15
               }
             ]
           },
-          "execution_time_ms": 30.71
+          "execution_time_ms": 52.16
         },
         {
           "tool_name": "lookup_actuator_by_part_number",
@@ -1080,12 +1080,12 @@
               }
             ]
           },
-          "execution_time_ms": 34.18
+          "execution_time_ms": 58.43
         },
         {
           "tool_name": "lookup_actuator_by_part_number",
           "arguments": {
-            "part_number": "761A00-11300000/A",
+            "part_number": "763A00-11300000/A",
             "focus": [
               "torque"
             ]
@@ -1096,73 +1096,73 @@
             "count": 1,
             "actuators": [
               {
-                "base_part_number": "761A00-11300000/A",
+                "base_part_number": "763A00-11300000/A",
                 "power_supply": "110V Single Phase",
                 "enclosure_type": "Weatherproof",
-                "on_off_torque_nm": 80,
-                "on_off_torque_in_lbs": 700,
-                "modulating_torque_nm": 65,
-                "modulating_torque_in_lbs": 580,
-                "motor_power_watts": 15
+                "on_off_torque_nm": 300,
+                "on_off_torque_in_lbs": 2650,
+                "modulating_torque_nm": 220,
+                "modulating_torque_in_lbs": 1950,
+                "motor_power_watts": 40
               }
             ]
           },
-          "execution_time_ms": 37.54
+          "execution_time_ms": 63.13
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 27.02,
+          "duration_ms": 50.88,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 27.67,
-          "duration_ms": 30.45,
+          "start_ms": 51.9,
+          "duration_ms": 49.9,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 64.41,
-          "duration_ms": 39.92,
+          "start_ms": 109.79,
+          "duration_ms": 79.32,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 65.96,
-          "duration_ms": 36.25,
+          "start_ms": 112.69,
+          "duration_ms": 61.38,
           "detail": null
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 68.36,
-          "duration_ms": 33.12,
+          "start_ms": 116.6,
+          "duration_ms": 67.38,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 136.12,
-          "duration_ms": 28.7,
+          "start_ms": 254.76,
+          "duration_ms": 63.24,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 164.84,
-          "duration_ms": 28.51,
+          "start_ms": 318.04,
+          "duration_ms": 55.16,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 193.36,
-          "duration_ms": 27.07,
+          "start_ms": 373.21,
+          "duration_ms": 54.9,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 220.45,
-          "duration_ms": 0.4,
+          "start_ms": 428.14,
+          "duration_ms": 0.52,
           "detail": "ungrounded"
         }
       ],
@@ -1252,7 +1252,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 210.94,
+      "total_latency_ms": 459.76,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1295,38 +1295,38 @@
               }
             ]
           },
-          "execution_time_ms": 32.55
+          "execution_time_ms": 55.74
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 30.95,
+          "duration_ms": 63.94,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 31.7,
-          "duration_ms": 29.97,
+          "start_ms": 65.66,
+          "duration_ms": 50.55,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 66.14,
-          "duration_ms": 35.39,
+          "start_ms": 129.5,
+          "duration_ms": 59.89,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 137.09,
-          "duration_ms": 27.8,
+          "start_ms": 259.89,
+          "duration_ms": 69.57,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 164.9,
-          "duration_ms": 22.18,
+          "start_ms": 329.48,
+          "duration_ms": 63.26,
           "detail": null
         }
       ],
@@ -1453,7 +1453,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 272.04,
+      "total_latency_ms": 567.4,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1528,50 +1528,50 @@
               }
             ]
           },
-          "execution_time_ms": 36.25
+          "execution_time_ms": 62.46
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 46.36,
+          "duration_ms": 75.58,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 47.04,
-          "duration_ms": 35.87,
+          "start_ms": 76.99,
+          "duration_ms": 74.28,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 88.61,
-          "duration_ms": 38.67,
+          "start_ms": 162.62,
+          "duration_ms": 67.73,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 162.1,
-          "duration_ms": 31.23,
+          "start_ms": 308.27,
+          "duration_ms": 66.56,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 193.34,
-          "duration_ms": 27.53,
+          "start_ms": 374.86,
+          "duration_ms": 67.69,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 220.88,
-          "duration_ms": 27.68,
+          "start_ms": 442.57,
+          "duration_ms": 61.5,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 248.58,
-          "duration_ms": 0.11,
+          "start_ms": 504.08,
+          "duration_ms": 0.15,
           "detail": "ungrounded"
         }
       ],
@@ -1628,7 +1628,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 134.5,
+      "total_latency_ms": 246.37,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1653,38 +1653,38 @@
               "There are no 24V Weatherproof models in Series 76; 24V is only offered as Explosionproof."
             ]
           },
-          "execution_time_ms": 43.65
+          "execution_time_ms": 58.92
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 24.35,
+          "duration_ms": 75.2,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 24.94,
-          "duration_ms": 32.33,
+          "start_ms": 76.38,
+          "duration_ms": 44.21,
           "detail": "selection_criteria"
         },
         {
           "name": "tool:recommend_actuators",
-          "start_ms": 61.49,
-          "duration_ms": 45.74,
+          "start_ms": 133.47,
+          "duration_ms": 64.51,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 108.87,
-          "duration_ms": 25.51,
+          "start_ms": 202.95,
+          "duration_ms": 43.17,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 134.39,
-          "duration_ms": 0.05,
+          "start_ms": 246.13,
+          "duration_ms": 0.1,
           "detail": null
         }
       ],
@@ -1734,7 +1734,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 70.11,
+      "total_latency_ms": 62.57,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1749,13 +1749,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 44.24,
+          "duration_ms": 33.0,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 44.97,
-          "duration_ms": 25.09,
+          "start_ms": 34.31,
+          "duration_ms": 28.13,
           "detail": "out_of_scope"
         }
       ],
@@ -1807,7 +1807,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 130.11,
+      "total_latency_ms": 164.79,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1822,13 +1822,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 53.34,
+          "duration_ms": 38.87,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 53.91,
-          "duration_ms": 26.2,
+          "start_ms": 40.3,
+          "duration_ms": 40.71,
           "detail": "act:help_request"
         }
       ],
@@ -1916,7 +1916,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 163.01,
+      "total_latency_ms": 231.98,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -1955,38 +1955,38 @@
               }
             ]
           },
-          "execution_time_ms": 24.87
+          "execution_time_ms": 40.12
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 38.94,
+          "duration_ms": 42.69,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 39.56,
-          "duration_ms": 25.23,
+          "start_ms": 44.3,
+          "duration_ms": 41.79,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 68.94,
-          "duration_ms": 26.69,
+          "start_ms": 97.04,
+          "duration_ms": 43.79,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 97.14,
-          "duration_ms": 25.78,
+          "start_ms": 144.65,
+          "duration_ms": 42.94,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 122.93,
-          "duration_ms": 0.05,
+          "start_ms": 187.61,
+          "duration_ms": 0.09,
           "detail": "llm_unavailable"
         }
       ],
@@ -2113,7 +2113,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 234.32,
+      "total_latency_ms": 470.18,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2185,50 +2185,50 @@
               }
             ]
           },
-          "execution_time_ms": 28.29
+          "execution_time_ms": 48.92
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 31.41,
+          "duration_ms": 111.22,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 32.24,
-          "duration_ms": 24.68,
+          "start_ms": 112.18,
+          "duration_ms": 52.01,
           "detail": "part_number"
         },
         {
           "name": "tool:lookup_actuator_by_part_number",
-          "start_ms": 63.05,
-          "duration_ms": 29.17,
+          "start_ms": 172.81,
+          "duration_ms": 51.28,
           "detail": null
         },
         {
           "name": "verifier",
-          "start_ms": 122.62,
-          "duration_ms": 28.79,
+          "start_ms": 267.12,
+          "duration_ms": 46.59,
           "detail": null
         },
         {
           "name": "verifier_retry",
-          "start_ms": 151.42,
-          "duration_ms": 30.71,
+          "start_ms": 313.73,
+          "duration_ms": 41.31,
           "detail": null
         },
         {
           "name": "ui_payload",
-          "start_ms": 182.13,
-          "duration_ms": 28.17,
+          "start_ms": 355.05,
+          "duration_ms": 44.39,
           "detail": null
         },
         {
           "name": "fallback_template",
-          "start_ms": 210.32,
-          "duration_ms": 0.12,
+          "start_ms": 399.46,
+          "duration_ms": 0.2,
           "detail": "ungrounded"
         }
       ],
@@ -2273,7 +2273,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 124.87,
+      "total_latency_ms": 181.48,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2288,13 +2288,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 28.51,
+          "duration_ms": 51.0,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 29.26,
-          "duration_ms": 26.5,
+          "start_ms": 52.25,
+          "duration_ms": 37.21,
           "detail": "act:greeting"
         }
       ],
@@ -2339,7 +2339,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 185.04,
+      "total_latency_ms": 184.9,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2354,13 +2354,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 43.79,
+          "duration_ms": 46.37,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 44.4,
-          "duration_ms": 42.42,
+          "start_ms": 47.62,
+          "duration_ms": 55.02,
           "detail": "act:capabilities"
         }
       ],
@@ -2412,7 +2412,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 141.53,
+      "total_latency_ms": 279.24,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2427,13 +2427,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 37.26,
+          "duration_ms": 72.06,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 37.86,
-          "duration_ms": 27.49,
+          "start_ms": 73.33,
+          "duration_ms": 50.13,
           "detail": "act:help_request"
         }
       ],
@@ -2449,11 +2449,11 @@
     "intent": "knowledge",
     "verification": {
       "status": "verified",
-      "numbers_checked": 6,
+      "numbers_checked": 8,
       "ungrounded": []
     },
     "session_id": "00000000-0000-4000-8000-000000000076",
-    "answer": "Los modelos disponibles se ofrecen en 24 V (10), 110 V (21) y 220 V (33) (entre paréntesis, nº de modelos).",
+    "answer": "El catálogo de la Serie 76 tiene 68 modelos, 64 disponibles y 4 listados como N/A, en 7 tamaños, con alimentación de 24 V, 110 V y 220 V y carcasa Explosionproof y Weatherproof.",
     "ui_payload": {
       "display_type": "TEXT_ONLY",
       "actuators": [],
@@ -2478,7 +2478,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 176.21,
+      "total_latency_ms": 252.08,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2492,47 +2492,46 @@
         {
           "tool_name": "catalog_overview",
           "arguments": {
-            "aspect": "voltages"
+            "aspect": "summary"
           },
-          "sql_executed": "SELECT voltage_num v, COUNT(*) n FROM actuators WHERE is_available GROUP BY voltage_num ORDER BY voltage_num;",
+          "sql_executed": "SELECT COUNT(*) n, SUM(is_available::int) av, COUNT(DISTINCT frame_size) fs FROM actuators;",
           "raw_output": {
             "status": "CATALOG_OVERVIEW",
-            "aspect": "voltages",
-            "values": [
-              {
-                "value": 24,
-                "models": 10
-              },
-              {
-                "value": 110,
-                "models": 21
-              },
-              {
-                "value": 220,
-                "models": 33
-              }
+            "aspect": "summary",
+            "models": 68,
+            "available": 64,
+            "not_available": 4,
+            "frame_sizes": 7,
+            "voltages": [
+              24,
+              110,
+              220
+            ],
+            "enclosures": [
+              "Explosionproof",
+              "Weatherproof"
             ]
           },
-          "execution_time_ms": 27.71
+          "execution_time_ms": 45.73
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 35.91,
+          "duration_ms": 47.15,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 36.67,
-          "duration_ms": 47.32,
+          "start_ms": 49.11,
+          "duration_ms": 39.86,
           "detail": "catalog_overview"
         },
         {
           "name": "tool:catalog_overview",
-          "start_ms": 88.21,
-          "duration_ms": 28.84,
+          "start_ms": 99.48,
+          "duration_ms": 47.67,
           "detail": null
         }
       ],
@@ -2697,38 +2696,8 @@
           "source_method": "A+B+humano"
         }
       ],
-      "engineering_warnings": [
-        "El modelo 766A00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA).",
-        "El modelo 766B00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA).",
-        "El modelo 767A00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA).",
-        "El modelo 767B00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
-      ],
-      "alerts": [
-        {
-          "code": "CSA_NOT_CERTIFIED",
-          "severity": "warning",
-          "title": "Sin certificación CSA",
-          "message": "El modelo 766A00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA)."
-        },
-        {
-          "code": "CSA_NOT_CERTIFIED",
-          "severity": "warning",
-          "title": "Sin certificación CSA",
-          "message": "El modelo 766B00-11320000/A (tamaño 6) NO tiene certificación CSA (solo CE y UKCA)."
-        },
-        {
-          "code": "CSA_NOT_CERTIFIED",
-          "severity": "warning",
-          "title": "Sin certificación CSA",
-          "message": "El modelo 767A00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
-        },
-        {
-          "code": "CSA_NOT_CERTIFIED",
-          "severity": "warning",
-          "title": "Sin certificación CSA",
-          "message": "El modelo 767B00-11320000/A (tamaño 7) NO tiene certificación CSA (solo CE y UKCA)."
-        }
-      ],
+      "engineering_warnings": [],
+      "alerts": [],
       "recommendation": null,
       "clarification": null,
       "suggested_followups": [
@@ -2748,7 +2717,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 197.48,
+      "total_latency_ms": 275.23,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2786,26 +2755,26 @@
             ],
             "filters": {}
           },
-          "execution_time_ms": 27.0
+          "execution_time_ms": 40.87
         }
       ],
       "steps": [
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 28.43,
+          "duration_ms": 41.91,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 29.11,
-          "duration_ms": 27.48,
+          "start_ms": 42.87,
+          "duration_ms": 45.82,
           "detail": "ranking"
         },
         {
           "name": "tool:rank_actuators",
-          "start_ms": 61.08,
-          "duration_ms": 27.76,
+          "start_ms": 97.01,
+          "duration_ms": 42.63,
           "detail": null
         }
       ],
@@ -2850,7 +2819,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 145.37,
+      "total_latency_ms": 182.07,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2865,13 +2834,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 25.6,
+          "duration_ms": 49.12,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 26.38,
-          "duration_ms": 25.22,
+          "start_ms": 50.35,
+          "duration_ms": 44.97,
           "detail": "act:attribute"
         }
       ],
@@ -2919,7 +2888,7 @@
     },
     "debug_trace": {
       "model_used": "openai/gpt-4o-mini",
-      "total_latency_ms": 113.59,
+      "total_latency_ms": 164.68,
       "token_usage": {
         "prompt_tokens": 0,
         "completion_tokens": 0,
@@ -2934,13 +2903,13 @@
         {
           "name": "history_load",
           "start_ms": 0.0,
-          "duration_ms": 36.71,
+          "duration_ms": 61.58,
           "detail": null
         },
         {
           "name": "router",
-          "start_ms": 37.28,
-          "duration_ms": 76.27,
+          "start_ms": 62.82,
+          "duration_ms": 101.73,
           "detail": "size_reference"
         }
       ],

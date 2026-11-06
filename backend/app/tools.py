@@ -773,6 +773,12 @@ def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None,
                 r = cur.fetchone()
                 result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "filters": {k: v for k, v in filters.items() if v is not None},
                           "models": int(r["n"]), "available": int(r["av"] or 0)}
+                if any(v is not None for v in filters.values()):          # desglose por carcasa y sufijo (para «¿hay de 24 V?»)
+                    sql_g = ("SELECT enclosure_type e, split_part(split_part(base_part_number, '-', 2), '/', 1) suf, COUNT(*) n, "
+                             f"SUM(is_available::int) av FROM actuators WHERE TRUE{w} GROUP BY 1, 2 ORDER BY 1, 2;")
+                    cur.execute(sql_g, params)
+                    sql_used += " " + sql_g
+                    result["groups"] = [{"enclosure": g["e"], "suffix": g["suf"], "models": int(g["n"]), "available": int(g["av"] or 0)} for g in cur.fetchall()]
             elif aspect == "sizes":
                 sql_used = ("SELECT frame_size, COUNT(*) n, MIN(LEAST(on_off_torque_nm, modulating_torque_nm)) tmin, "
                             "MAX(GREATEST(on_off_torque_nm, modulating_torque_nm)) tmax FROM actuators WHERE is_available GROUP BY frame_size ORDER BY frame_size;")

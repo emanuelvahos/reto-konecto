@@ -359,3 +359,38 @@ Fallos (texto del arnés, sin editar):
 - Con OpenRouter por HTTP se cumplen las puertas (EVAL 11/11, ADV 30/30, ciega 39/40).
 - El 100 % del banco natural incluye el set de desarrollo; la tasa sobre casos no vistos se mide con el set ciego del usuario (informe aparte).
 - Resultados por caso: `backend/evals/baselines/*_6D_*.json`; informes `NATURAL_REPORT.md`, `ADVERSARIAL_REPORT.md`, `HELDOUT_REPORT.md`, `EVALUATION_REPORT.md`.
+
+## Set ciego del usuario (40 mensajes, `evals/blind.json`): primera corrida y segunda corrida (2026-11-06)
+
+Tasa REAL sobre mensajes no vistos: la de la **primera corrida**. El 235/235 del banco natural NO es una tasa real: incluye 21 casos de paráfrasis escritos durante la fase 6 y casos que se ajustaron al corregir fallos; el set ciego es la medida honesta. Ambas corridas fueron por HTTP contra el contenedor reconstruido (OpenRouter, `openai/gpt-4o-mini`), con las expectativas fijadas antes de la primera corrida.
+
+| | Primera corrida (commit `5879a60`, código de `46d54ae`) | Segunda corrida (con los arreglos de esta sección) |
+| --- | --- | --- |
+| Ejecutor automático | 30/40 | 32/40 |
+| **Auditado a mano** | **33/40 (82,5 %)** | **38/40 (95 %)** |
+| Latencia (último turno) | p50 812 ms, p95 3216 ms | ver `BLIND_REPORT_run2.md` |
+| Costo / tokens | USD 0,00714 / 42 739 | USD 0,00756 / 45 683 |
+
+**Corrección a mi informe de la primera corrida:** dije 34/40. Al auditar con el mismo criterio que en la segunda corrida, BLD-02 («qué hace esta app») responde con el texto de «quién soy» y no con las capacidades, así que cuenta como fallo: la primera corrida queda en **33/40**. Las cifras por caso están en `BLIND_REPORT.md` (primera) y `BLIND_REPORT_run2.md` (segunda); los JSON en `baselines/blind_6D_http_openrouter.json` y `baselines/blind_6D2_http.json`.
+
+**Fallos de la primera corrida (7):** BLD-02, 06, 08, 10, 15, 22, 25 (descritos en `BLIND_REPORT.md`).
+
+**Arreglos de la segunda corrida (generales, no por cadena de caso):**
+1. Código de tamaño + alimentación en el mismo mensaje, en ficha y en comparación («762B00 de 220 monofasico», «761A00 con el 762A00 de 110V», «el 764B a 220 trifásico»): el voltaje sin unidad junto a la fase se reconoce y cada código se resuelve contra la base; si falta la alimentación se pide, nunca se dice «no coincide».
+2. «¿Hay de 24 V?» y variantes: respuesta de catálogo sin tarjetas (carcasa y sufijos desde SQL) y botones de ese voltaje.
+3. Saludos informales en inglés («what's up», «sup», «hey there») y concepto genérico («qué es un actuador eléctrico») hacia `search_engineering_knowledge`.
+4. Número con forma de código de tamaño que no existe (999Z00): lookup → «no coincide con ningún modelo» con botones de ejemplo; «¿cuál me conviene?» sin criterios: pregunta el criterio, no el voltaje.
+5. Rankings y catálogo sin avisos CSA repetidos que nadie pidió; la pregunta compuesta «¿cuántos modelos hay y qué voltajes manejan?» responde con el resumen (ambas partes).
+
+**Resultado de la segunda corrida:** corregidos BLD-06, 08, 10, 15, 22 y 37 (ahora dice que 999Z00 no existe) y 40 (pregunta el criterio). Siguen sin cumplir: **BLD-02** («qué hace esta app» da el texto de «quién soy», no las capacidades), **BLD-25** (decisión de diseño: con 800 in-lbs pregunta el voltaje antes de recomendar; el pedido era recomendar) y, parcial, **BLD-24** («catálogo completo» da el resumen, pero los botones son los genéricos, no filtros). Los 8 «fallos» del ejecutor que no son reales (BLD-03, 21, 22, 23, 24 y las cifras de BLD-02; BLD-08 por 62 palabras frente a su tope de 60, mientras el tope del producto sin tarjetas es 80) son límites del ejecutor: `run_adversarial.py` no tiene el oráculo de catálogo y marca conteos, rangos y sufijos que sí coinciden con `golden.json`.
+
+**Incidente durante la fase:** un reemplazo mío eliminó caracteres de control (`\x08`) de `router.py` que estaban en 3 patrones (un `\b` mal escrito desde antes); eso hizo que «recomiéndame una película…» llamara a `recommend_actuators`. Lo detectó el banco natural (232/235 en el primer intento), restauré esas 3 líneas tal cual estaban y repetí todo. Los patrones con ese defecto previo quedan como estaban (deshabilitan sus fronteras `\b`); no los toqué por no cambiar comportamiento ya medido.
+
+### Puertas tras los arreglos (OpenRouter, HTTP, contenedor reconstruido)
+| Batería | Resultado |
+| --- | --- |
+| Evals | 11/11 |
+| Adversarial | 30/30 |
+| Ciega propia (`heldout.json`) | 40/40 (USD 0,0169) |
+| Banco natural | 235/235 (no relacionada 0; `uncertain` 6,8 %; p50 480 ms; p95 4536 ms) — NO es tasa real (ver arriba) |
+| Suite pytest | 675 pasan, 1 omitida |

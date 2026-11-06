@@ -38,6 +38,10 @@ def _filters_text(filters: Dict[str, Any], lang: str) -> str:
     return ", ".join(bits)
 
 
+def _short(word: str) -> str:
+    return word.split(" (")[0]
+
+
 def _join(items: List[str], lang: str) -> str:
     if len(items) <= 1:
         return "".join(items)
@@ -96,9 +100,24 @@ def render_overview(out: Dict[str, Any], lang: str) -> str:
         if n == 0:
             return (f"No hay modelos {desc} en el catálogo." if es else f"There are no {desc} models in the catalog.")
         what = f" {desc}" if desc else ""
+        by_enc: Dict[str, Dict[str, Any]] = {}
+        for g in out.get("groups") or []:
+            if g["available"]:
+                e = by_enc.setdefault(g["enclosure"], {"av": 0, "suf": []})
+                e["av"] += g["available"]
+                e["suf"].append(g["suffix"])
+        tail = ""
+        if desc and by_enc:
+            enc_txt = [f"{_short(ENCLOSURE.get(e, {}).get(lang, e))}: {v['av']} ({'sufijos' if es else 'suffixes'} {', '.join(v['suf'])})" for e, v in by_enc.items()]
+            if len(by_enc) == 1:
+                e0 = next(iter(by_enc))
+                tail = (f" Solo se ofrecen en carcasa {_short(ENCLOSURE.get(e0, {}).get(lang, e0))} ({'sufijos' if es else 'suffixes'} {', '.join(by_enc[e0]['suf'])})." if es
+                        else f" They are only offered in {_short(ENCLOSURE.get(e0, {}).get(lang, e0))} enclosures (suffixes {', '.join(by_enc[e0]['suf'])}).")
+            else:
+                tail = (" Por carcasa: " if es else " By enclosure: ") + "; ".join(enc_txt) + "."
         if es:
-            return f"Sí. Hay {n} modelos{what} en el catálogo, {av} disponibles." if desc else f"Hay {n} modelos en el catálogo, {av} disponibles."
-        return f"Yes. There are {n}{what} models in the catalog, {av} available." if desc else f"There are {n} models in the catalog, {av} available."
+            return (f"Sí. Hay {n} modelos{what} en el catálogo, {av} disponibles." + tail) if desc else f"Hay {n} modelos en el catálogo, {av} disponibles."
+        return (f"Yes. There are {n}{what} models in the catalog, {av} available." + tail) if desc else f"There are {n} models in the catalog, {av} available."
     if aspect == "voltages":
         items = [f"{v['value']} V ({v['models']})" for v in out["values"]]
         return (f"Los modelos disponibles se ofrecen en {_join(items, lang)} (entre paréntesis, nº de modelos)." if es

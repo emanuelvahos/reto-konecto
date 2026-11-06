@@ -79,6 +79,14 @@ def build_followups(
         add("ask_certs")
         add("start_recommend")
     elif intent == "error" or not rows:
+        if intent == "lookup":          # número que no existe: se ofrece un modelo real de ejemplo y la recomendación
+            try:
+                from app.acts import sample_models
+                sample = sample_models()
+                if sample:
+                    add("sample_spec", pn=sample[0])
+            except Exception:  # noqa: BLE001
+                pass
         add("start_recommend")
     return out[:MAX_FOLLOWUPS]
 

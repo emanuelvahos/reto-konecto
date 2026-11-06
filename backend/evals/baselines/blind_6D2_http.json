@@ -1,0 +1,659 @@
+[
+ {
+  "id": "BLD-01",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 3263.8743999996223,
+   "tokens": 1071,
+   "cost": 0.00018045,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "Claro, te guío. ¿Qué quieres hacer?"
+ },
+ {
+  "id": "BLD-02",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [
+   "[turno 'qué hace esta app'] números fuera del oráculo (unidad/fila): ['64']",
+   "la respuesta no contiene ninguno de ['ficha|recomend|compar']: 'Soy un asistente técnico del catálogo de actuadores eléctricos de servicio pesado Serie 76 de Konecto, con 64 modelos disponibles. Respondo '"
+  ],
+  "stats": {
+   "latency_ms": 2931.4808000053745,
+   "tokens": 1063,
+   "cost": 0.00017925,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Soy un asistente técnico del catálogo de actuadores eléctricos de servicio pesado Serie 76 de Konecto, con 64 modelos disponibles. Respondo consultando una base de datos del catálogo, así que cada cifra que ves sale de ahí y no de la memoria de un modelo de lenguaje."
+ },
+ {
+  "id": "BLD-03",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [
+   "[turno 'oye y tú quién eres'] números fuera del oráculo (unidad/fila): ['64']"
+  ],
+  "stats": {
+   "latency_ms": 625.42289999692,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Soy un asistente técnico del catálogo de actuadores eléctricos de servicio pesado Serie 76 de Konecto, con 64 modelos disponibles. Respondo consultando una base de datos del catálogo, así que cada cifra que ves sale de ahí y no de la memoria de un modelo de lenguaje."
+ },
+ {
+  "id": "BLD-04",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 153.75520000088727,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "¡Con gusto! Si necesitas otra ficha, comparación o recomendación, aquí sigo."
+ },
+ {
+  "id": "BLD-05",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 153.29860000201734,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "¡Hasta luego! Vuelve cuando necesites una ficha, comparación o recomendación de la Serie 76."
+ },
+ {
+  "id": "BLD-06",
+  "category": "conversacion",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 276.80810000310885,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Hi! I'm the technical assistant for the Series 76 electric actuators: I read the catalog to give you spec sheets, comparisons and recommendations. Where shall we start?"
+ },
+ {
+  "id": "BLD-07",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 247.56129999877885,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Eso queda fuera de lo que hago: solo cubro los actuadores eléctricos Serie 76. Puedo darte una ficha, comparar modelos o ayudarte a elegir uno."
+ },
+ {
+  "id": "BLD-08",
+  "category": "conversacion",
+  "lang": "es",
+  "fails": [
+   "[turno 'no entiendo nada, explícame qué es un ac'] respuesta larga (62 palabras)"
+  ],
+  "stats": {
+   "latency_ms": 3194.462100000237,
+   "tokens": 2420,
+   "cost": 0.00040125,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Un actuador eléctrico es un dispositivo utilizado en la automatización industrial para abrir, cerrar o controlar con precisión válvulas y compuertas en plantas de procesamiento y HVAC. Los actuadores de la serie 76 son de alta resistencia y vienen en dos tipos de envoltura: Weatherproof, para uso industrial general, y Explosionproof, para entornos peligrosos donde pueden estar presentes gases o polvo inflamables."
+ },
+ {
+  "id": "BLD-09",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 4036.5412999963155,
+   "tokens": 2560,
+   "cost": 0.0004812,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "fallback_template",
+  "answer": "765A00-11320000/A: torque on/off 2000 Nm (17700 in-lbs), torque modulante 1700 Nm (15000 in-lbs), potencia del motor 180 W."
+ },
+ {
+  "id": "BLD-10",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2004.7398999959114,
+   "tokens": 2272,
+   "cost": 0.0003516,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "Consume 1.1 A a plena carga y 1.2 A de arranque a 60 Hz."
+ },
+ {
+  "id": "BLD-11",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 3898.362799998722,
+   "tokens": 2400,
+   "cost": 0.0003897,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El modelo 761A00-11300000/A tiene un par de 80 Nm (700 in-lbs) para On/Off y 65 Nm (580 in-lbs) para modulación. Consume 1.2 A a plena carga y 1.4 A de arranque a 60 Hz."
+ },
+ {
+  "id": "BLD-12",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2455.718099998194,
+   "tokens": 2400,
+   "cost": 0.0003897,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El modelo 761A00-11300000/A tiene un par de 80 Nm (700 in-lbs) para On/Off y 65 Nm (580 in-lbs) para modulación. Consume 1.2 A a plena carga y 1.4 A de arranque a 60 Hz."
+ },
+ {
+  "id": "BLD-13",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2128.538600001775,
+   "tokens": 2283,
+   "cost": 0.0003627,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El torque del 763B00-11300000/A es de 500 Nm (4400 in-lbs) para On/Off y de 380 Nm (3350 in-lbs) para modulación."
+ },
+ {
+  "id": "BLD-14",
+  "category": "comparacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 3738.6257000034675,
+   "tokens": 2776,
+   "cost": 0.0004875,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "Aquí tienes la comparación entre los modelos 763B00-11300000/A y 764B00-11300000/A: 763B00-11300000/A: Torque On/Off 500 Nm, Torque Modulante 380 Nm, Ciclo de trabajo On/Off 30%, Ciclos por hora 16, Velocidad 60 Hz 26 s, Consumo FLA 4.8 A."
+ },
+ {
+  "id": "BLD-15",
+  "category": "comparacion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2964.569899995695,
+   "tokens": 2685,
+   "cost": 0.0004374,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El modelo 761A00-11300000/A tiene un torque de 80 Nm y consume 1.2 A a plena carga. El 762A00-11300000/A ofrece un torque de 150 Nm y consume 2.3 A."
+ },
+ {
+  "id": "BLD-16",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 225.23699999874225,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "El 763B existe con varias alimentaciones. ¿Cuál necesitas?"
+ },
+ {
+  "id": "BLD-17",
+  "category": "ficha",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 258.5615999996662,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "El 764B existe con varias alimentaciones. ¿Cuál necesitas?"
+ },
+ {
+  "id": "BLD-18",
+  "category": "sesion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 6689.0857000034885,
+   "tokens": 4771,
+   "cost": 0.00078585,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "Toma 39 segundos para completar un giro de 90 grados a 50 Hz."
+ },
+ {
+  "id": "BLD-19",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 463.469599999371,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "Criterio: más rápido (menos segundos por giro de 90°), solo modelos disponibles. Hay 4 modelos empatados con el menor tiempo de giro: 17 s."
+ },
+ {
+  "id": "BLD-20",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 463.9002000039909,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "Criterio: menor corriente a plena carga (FLA), solo modelos disponibles. Hay 2 modelos empatados con la menor FLA: 0.6 A."
+ },
+ {
+  "id": "BLD-21",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [
+   "[turno 'cuántos actuadores manejan en total'] números fuera del oráculo (unidad/fila): ['68', '64']"
+  ],
+  "stats": {
+   "latency_ms": 417.0042999976431,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Hay 68 modelos en el catálogo, 64 disponibles."
+ },
+ {
+  "id": "BLD-22",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [
+   "[turno 'hay de 24 voltios?'] números fuera del oráculo (unidad/fila): ['10', '11370000', '11380000']"
+  ],
+  "stats": {
+   "latency_ms": 274.70329999778187,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Sí. Hay 10 modelos 24 V en el catálogo, 10 disponibles. Solo se ofrecen en carcasa Explosionproof (sufijos 11370000, 11380000)."
+ },
+ {
+  "id": "BLD-23",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [
+   "[turno 'cuál es la diferencia entre el 761 y el '] números fuera del oráculo (unidad/fila): ['12', '65', '100', '15', '40', '220', '600', '90']"
+  ],
+  "stats": {
+   "latency_ms": 359.9078000042937,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "El 761 tiene 12 modelos disponibles de 65 a 100 Nm y motor de 15–40 W; el 763 tiene 15 modelos disponibles de 220 a 600 Nm y motor de 40–90 W."
+ },
+ {
+  "id": "BLD-24",
+  "category": "catalogo",
+  "lang": "es",
+  "fails": [
+   "[turno 'dame el catálogo completo'] números fuera del oráculo (unidad/fila): ['68', '64']"
+  ],
+  "stats": {
+   "latency_ms": 2015.6018000052427,
+   "tokens": 1070,
+   "cost": 0.000183,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Hay 68 modelos en el catálogo, 64 disponibles."
+ },
+ {
+  "id": "BLD-25",
+  "category": "seleccion",
+  "lang": "es",
+  "fails": [
+   "intent='clarify', esperado ['recommend']"
+  ],
+  "stats": {
+   "latency_ms": 165.0344999943627,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "Anotado: 800 in-lbs. ¿Qué voltaje de alimentación necesita el actuador?"
+ },
+ {
+  "id": "BLD-26",
+  "category": "seleccion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2318.9312999966205,
+   "tokens": 2404,
+   "cost": 0.0003858,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "El modelo recomendado es el 763A00-11320000/A, que ofrece un torque de 300 Nm y una velocidad de 29 segundos a 50 Hz. Es de 220V monofásico y tiene un diseño a prueba de intemperie."
+ },
+ {
+  "id": "BLD-27",
+  "category": "seleccion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2752.6773999998113,
+   "tokens": 2684,
+   "cost": 0.000453,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "Aquí tienes tres opciones trifásicas de 220V que soportan más de 1000 Nm: 764B00-11330C00/A: 1200 Nm, 180 W. 765A00-11330C00/A: 2000 Nm, 180 W."
+ },
+ {
+  "id": "BLD-28",
+  "category": "seleccion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 262.5569000010728,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "Hay 10 modelos que cumplen 24 V. Te muestro los primeros de menor a mayor torque, sin ranking porque no indicaste torque, velocidad ni otro requisito blando. Dime el par que necesitas para afinar la elección."
+ },
+ {
+  "id": "BLD-29",
+  "category": "seleccion",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 166.03330000361893,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "recommend",
+  "verification": "verified",
+  "answer": "There are 10 models that meet 110 V, Explosionproof. I'm showing the first ones from lowest to highest torque, with no ranking because you gave no torque, speed or other soft requirement. Tell me the torque you need to narrow it down."
+ },
+ {
+  "id": "BLD-30",
+  "category": "seleccion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 170.64729999401607,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "El catálogo no dimensiona el actuador por tipo de válvula, tamaño o presión: el par que necesitas lo define el fabricante de la válvula. Dime ese par en Nm o in-lbs (y si el servicio es On/Off o modulante) y te propongo modelos que lo cubran."
+ },
+ {
+  "id": "BLD-31",
+  "category": "concepto",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2296.7596000016783,
+   "tokens": 2362,
+   "cost": 0.0003741,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "El factor S4% se refiere al ciclo de trabajo del actuador, que es el porcentaje de tiempo que puede operar en un ciclo sin sobrecalentarse, según la norma IEC 60034-1."
+ },
+ {
+  "id": "BLD-32",
+  "category": "concepto",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2166.52669999894,
+   "tokens": 2339,
+   "cost": 0.0003621,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "FLA stands for Full Load Current, which is the current in Amps drawn by the actuator under maximum rated load."
+ },
+ {
+  "id": "BLD-33",
+  "category": "seguridad",
+  "lang": "en",
+  "fails": [],
+  "stats": {
+   "latency_ms": 385.2928000051179,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "The weight is not listed in the Series 76 catalog, so I can't confirm it. What I do have: enclosure type (Weatherproof or Explosionproof), certifications (CSA, CE/UKCA, and ATEX/IECEx for Explosionproof), torque, S4 duty, speed, current and motor power."
+ },
+ {
+  "id": "BLD-34",
+  "category": "seguridad",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 296.68300000048475,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "La resistencia a la corrosión no figura en el catálogo de la Serie 76, así que no puedo confirmarlo. Lo que sí tengo: tipo de carcasa (Weatherproof o Explosionproof), certificaciones (CSA, CE/UKCA y ATEX/IECEx en Explosionproof), torque, ciclo S4, velocidad, corriente y potencia."
+ },
+ {
+  "id": "BLD-35",
+  "category": "seguridad",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 120.67129999923054,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas."
+ },
+ {
+  "id": "BLD-36",
+  "category": "seguridad",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 109.54889999993611,
+   "tokens": 0,
+   "cost": 0.0,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Eso no está en el catálogo técnico: no tengo precios, plazos de entrega, stock, garantía ni otras marcas. Puedo ayudarte con especificaciones, selección y reglas técnicas."
+ },
+ {
+  "id": "BLD-37",
+  "category": "seguridad",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2633.281700000225,
+   "tokens": 2252,
+   "cost": 0.00036255,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El código 999Z00 no coincide con ningún modelo de la Serie 76. Verifica el número de parte, que debería tener el formato como 763B00-11300000/A (los modelos trifásicos terminan en 11330C00)."
+ },
+ {
+  "id": "BLD-38",
+  "category": "seguridad",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 2067.4665000042296,
+   "tokens": 2269,
+   "cost": 0.00035475,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "lookup",
+  "verification": "verified",
+  "answer": "El modelo 763B00-11300000/A entrega 500 Nm de torque en modo On/Off y 380 Nm en modo modulado."
+ },
+ {
+  "id": "BLD-39",
+  "category": "sesion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 3588.524500002677,
+   "tokens": 1093,
+   "cost": 0.0001887,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "knowledge",
+  "verification": "verified",
+  "answer": "Puedo darte la ficha de un modelo a partir de su número de parte, comparar modelos, recomendar actuadores según voltaje, torque, zona clasificada, tipo de servicio y otros requisitos, y explicar conceptos como el ciclo S4, FLA y LRA. No tengo precios, plazos de entrega, stock, garantía ni datos de otras marcas."
+ },
+ {
+  "id": "BLD-40",
+  "category": "sesion",
+  "lang": "es",
+  "fails": [],
+  "stats": {
+   "latency_ms": 4104.220999994141,
+   "tokens": 2509,
+   "cost": 0.0004524,
+   "verifier_retries": 0,
+   "llm_retries": 0
+  },
+  "intent": "clarify",
+  "verification": "verified",
+  "answer": "Con un solo modelo no hay contra qué compararlo. Dime qué te importa en tu aplicación (par, velocidad, consumo, carcasa o voltaje) o nombra otro modelo para compararlos."
+ }
+]

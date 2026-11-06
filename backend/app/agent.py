@@ -421,8 +421,8 @@ def _known_keys() -> set:
         return set()
 
 
-ACT_REPLIES = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
-CONVERSATIONAL_ACTS = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
+ACT_REPLIES = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria"}
+CONVERSATIONAL_ACTS = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria"}
 FILTER_MAX_IDLE_TURNS = 3   # los filtros de una recomendación caducan tras este nº de turnos sin usarse
 
 
@@ -514,6 +514,30 @@ def _resolve_decision(decision: Decision, active_parts: List[str], lang: str):
         if res["kind"] == "clarify":
             return res
         return lookup(r["size"])                                  # tamaño sin filas: el lookup responde typo/INVALID como siempre
+    if r["what"] == "size_references":
+        fulls: List[str] = []
+        for pn in r["pns"]:
+            if "-" in pn:
+                fulls.append(pn)
+                continue
+            res = acts.resolve_size_reference(pn_key(pn)[:4], r.get("voltage"), r.get("phase"), lang)
+            if res["kind"] == "lookup":
+                fulls.append(res["pn"])
+            elif res["kind"] == "clarify":      # falta la alimentación de algún tamaño: se pide (no se muestran modelos no nombrados)
+                return Decision(kind="reply", reply="ambiguous_size", rule="ambiguous_size", clean_query=decision.clean_query)
+            else:
+                fulls.append(pn)
+        fulls = list(dict.fromkeys(fulls))
+        calls = []
+        for pn in fulls:
+            args: Dict[str, Any] = {"part_number": pn}
+            if focus:
+                args["focus"] = focus
+            if hz:
+                args["frequency_hz"] = hz
+            current_grounded_pns.get().add(pn_key(pn))
+            calls.append({"name": "lookup_actuator_by_part_number", "args": args})
+        return Decision(kind="tools", rule="part_number", act="compare" if len(calls) >= 2 else "spec_lookup", calls=calls, clean_query=decision.clean_query)
     if r["what"] == "next_size":
         from app.followups import _next_size_part
         with get_db_cursor() as cur:
@@ -674,7 +698,9 @@ def run_agent_turn(
         out = traces[-1].get("raw_output") or {}
         answer = render_rank(out, lang) if traces[-1]["tool_name"] == "rank_actuators" else render_overview(out, lang)
         ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang, user_query)
-        ui_payload["suggested_followups"] = acts.data_followups(lang)
+        if not re.search(r"csa|certif", user_query, re.I):      # avisos por modelo (p. ej. «sin CSA» ×4) que nadie pidió en un ranking/catálogo
+            ui_payload["alerts"], ui_payload["engineering_warnings"] = [], []
+        ui_payload["suggested_followups"] = acts.data_followups(lang, out.get("filters") if isinstance(out.get("filters"), dict) else None)
         shown = [a["base_part_number"] for a in ui_payload["actuators"]]
         parts = shown or list(active_part_numbers)
         debug_trace, cost = _debug(all_msgs, 0, traces, parts)
