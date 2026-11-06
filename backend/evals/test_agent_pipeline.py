@@ -148,7 +148,7 @@ def test_missing_decisive_data_returns_clarification_with_one_question_and_optio
     (answer, ui, dbg, _, filters, meta), _ = run([{"tool": rec, "answer": "I will ask."}], "necesito un actuador de 450 Nm", locale="es")
     assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and ui["actuators"] == []
     c = ui["clarification"]
-    assert answer == c["question"] == "¿Qué voltaje de alimentación necesita el actuador?"
+    assert answer == c["question"] and answer.endswith("¿Qué voltaje de alimentación necesita el actuador?") and answer.startswith("Anotado: 450 Nm")
     assert [o["value"] for o in c["options"]] == ["110V monofásico", "220V trifásico", "220V monofásico"]  # 24V no llega a 450 Nm: solo combinaciones reales
     assert meta["verification"]["status"] == "verified" and ui["suggested_followups"] == []
     assert filters["_pending"] == {"topic": "voltage", "args": {"min_torque_nm": 450}}
@@ -161,11 +161,11 @@ def test_clarification_chain_resolves_each_answer_in_the_same_context(run):
     (_, ui, _, _, filters, _), _ = run(
         [{"tool": ("recommend", {"voltage_num": 110}), "answer": "q"}], "110V", locale="en", filters=filters
     )
-    assert ui["clarification"]["question"] == "Which type of service will it run?"
+    assert ui["clarification"]["question"].endswith("Which type of service will it run?") and ui["clarification"]["question"].startswith("Noted:")
     (_, ui, _, _, filters, _), _ = run(
         [{"tool": ("recommend", {}), "answer": "q"}], ui["clarification"]["options"][0]["value"], locale="en", filters=filters
     )
-    assert ui["clarification"]["question"].startswith("Will it be installed in a hazardous")
+    assert "Will it be installed in a hazardous" in ui["clarification"]["question"]
     assert [o["value"] for o in ui["clarification"]["options"]] == ["Hazardous area (Explosionproof)", "Non-hazardous area"]
     (answer, ui, _, _, filters, meta), _ = run(
         [{"tool": ("recommend", {}), "answer": "Best is 763Y30-11300000/A at 450 Nm."}],

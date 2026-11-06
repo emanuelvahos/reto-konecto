@@ -3531,6 +3531,377 @@
     ],
     "cards": false
    }
+  },
+  {
+   "id": "NAT-215",
+   "category": "parafrasis",
+   "act": "ranking",
+   "lang": "es",
+   "turns": [
+    "de todos los que manejan, cuál aguanta más carga?"
+   ],
+   "expect": {
+    "cards": true,
+    "parts_any": [
+     "767C00-11320000/A"
+    ],
+    "must_not": [
+     "no puedo encontrar",
+     "n[uú]mero de parte .?76.?\\b"
+    ]
+   }
+  },
+  {
+   "id": "NAT-216",
+   "category": "parafrasis",
+   "act": "ranking",
+   "lang": "es",
+   "turns": [
+    "quiero el de arranque más suave, el que menos amperaje pida"
+   ],
+   "expect": {
+    "cards": true,
+    "parts_any": [
+     "761X30-11320000/A",
+     "761Y30-11320000/A"
+    ],
+    "must_not": [
+     "no puedo encontrar",
+     "n[uú]mero de parte .?76.?\\b"
+    ]
+   }
+  },
+  {
+   "id": "NAT-217",
+   "category": "parafrasis",
+   "act": "ranking",
+   "lang": "en",
+   "turns": [
+    "which of them turns the quickest?"
+   ],
+   "expect": {
+    "cards": true,
+    "parts_any": [
+     "761A00-11300000/A",
+     "761A00-11320000/A",
+     "761X30-11380000/A",
+     "761X30-11370000/A"
+    ],
+    "must_not": [
+     "no puedo encontrar",
+     "n[uú]mero de parte .?76.?\\b"
+    ]
+   }
+  },
+  {
+   "id": "NAT-218",
+   "category": "parafrasis",
+   "act": "ranking",
+   "lang": "es",
+   "turns": [
+    "dime el de motor más grande"
+   ],
+   "expect": {
+    "cards": true,
+    "parts_any": [
+     "766A00-11320000/A",
+     "766B00-11320000/A",
+     "767A00-11320000/A",
+     "767B00-11320000/A",
+     "767C00-11320000/A"
+    ],
+    "must_not": [
+     "no puedo encontrar",
+     "n[uú]mero de parte .?76.?\\b"
+    ]
+   }
+  },
+  {
+   "id": "NAT-219",
+   "category": "parafrasis",
+   "act": "catalog_overview",
+   "lang": "es",
+   "turns": [
+    "qué opciones de alimentación eléctrica tienen?"
+   ],
+   "expect": {
+    "must": [
+     "24",
+     "110",
+     "220"
+    ],
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-220",
+   "category": "parafrasis",
+   "act": "catalog_overview",
+   "lang": "en",
+   "turns": [
+    "tell me how big the range is, how many versions in total"
+   ],
+   "expect": {
+    "must": [
+     "68|64"
+    ],
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-221",
+   "category": "parafrasis",
+   "act": "catalog_overview",
+   "lang": "es",
+   "turns": [
+    "me interesa saber en qué se distingue el 764 del 765"
+   ],
+   "expect": {
+    "must": [
+     "764",
+     "765"
+    ],
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-222",
+   "category": "parafrasis",
+   "act": "catalog_overview",
+   "lang": "es",
+   "turns": [
+    "de qué lados de potencia van los de exterior"
+   ],
+   "expect": {
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-223",
+   "category": "parafrasis",
+   "act": "recommend",
+   "lang": "es",
+   "turns": [
+    "podrías ayudarme a escoger uno para mi planta?"
+   ],
+   "expect": {
+    "display": [
+     "CLARIFICATION",
+     "TEXT_ONLY"
+    ],
+    "cards": false
+   }
+  },
+  {
+   "id": "NAT-224",
+   "category": "parafrasis",
+   "act": "recommend",
+   "lang": "es",
+   "turns": [
+    "ocupo algo que resista la intemperie y mueva unos 400 newton metro"
+   ],
+   "expect": {
+    "tools_required": [
+     "recommend_actuators"
+    ],
+    "enclosure_if_cards": "Weatherproof"
+   }
+  },
+  {
+   "id": "NAT-225",
+   "category": "parafrasis",
+   "act": "recommend",
+   "lang": "en",
+   "turns": [
+    "I'm after something rugged for outdoors that delivers 300 Nm on 110V"
+   ],
+   "expect": {
+    "tools_required": [
+     "recommend_actuators"
+    ],
+    "enclosure_if_cards": "Weatherproof"
+   }
+  },
+  {
+   "id": "NAT-226",
+   "category": "parafrasis",
+   "act": "spec_lookup",
+   "lang": "es",
+   "turns": [
+    "cuánta fuerza entrega el 763B00-11300000/A"
+   ],
+   "expect": {
+    "tools_required": [
+     "lookup_actuator_by_part_number"
+    ],
+    "cards": true,
+    "parts_any": [
+     "763B00-11300000/A"
+    ]
+   }
+  },
+  {
+   "id": "NAT-227",
+   "category": "parafrasis",
+   "act": "spec_lookup",
+   "lang": "en",
+   "turns": [
+    "how much juice does the 763B00-11300000/A pull"
+   ],
+   "expect": {
+    "tools_required": [
+     "lookup_actuator_by_part_number"
+    ],
+    "cards": true,
+    "parts_any": [
+     "763B00-11300000/A"
+    ]
+   }
+  },
+  {
+   "id": "NAT-228",
+   "category": "parafrasis",
+   "act": "spec_lookup",
+   "lang": "es",
+   "turns": [
+    "ficha del 763B00-11300000/A",
+    "y de cuánto es su potencia de motor"
+   ],
+   "expect": {
+    "tools_required": [
+     "lookup_actuator_by_part_number"
+    ],
+    "cards": true,
+    "parts_any": [
+     "763B00-11300000/A"
+    ]
+   }
+  },
+  {
+   "id": "NAT-229",
+   "category": "parafrasis",
+   "act": "knowledge",
+   "lang": "es",
+   "turns": [
+    "para qué sirve el valor LRA en la hoja"
+   ],
+   "expect": {
+    "tools_required": [
+     "search_engineering_knowledge"
+    ],
+    "cards": false
+   }
+  },
+  {
+   "id": "NAT-230",
+   "category": "parafrasis",
+   "act": "knowledge",
+   "lang": "en",
+   "turns": [
+    "can you explain what the allowable voltage tolerance is"
+   ],
+   "expect": {
+    "tools_required": [
+     "search_engineering_knowledge"
+    ],
+    "cards": false
+   }
+  },
+  {
+   "id": "NAT-231",
+   "category": "parafrasis",
+   "act": "out_of_catalog_attribute",
+   "lang": "es",
+   "turns": [
+    "ficha del 763B00-11300000/A",
+    "y de qué está hecho"
+   ],
+   "expect": {
+    "cards": false,
+    "must_any": [
+     "no figura|no est[aá]|no tengo"
+    ]
+   }
+  },
+  {
+   "id": "NAT-232",
+   "category": "parafrasis",
+   "act": "off_topic",
+   "lang": "es",
+   "turns": [
+    "recomiéndame una película para el fin de semana"
+   ],
+   "expect": {
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-233",
+   "category": "parafrasis",
+   "act": "about_project",
+   "lang": "en",
+   "turns": [
+    "so what exactly is this thing I'm talking to?"
+   ],
+   "expect": {
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators",
+     "lookup_actuator_by_part_number"
+    ]
+   }
+  },
+  {
+   "id": "NAT-234",
+   "category": "parafrasis",
+   "act": "help_request",
+   "lang": "es",
+   "turns": [
+    "estoy perdido, por dónde empiezo"
+   ],
+   "expect": {
+    "display": [
+     "CLARIFICATION"
+    ],
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators"
+    ]
+   }
+  },
+  {
+   "id": "NAT-235",
+   "category": "parafrasis",
+   "act": "unclear",
+   "lang": "es",
+   "turns": [
+    "asdf qwer zxcv"
+   ],
+   "expect": {
+    "display": [
+     "CLARIFICATION"
+    ],
+    "cards": false,
+    "tools_forbidden": [
+     "recommend_actuators",
+     "lookup_actuator_by_part_number"
+    ]
+   }
   }
  ]
 }

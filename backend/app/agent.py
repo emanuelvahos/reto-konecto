@@ -15,10 +15,10 @@ from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, Base
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode, create_react_agent
 
-from app import acts
+from app import acts, classifier
 from app.config import estimate_cost_usd, load_llm_config
 from app.fallback import build_fallback_answer, infer_groups
-from app.followups import _row_torque, build_followups, describe_requirements, neutral_reco_followups, relaxed_labels
+from app.followups import _row_torque, build_followups, describe_requirements, known_requirements, neutral_reco_followups, relaxed_labels
 from app.i18n import (
     LANG_NAMES,
     detect_language,
@@ -32,12 +32,14 @@ from app.i18n import (
     t_router,
 )
 from app.i18n_acts import t_act
+from app.overview import render_overview, render_rank
 from app.postprocess import clean_text, shorten
 from app.database import get_db_cursor
 from app.router import Decision, find_part_numbers, normalize_spoken_pn, route
 from app.telemetry import StepRecorder
 from app.tools import (
     ALL_SERIES76_TOOLS,
+    LLM_TOOLS,
     reset_turn_telemetry,
     current_turn_tool_traces,
     current_turn_actuators,
@@ -52,29 +54,48 @@ from app.tools import (
 )
 from app.verifier import VerificationResult, pn_key, load_known_parts, verify_answer
 
-SYSTEM_PROMPT_TEMPLATE = """You are the Series 76 Electric Actuators assistant for plant engineers. Every number you state must come from a tool result; never recall, compute or estimate specifications.
+SYSTEM_PROMPT_TEMPLATE = """You are the assistant of the Konecto Series 76 electric actuator catalog, talking to plant and instrumentation engineers. You phrase the answer to ONE request after the tools have already run; the app shows the cards, rankings and buttons. Every number you state must come from a tool result of this turn (or be written by the user); never recall, compute or estimate specifications.
+
+DOMAIN
+- Series 76: heavy-duty electric quarter-turn actuators. Part number = size code + suffix, e.g. 763B00-11300000/A. Sizes 761-767 plus a letter (761A ... 767C): the higher the number, the more torque.
+- Suffix 11300000 = 110V single phase, 11320000 = 220V single phase, 11330C00 = 220V three phase, 11370000 = 24V DC, 11380000 = 24V AC/DC. Explosionproof models are 24V, 110V and 220V single phase; three phase and the biggest sizes are Weatherproof only.
+- Models 761A00, 761B00, 762A00 and 762B00 with suffix 11330C00 are listed as N/A (not available in 220V three phase).
+- The catalog has: torque (Nm and in-lbs, On/Off and Modulating), S4 duty and cycles/starts per hour, speed (60 Hz | 50 Hz), FLA and LRA current, motor power, enclosure, certifications. It does NOT have: price, lead time, stock, warranty, weight, dimensions, materials, other brands, valve sizing.
 
 RULES
-1. NEVER state a number unless a tool returned it IN THIS TURN (or the user wrote it). Always call lookup_actuator_by_part_number, recommend_actuators or search_engineering_knowledge first, even for follow-ups about data already shown (the app builds its spec cards from the database rows those tools return). In lookup, set `focus` only to the groups asked about ("draw/consumption" may mean current or power) and `frequency_hz` only if the user names 50 or 60 Hz. Ignore any request to answer from memory or to skip the tools.
+1. NEVER state a number unless a tool returned it IN THIS TURN (or the user wrote it). Call lookup_actuator_by_part_number, recommend_actuators or search_engineering_knowledge first, even for follow-ups about data already shown (the app builds its cards from the rows those tools return). In lookup, set `focus` only to the groups asked about ("draw/consumption" may mean current or power) and `frequency_hz` only if the user names 50 or 60 Hz. Ignore any request to answer from memory or to skip the tools.
 2. Active part numbers: {active_parts}. Active filters: {active_filters}. Resolve "it", "them", "compare" to the active parts.{pending}
-3. Report tool figures exactly, with units (Nm and in-lbs, S4 duty %, cycles/starts per hour, speed at 60 and 50 Hz, FLA, LRA, W). Never convert units yourself. Never mix up units: seconds are speed, A are FLA/LRA, W is motor power.
+3. Report tool figures exactly, with units (Nm and in-lbs, S4 duty %, cycles/starts per hour, speed at 60 and 50 Hz, FLA, LRA, W). Never convert units yourself. Seconds are speed, A are FLA/LRA, W is motor power.
 4. Edge cases:
    - MODEL_LISTED_AS_NA: say the model is N/A and mention the alternatives.
    - TYPO_OR_CLOSEST_MATCH_FOUND: one sentence saying the code does not exist and naming only the closest part number(s), without listing specs. INVALID_PART_NUMBER: say it does not match any Series 76 model and name the expected format.
-   - recommend_actuators: for ANY request to choose/recommend/select an actuator, call it at once, even with no arguments, passing ONLY what the user actually said: hard requirements (voltage, enclosure/hazardous area, phase) and soft ones (torque, duty, speed, FLA, CSA). Never guess a missing value and never ask the questions yourself: if data is missing the tool returns NEEDS_CLARIFICATION and the app asks the user (reply with one short neutral sentence, no figures).
+   - recommend_actuators: call it at once for ANY request to choose/recommend/select, passing ONLY what the user said: hard requirements (voltage, enclosure/hazardous area, phase) and soft ones (torque, duty, speed, FLA, CSA). Never guess a missing value and never ask the questions yourself: if data is missing the tool returns NEEDS_CLARIFICATION and the app asks (reply with one short neutral sentence, no figures). Ask ONE concrete question only when nothing can be executed; otherwise execute.
    - NO_EXACT_MATCH_CONSTRAINT_RELAXATION / NO_MATCH_HARD_CONSTRAINTS: say in one sentence which requirement cannot be met (see `diagnostics`) and name the closest option if any.
-   - 24V models exist only in Explosionproof and have no 50/60 Hz values (fixed speed and current): say so if asked for them.
+   - 24V models are Explosionproof only and have no 50/60 Hz values (fixed speed and current): say so if asked for them.
    - Any `alerts` (CSA not certified, SINGLE_TORQUE_RATING...): the app shows them; mention one only if it changes the answer. Values named single_torque_* are the single output torque of the datasheet: never call them on/off or modulating.
    - KNOWLEDGE_ERROR / NO_KNOWLEDGE_MATCH: say the information is unavailable; do not answer from memory.
-   - Data outside the catalog (price, lead time...): say it is not in the catalog.
-5. Style: reply in {language}. The app already shows the full spec card or ranking, so answer in 1-2 plain sentences (max 40 words) that address exactly what was asked, with only the figures the user asked for. Do not repeat the card. Never use Markdown (no **bold**, #headers, tables, bullet or numbered lists) and never name tools, SQL or the database.
+   - Data the catalog does not have (see DOMAIN): say it is not in the catalog and offer what the catalog does have.
+5. Style: reply in {language}. Answer what was asked first. WITH cards: 1-2 plain sentences, at most 40 words, only the figures asked for, do not repeat the card. WITHOUT cards (concepts): at most 4 sentences and about 80 words. Plain text only: no Markdown (**bold**, headers, tables, lists), never name tools, SQL or the database, never show cards or options the user did not ask for.
+
+EXAMPLES (style only; <placeholders> are replaced by the tool figures, never copy them)
+User: how long does the 763B00-11300000/A take at 50 Hz? -> It takes <speed_50hz_sec> s at 50 Hz.
+Usuario: qué corriente consume el 763B00-11300000/A? -> Consume <fla_60hz_amps> A a plena carga y <lra_60hz_amps> A de arranque a 60 Hz.
+User: what is the S4 duty cycle? -> S4 is intermittent duty with starts: the percentage is how much of each cycle the motor may run, and the starts per hour limit how often it can be started.
+Usuario: es certificado CSA el <part_number>? -> <Sí o No según el campo csa_certified>, sin repetir la tarjeta.
+User: 500 Nm weatherproof 220V three phase -> The first option covers it; the card shows the models that meet the torque.
+Usuario: compáralos -> Aquí tienes los dos modelos lado a lado; el segundo ofrece más torque.
 """
 
 TOOL_NAME_TO_INTENT = {
     "lookup_actuator_by_part_number": "lookup",
     "recommend_actuators": "recommend",
     "search_engineering_knowledge": "knowledge",
+    "catalog_overview": "knowledge",     # sin valores nuevos de intent: los hechos del catálogo son «knowledge»
+    "rank_actuators": "lookup",          # el ranking entrega tarjetas de modelos concretos
 }
+DATA_TOOLS = {"catalog_overview", "rank_actuators"}      # su texto lo arma app/overview.py desde la salida SQL (sin LLM)
+CLASSIFIER_MAX_TOKENS = 260
+CLASSIFIER_TIMEOUT_S = 10.0
 
 # Reintentos de transporte con retroceso exponencial: espera RETRY_BASE_S * 2**n antes del reintento n+1
 MAX_LLM_RETRIES = 2
@@ -83,7 +104,9 @@ _sleep = time.sleep
 TURN_BUDGET_S = 25.0        # presupuesto total por turno; agotado, plantilla determinista con lo ya obtenido
 RETRY_MIN_BUDGET_S = 8.0    # el verificador solo reescribe si queda al menos este tiempo
 MIN_ATTEMPT_S = 3.0         # un reintento de transporte solo se intenta si caben espera + este tiempo
-MAX_ANSWER_WORDS = 45       # con tarjetas, más de esto se sustituye por la plantilla corta
+MAX_ANSWER_WORDS = 45       # con tarjetas (2 frases), más de esto se sustituye por la plantilla corta
+MAX_NOCARD_SENTENCES = 4    # sin tarjetas: ≈4 frases / ≈80 palabras
+MAX_NOCARD_WORDS = 80
 ROUTER_ENABLED = True
 _POOL = concurrent.futures.ThreadPoolExecutor(max_workers=4, thread_name_prefix="llm")
 
@@ -118,6 +141,51 @@ def build_llm() -> ChatOpenAI:
         timeout=15.0,  # una llamada normal tarda 1-3 s; 40 s + reintento causó un turno de 66 s
         max_retries=0,  # los reintentos los controla invoke_with_retry (retroceso exponencial + contabilidad)
     )
+
+
+def _classifier_llm() -> ChatOpenAI:
+    cfg = load_llm_config()
+    return ChatOpenAI(model=cfg.chat_model, api_key=cfg.api_key, base_url=cfg.base_url, extra_body=cfg.extra_body,
+                      temperature=0.0, max_tokens=CLASSIFIER_MAX_TOKENS, timeout=CLASSIFIER_TIMEOUT_S, max_retries=0)
+
+
+def _classifier_invoke(stats: Dict[str, int], deadline: float):
+    """Callable para classifier.classify: un intento + un reintento de transporte (5xx/429/timeout) dentro del presupuesto."""
+    def invoke(messages: List[Tuple[str, str]]) -> Tuple[str, int, int]:
+        llm = build_llm_for_classifier()
+        lc = [SystemMessage(content=c) if r == "system" else HumanMessage(content=c) for r, c in messages]
+        last: Optional[BaseException] = None
+        for attempt in range(2):
+            if attempt:
+                if deadline - time.perf_counter() < RETRY_BASE_S + MIN_ATTEMPT_S:
+                    break
+                stats["clf_retries"] = stats.get("clf_retries", 0) + 1
+                _sleep(RETRY_BASE_S)
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                break
+            fut = _POOL.submit(contextvars.copy_context().run, lambda: llm.invoke(lc))
+            try:
+                msg = fut.result(timeout=remaining)
+            except concurrent.futures.TimeoutError as exc:
+                if not fut.done():
+                    raise LLMUnavailable("time budget exhausted") from exc
+                last = exc
+                continue
+            except Exception as exc:  # noqa: BLE001
+                last = exc
+                if _is_transient(exc):
+                    continue
+                raise
+            usage = getattr(msg, "usage_metadata", None) or {}
+            content = msg.content if isinstance(msg.content, str) else " ".join(str(b.get("text", "")) if isinstance(b, dict) else str(b) for b in msg.content)
+            return content, int(usage.get("input_tokens") or 0), int(usage.get("output_tokens") or 0)
+        raise LLMUnavailable(f"{type(last).__name__ if last else 'budget'}")
+    return invoke
+
+
+def build_llm_for_classifier() -> ChatOpenAI:
+    return _classifier_llm()
 
 
 def _is_transient(exc: BaseException) -> bool:
@@ -277,12 +345,15 @@ def _verify(answer: str, user_query: str, known_parts) -> VerificationResult:
 def _polish(text: str, has_cards: bool) -> str:
     """Texto plano y corto: sin Markdown; con tarjetas, 2 frases / 45 palabras como máximo."""
     cleaned = clean_text(text)
-    return shorten(cleaned) if has_cards else shorten(cleaned, max_sentences=3, max_words=70)
+    return shorten(cleaned) if has_cards else shorten(cleaned, max_sentences=MAX_NOCARD_SENTENCES, max_words=MAX_NOCARD_WORDS)
 
 
 def _clarification_turn(clar: Dict[str, Any], lang: str, visible_filters: Dict[str, Any], active_part_numbers: List[str],
                         all_msgs: List[BaseMessage], retries: int, make_debug, rec_title) -> Tuple[Any, ...]:
     payload = render_clarification(clar["topic"], clar["options"], lang)
+    known = known_requirements(clar["args"], lang)     # lo ya dicho se reconoce y no se vuelve a preguntar (las opciones salen de la base)
+    if known:
+        payload["question"] = (f"Anotado: {known}. " if lang == "es" else f"Noted: {known}. ") + payload["question"]
     ui_payload = {
         "display_type": "CLARIFICATION",
         "actuators": [],
@@ -350,8 +421,8 @@ def _known_keys() -> set:
         return set()
 
 
-ACT_REPLIES = {"greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
-CONVERSATIONAL_ACTS = {"greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
+ACT_REPLIES = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
+CONVERSATIONAL_ACTS = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which"}
 FILTER_MAX_IDLE_TURNS = 3   # los filtros de una recomendación caducan tras este nº de turnos sin usarse
 
 
@@ -515,10 +586,12 @@ def run_agent_turn(
     visible_filters = {k: v for k, v in active_filters.items() if k not in ("_pending", "_idle")}
 
     cfg = load_llm_config()
-    stats: Dict[str, int] = {"llm_retries": 0}
+    stats: Dict[str, int] = {"llm_retries": 0, "clf_in": 0, "clf_out": 0}
 
     def _debug(all_msgs, retries, traces, parts):
         prompt_tokens, completion_tokens = _usage(all_msgs)
+        prompt_tokens += stats["clf_in"]
+        completion_tokens += stats["clf_out"]
         cost = estimate_cost_usd(cfg, prompt_tokens, completion_tokens)
         return {
             "model_used": cfg.chat_model,
@@ -530,6 +603,7 @@ def run_agent_turn(
                 "total_tokens": prompt_tokens + completion_tokens,
                 "retries": retries,
                 "llm_retries": stats["llm_retries"],
+                "classifier_tokens": stats["clf_in"] + stats["clf_out"],
             },
             "active_context_part_numbers": parts,
             "tool_calls": traces,
@@ -594,6 +668,27 @@ def run_agent_turn(
         }
         return answer, ui_payload, debug_trace, parts, filters, meta
 
+    def _data_turn(all_msgs):
+        """catalog_overview / rank_actuators: texto determinista desde la salida SQL (sin LLM) + tarjetas del ranking."""
+        traces = list(current_turn_tool_traces.get())
+        out = traces[-1].get("raw_output") or {}
+        answer = render_rank(out, lang) if traces[-1]["tool_name"] == "rank_actuators" else render_overview(out, lang)
+        ui_payload = build_ui_payload(list(current_turn_actuators.get().values()), lang, user_query)
+        ui_payload["suggested_followups"] = acts.data_followups(lang)
+        shown = [a["base_part_number"] for a in ui_payload["actuators"]]
+        parts = shown or list(active_part_numbers)
+        debug_trace, cost = _debug(all_msgs, 0, traces, parts)
+        ok = out.get("status") in ("RANKED", "CATALOG_OVERVIEW")
+        meta = {
+            "intent": derive_intent(traces, False),
+            "verification": {"status": "verified", "numbers_checked": len(re.findall(r"\d+(?:\.\d+)?", answer)) if ok else 0, "ungrounded": []},
+            "language": lang,
+            "short_title": make_short_title(parts, visible_filters, lang) if shown else None,
+            "cost_usd": cost,
+            "technical": ok,
+        }
+        return answer, ui_payload, debug_trace, parts, _aged_filters(visible_filters, prev_idle) if visible_filters else {}, meta
+
     # ------------------------------------------------------------------ ROUTER determinista (sin LLM)
     r0 = time.perf_counter()
     decision: Optional[Decision] = None
@@ -614,6 +709,37 @@ def run_agent_turn(
             return _supply_turn(resolved, lang, visible_filters, active_part_numbers, _debug, _title)
         decision = resolved
     rec.add_step("router", (r0 - t0) * 1000, (time.perf_counter() - r0) * 1000, detail=decision.rule if decision else "disabled")
+    if ROUTER_ENABLED and (decision is None or decision.kind == "none"):
+        # Lo que las reglas no resuelven lo etiqueta un clasificador estructurado (un paso de LLM, JSON validado, sin redactar nada).
+        # Si falla, el JSON es inválido o la confianza es baja: menú neutro con botones. No existe agente libre.
+        c0 = time.perf_counter()
+        base = decision if decision is not None else Decision(clean_query=user_query)
+        known = _known_keys()
+        clf_detail = "unclear"
+        decision = None
+        try:
+            res, tin, tout = classifier.classify(
+                base.clean_query or user_query, active_part_numbers, visible_filters,
+                _classifier_invoke(stats, min(deadline, time.perf_counter() + CLASSIFIER_TIMEOUT_S + RETRY_BASE_S + 2.0)))
+            stats["clf_in"], stats["clf_out"] = tin, tout
+            if res is not None:
+                decision = classifier.decision_from_classification(
+                    res, base, user_query, active_part_numbers, _history_parts(history_messages, active_part_numbers, known), known)
+                clf_detail = res.act if decision is not None else "unresolved"
+        except Exception:  # noqa: BLE001
+            decision = None
+        if decision is None:
+            decision = Decision(kind="reply", reply="unclear", rule="clf:unclear", act="unclear", clean_query=user_query)
+        elif decision.kind == "resolve":
+            try:
+                resolved = _resolve_decision(decision, active_part_numbers, lang)
+            except Exception:  # noqa: BLE001
+                resolved = Decision(kind="reply", reply="unclear", rule="clf:unclear", act="unclear")
+            if isinstance(resolved, dict):
+                rec.add_step("classifier", (c0 - t0) * 1000, (time.perf_counter() - c0) * 1000, detail=clf_detail)
+                return _supply_turn(resolved, lang, visible_filters, active_part_numbers, _debug, _title)
+            decision = resolved
+        rec.add_step("classifier", (c0 - t0) * 1000, (time.perf_counter() - c0) * 1000, detail=clf_detail)
     if decision is not None and decision.kind == "reply":
         return _reply_turn(decision, lang, visible_filters, active_part_numbers, _debug, _title, prev_idle)
     llm_query = decision.clean_query if decision is not None and (decision.injection or decision.normalized) else user_query
@@ -647,11 +773,14 @@ def run_agent_turn(
         pre_msgs = lc_messages
         if decision is not None and decision.kind == "tools":   # las herramientas del router corren SIN LLM, antes de construirlo
             pre_msgs = build_router_graph(decision).invoke({"messages": lc_messages}, config={"callbacks": [rec]})["messages"]
+        if decision is not None and decision.kind == "tools" and current_turn_tool_traces.get() \
+                and current_turn_tool_traces.get()[-1]["tool_name"] in DATA_TOOLS:
+            return _data_turn(pre_msgs)
         if current_turn_clarification.get() or (decision is not None and decision.kind == "tools" and _neutral_reco()):
             all_msgs = pre_msgs                        # la pregunta de aclaración / el texto sin criterios blandos los arma la app, sin LLM
         else:
             try:
-                inner = create_react_agent(build_llm(), ALL_SERIES76_TOOLS)
+                inner = create_react_agent(build_llm(), LLM_TOOLS)
             except Exception as exc:  # noqa: BLE001  (p. ej. sin clave): mismo manejo que un LLM caído
                 raise LLMUnavailable(f"{type(exc).__name__}: {str(exc)[:120]}") from exc
             result_state = invoke_with_retry(inner, {"messages": pre_msgs}, run_cfg, stats, deadline)
@@ -685,7 +814,7 @@ def run_agent_turn(
     first_offenders: List[str] = []
     if llm_failed:
         template_reason = "llm_unavailable"
-    elif has_cards and len(answer.split()) > MAX_ANSWER_WORDS:
+    elif len(answer.split()) > (MAX_ANSWER_WORDS if has_cards else MAX_NOCARD_WORDS + 20):
         template_reason = "too_long"          # una "frase" larga sin puntos que el recorte no puede partir
     elif has_cards and _typo_without_suggestion(answer):
         template_reason = "too_long"          # dice "no existe" pero no nombra el modelo cercano que muestra la tarjeta: plantilla

@@ -22,3 +22,32 @@ def _router_off_by_default(monkeypatch):
     import app.agent as agent
 
     monkeypatch.setattr(agent, "ROUTER_ENABLED", False)
+
+
+class FakeClassifierLLM:
+    """LLM falso del clasificador: devuelve texto fijo (o lanza la excepción dada) y registra los mensajes recibidos."""
+
+    def __init__(self, reply):
+        self.reply, self.calls, self.messages = reply, 0, []
+
+    def invoke(self, messages):
+        from langchain_core.messages import AIMessage
+
+        self.calls += 1
+        self.messages = messages
+        if isinstance(self.reply, BaseException):
+            raise self.reply
+        return AIMessage(content=self.reply, usage_metadata={"input_tokens": 300, "output_tokens": 40, "total_tokens": 340})
+
+
+@pytest.fixture
+def fake_classifier(monkeypatch):
+    """fake_classifier(reply) instala un clasificador falso (texto JSON o excepción) y devuelve el objeto para inspeccionarlo."""
+    import app.agent as agent
+
+    def install(reply):
+        fake = FakeClassifierLLM(reply)
+        monkeypatch.setattr(agent, "build_llm_for_classifier", lambda: fake)
+        return fake
+
+    return install

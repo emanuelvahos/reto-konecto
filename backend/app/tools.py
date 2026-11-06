@@ -707,8 +707,150 @@ def search_engineering_knowledge(query: str) -> Dict[str, Any]:
     return result
 
 
-ALL_SERIES76_TOOLS = [
+# =====================================================================
+# CATÁLOGO Y RANKING (solo lectura, SQL directo; los textos los arma app/overview.py desde estas salidas)
+# =====================================================================
+OVERVIEW_ASPECTS = ("summary", "count", "voltages", "sizes", "enclosures", "phases", "compare_sizes")
+RANK_METRICS: Dict[str, Dict[str, Any]] = {
+    # lista blanca: la métrica llega como nombre, nunca como SQL. N/A y valores NULL se excluyen siempre.
+    "torque": {"expr": "GREATEST(on_off_torque_nm, modulating_torque_nm)", "unit": "Nm", "best": "max"},
+    "power": {"expr": "motor_power_watts", "unit": "W", "best": "max"},
+    "speed": {"expr": "COALESCE(speed_60hz_sec, speed_dc_or_fixed_sec)", "unit": "s", "best": "min"},
+    "fla": {"expr": "COALESCE(fla_60hz_amps, fla_dc_or_fixed_amps)", "unit": "A", "best": "min"},
+    "lra": {"expr": "COALESCE(lra_60hz_amps, lra_dc_or_fixed_amps)", "unit": "A", "best": "min"},
+    "duty": {"expr": "GREATEST(on_off_duty_cycle_pct, modulating_duty_cycle_pct)", "unit": "%", "best": "max"},
+}
+RANK_FILTER_COLS = {"voltage_num": "voltage_num", "phase_type": "phase_type", "enclosure_type": "enclosure_type"}
+RANK_MAX_ROWS = 4          # empates: se muestran hasta este número de tarjetas (el recuento total se informa)
+
+
+def _where(filters: Dict[str, Any]) -> (str, List[Any]):
+    clauses, params = [], []
+    for k, col in RANK_FILTER_COLS.items():
+        if filters.get(k) is not None:
+            clauses.append(f"{col} = %s")
+            params.append(filters[k])
+    return (" AND " + " AND ".join(clauses)) if clauses else "", params
+
+
+class CatalogOverviewInput(BaseModel):
+    aspect: str = Field("summary", description="summary | count | voltages | sizes | enclosures | phases | compare_sizes")
+    sizes: Optional[List[int]] = Field(None, description="Frame sizes (1-7, from 761-767) to compare when aspect=compare_sizes.")
+    voltage_num: Optional[int] = Field(None, description="Filter for aspect=count: 24, 110 or 220.")
+    phase_type: Optional[str] = Field(None, description="Filter for aspect=count: 'Single Phase', '3 Phase', 'AC/DC' or 'DC'.")
+    enclosure_type: Optional[str] = Field(None, description="Filter for aspect=count: 'Weatherproof' or 'Explosionproof'.")
+
+
+@tool("catalog_overview", args_schema=CatalogOverviewInput)
+def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None, voltage_num: Optional[int] = None,
+                     phase_type: Optional[str] = None, enclosure_type: Optional[str] = None) -> Dict[str, Any]:
+    """Read-only catalog facts from the database: how many models, which voltages/phases/enclosures/sizes exist,
+    available vs N/A counts, torque range per frame size, and a comparison of two frame sizes."""
+    t0 = time.perf_counter()
+    aspect = aspect if aspect in OVERVIEW_ASPECTS else "summary"
+    filters = {"voltage_num": voltage_num, "phase_type": phase_type, "enclosure_type": enclosure_type}
+    sql_used = ""
+    try:
+        with get_db_cursor() as cur:
+            if aspect == "compare_sizes":
+                fs = sorted({int(x) for x in (sizes or []) if 1 <= int(x) <= 7})[:2]
+                sql_used = ("SELECT frame_size, COUNT(*) n, SUM(is_available::int) av, MIN(LEAST(on_off_torque_nm, modulating_torque_nm)) tmin, "
+                            "MAX(GREATEST(on_off_torque_nm, modulating_torque_nm)) tmax, MIN(motor_power_watts) pmin, MAX(motor_power_watts) pmax "
+                            "FROM actuators WHERE frame_size = ANY(%s) GROUP BY frame_size ORDER BY frame_size;")
+                cur.execute(sql_used, (fs,))
+                rows = cur.fetchall()
+                result: Dict[str, Any] = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "sizes": [
+                    {"size": 760 + int(r["frame_size"]), "models": int(r["n"]), "available": int(r["av"]),
+                     "torque_min_nm": _num(float(r["tmin"])) if r["tmin"] is not None else None,
+                     "torque_max_nm": _num(float(r["tmax"])) if r["tmax"] is not None else None,
+                     "power_min_w": r["pmin"], "power_max_w": r["pmax"]} for r in rows]}
+                if len(rows) < 2:
+                    result = {"status": "CATALOG_NOT_FOUND", "aspect": aspect, "message": "Two valid frame sizes (761-767) are needed."}
+            elif aspect == "count":
+                w, params = _where(filters)
+                sql_used = f"SELECT COUNT(*) n, SUM(is_available::int) av FROM actuators WHERE TRUE{w};"
+                cur.execute(sql_used, params)
+                r = cur.fetchone()
+                result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "filters": {k: v for k, v in filters.items() if v is not None},
+                          "models": int(r["n"]), "available": int(r["av"] or 0)}
+            elif aspect == "sizes":
+                sql_used = ("SELECT frame_size, COUNT(*) n, MIN(LEAST(on_off_torque_nm, modulating_torque_nm)) tmin, "
+                            "MAX(GREATEST(on_off_torque_nm, modulating_torque_nm)) tmax FROM actuators WHERE is_available GROUP BY frame_size ORDER BY frame_size;")
+                cur.execute(sql_used)
+                result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "sizes": [
+                    {"size": 760 + int(r["frame_size"]), "models": int(r["n"]), "torque_min_nm": _num(float(r["tmin"])),
+                     "torque_max_nm": _num(float(r["tmax"]))} for r in cur.fetchall()]}
+            elif aspect in ("voltages", "phases", "enclosures"):
+                col = {"voltages": "voltage_num", "phases": "phase_type", "enclosures": "enclosure_type"}[aspect]
+                sql_used = f"SELECT {col} v, COUNT(*) n FROM actuators WHERE is_available GROUP BY {col} ORDER BY {col};"
+                cur.execute(sql_used)
+                result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "values": [{"value": r["v"], "models": int(r["n"])} for r in cur.fetchall()]}
+            else:
+                sql_used = "SELECT COUNT(*) n, SUM(is_available::int) av, COUNT(DISTINCT frame_size) fs FROM actuators;"
+                cur.execute(sql_used)
+                r = cur.fetchone()
+                cur.execute("SELECT DISTINCT voltage_num FROM actuators WHERE is_available ORDER BY 1;")
+                volts = [int(x["voltage_num"]) for x in cur.fetchall()]
+                cur.execute("SELECT DISTINCT enclosure_type FROM actuators WHERE is_available ORDER BY 1;")
+                encs = [x["enclosure_type"] for x in cur.fetchall()]
+                result = {"status": "CATALOG_OVERVIEW", "aspect": "summary", "models": int(r["n"]), "available": int(r["av"]),
+                          "not_available": int(r["n"]) - int(r["av"]), "frame_sizes": int(r["fs"]), "voltages": volts, "enclosures": encs}
+    except Exception as exc:  # noqa: BLE001
+        result = {"status": "CATALOG_ERROR", "message": f"Catalog lookup failed ({type(exc).__name__})."}
+    record_tool_trace("catalog_overview", {"aspect": aspect, **{k: v for k, v in filters.items() if v is not None},
+                                           **({"sizes": sizes} if sizes else {})}, sql_used, result, (time.perf_counter() - t0) * 1000)
+    return result
+
+
+class RankActuatorsInput(BaseModel):
+    metric: str = Field(..., description="torque | power | speed | fla | lra | duty")
+    order: Optional[str] = Field(None, description="'max' or 'min'. Omit to use the natural direction (torque/power/duty: max; speed/FLA/LRA: min).")
+    voltage_num: Optional[int] = Field(None, description="Hard filter: 24, 110 or 220.")
+    phase_type: Optional[str] = Field(None, description="Hard filter: 'Single Phase', '3 Phase', 'AC/DC' or 'DC'.")
+    enclosure_type: Optional[str] = Field(None, description="Hard filter: 'Weatherproof' or 'Explosionproof'.")
+
+
+@tool("rank_actuators", args_schema=RankActuatorsInput)
+def rank_actuators(metric: str, order: Optional[str] = None, voltage_num: Optional[int] = None,
+                   phase_type: Optional[str] = None, enclosure_type: Optional[str] = None) -> Dict[str, Any]:
+    """Which available model has the highest or lowest value of one metric (torque, power, speed, FLA, LRA, duty), with optional
+    hard filters. Not-available (N/A) models and missing values are excluded; ties are all returned."""
+    t0 = time.perf_counter()
+    spec = RANK_METRICS.get(metric)
+    filters = {"voltage_num": voltage_num, "phase_type": phase_type, "enclosure_type": enclosure_type}
+    args = {"metric": metric, "order": order, **{k: v for k, v in filters.items() if v is not None}}
+    if spec is None:
+        result: Dict[str, Any] = {"status": "RANK_INVALID_METRIC", "message": "Unsupported metric."}
+        record_tool_trace("rank_actuators", args, "", result, (time.perf_counter() - t0) * 1000)
+        return result
+    direction = order if order in ("max", "min") else spec["best"]
+    w, params = _where(filters)
+    expr = spec["expr"]
+    sql_used = (f"WITH r AS (SELECT id, base_part_number, {expr} AS v FROM actuators WHERE is_available AND {expr} IS NOT NULL{w}) "
+                f"SELECT id, base_part_number, v FROM r WHERE v = (SELECT {direction.upper()}(v) FROM r) ORDER BY base_part_number;")
+    try:
+        with get_db_cursor() as cur:
+            cur.execute(sql_used, params)
+            rows = cur.fetchall()
+        if not rows:
+            result = {"status": "RANK_NO_DATA", "metric": metric, "order": direction, "filters": {k: v for k, v in filters.items() if v is not None}}
+        else:
+            shown = rows[:RANK_MAX_ROWS]
+            register_ui_actuators(shown)
+            result = {"status": "RANKED", "metric": metric, "order": direction, "unit": spec["unit"],
+                      "value": _num(float(rows[0]["v"])), "ties": len(rows),
+                      "part_numbers": [r["base_part_number"] for r in shown],
+                      "filters": {k: v for k, v in filters.items() if v is not None}}
+    except Exception as exc:  # noqa: BLE001
+        result = {"status": "RANK_ERROR", "message": f"Ranking failed ({type(exc).__name__})."}
+    record_tool_trace("rank_actuators", args, sql_used, result, (time.perf_counter() - t0) * 1000)
+    return result
+
+
+# El LLM que redacta solo puede llamar a estas tres; catalog_overview y rank_actuators las fuerzan el router o el clasificador.
+LLM_TOOLS = [
     lookup_actuator_by_part_number,
     recommend_actuators,
     search_engineering_knowledge,
 ]
+ALL_SERIES76_TOOLS = LLM_TOOLS + [catalog_overview, rank_actuators]

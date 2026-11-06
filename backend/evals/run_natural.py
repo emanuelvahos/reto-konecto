@@ -31,7 +31,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from run_evals import EvalClient  # noqa: E402  (carga .env y la app)
-from oracle_check import BY_PN, oracle_verify, ui_matches_oracle  # noqa: E402
+from oracle_check import BY_PN, catalog_oracle, oracle_verify, ui_matches_oracle  # noqa: E402
 from app.config import load_llm_config  # noqa: E402
 from app.router import normalize_spoken_pn  # noqa: E402
 
@@ -65,6 +65,9 @@ def merged_expect(case: Dict[str, Any]) -> Dict[str, Any]:
 
 def check_numbers(resp: Dict[str, Any], query: str) -> List[str]:
     """Cifras de la respuesta contra el oráculo. Los conteos de catálogo («68 modelos») no son cifras de una ficha."""
+    tools_used = {tc.get("tool_name") for tc in (resp.get("debug_trace") or {}).get("tool_calls") or []}
+    if tools_used & {"catalog_overview", "rank_actuators"}:       # catálogo/ranking: el oráculo recalcula cada cifra desde golden.json
+        return catalog_oracle(resp)
     r2 = dict(resp)
     r2["answer"] = COUNT_RE.sub(" ", resp.get("answer") or "")
     res = oracle_verify(r2, normalize_spoken_pn(query)[0])
@@ -82,6 +85,9 @@ def check_turn(resp: Dict[str, Any], query: str) -> List[str]:
         fails.append(f"ui: ui_payload difiere del oráculo: {diffs[:3]}")
     if MARKDOWN_RE.search(answer):
         fails.append("markdown: la respuesta contiene Markdown")
+    n_fu = len((resp.get("ui_payload") or {}).get("suggested_followups") or [])
+    if n_fu > 3:
+        fails.append(f"contract: {n_fu} suggested_followups (máximo 3: la app solo muestra 3)")
     return fails
 
 
@@ -232,11 +238,12 @@ def main() -> int:
     ap.add_argument("--results-json", default=None)
     ap.add_argument("--compare", default=None, help="results-json de una corrida anterior (antes/después por categoría)")
     ap.add_argument("--label", default="")
+    ap.add_argument("--cases-file", default=None, help="banco alternativo (p. ej. con las expectativas originales de 6A)")
     args = ap.parse_args()
     if sys.platform == "win32":
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    cases = json.loads(CASES_PATH.read_text(encoding="utf-8"))["cases"]
+    cases = json.loads(Path(args.cases_file or CASES_PATH).read_text(encoding="utf-8"))["cases"]
     if args.case:
         cases = [c for c in cases if c["id"] in set(args.case)]
     if args.cat:

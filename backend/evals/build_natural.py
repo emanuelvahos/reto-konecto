@@ -235,6 +235,30 @@ C("mixto", "capabilities", "mixed", "what puedes hacer por mí?")
 C("mixto", "out_of_scope", "mixed", "cuánto cuesta el 763B00, what is the price?", **OOS)
 C("mixto", "knowledge", "mixed", "explícame el duty cycle please", **KN)
 
+# --------------------------------------------------------------------------- paráfrasis (6C): redactadas para NO coincidir con las reglas del router
+PH = dict(cards=False, tools_forbidden=["recommend_actuators"])
+C("parafrasis", "ranking", "es", "de todos los que manejan, cuál aguanta más carga?", **RK(TQ))
+C("parafrasis", "ranking", "es", "quiero el de arranque más suave, el que menos amperaje pida", **RK(LOWFLA))
+C("parafrasis", "ranking", "en", "which of them turns the quickest?", **RK(FAST))
+C("parafrasis", "ranking", "es", "dime el de motor más grande", **RK(POWER))
+C("parafrasis", "catalog_overview", "es", "qué opciones de alimentación eléctrica tienen?", must=[r"24", r"110", r"220"], **PH)
+C("parafrasis", "catalog_overview", "en", "tell me how big the range is, how many versions in total", must=[r"68|64"], **PH)
+C("parafrasis", "catalog_overview", "es", "me interesa saber en qué se distingue el 764 del 765", must=[r"764", r"765"], **PH)
+C("parafrasis", "catalog_overview", "es", "de qué lados de potencia van los de exterior", cards=False, tools_forbidden=["recommend_actuators"])
+C("parafrasis", "recommend", "es", "podrías ayudarme a escoger uno para mi planta?", display=["CLARIFICATION", "TEXT_ONLY"], cards=False)
+C("parafrasis", "recommend", "es", "ocupo algo que resista la intemperie y mueva unos 400 newton metro", tools_required=["recommend_actuators"], enclosure_if_cards="Weatherproof")
+C("parafrasis", "recommend", "en", "I'm after something rugged for outdoors that delivers 300 Nm on 110V", tools_required=["recommend_actuators"], enclosure_if_cards="Weatherproof")
+C("parafrasis", "spec_lookup", "es", "cuánta fuerza entrega el 763B00-11300000/A", tools_required=["lookup_actuator_by_part_number"], cards=True, parts_any=[A])
+C("parafrasis", "spec_lookup", "en", "how much juice does the 763B00-11300000/A pull", tools_required=["lookup_actuator_by_part_number"], cards=True, parts_any=[A])
+C("parafrasis", "spec_lookup", "es", ["ficha del " + A, "y de cuánto es su potencia de motor"], tools_required=["lookup_actuator_by_part_number"], cards=True, parts_any=[A])
+C("parafrasis", "knowledge", "es", "para qué sirve el valor LRA en la hoja", **KN)
+C("parafrasis", "knowledge", "en", "can you explain what the allowable voltage tolerance is", **KN)
+C("parafrasis", "out_of_catalog_attribute", "es", ["ficha del " + A, "y de qué está hecho"], cards=False, must_any=[r"no figura|no est[aá]|no tengo"])
+C("parafrasis", "off_topic", "es", "recomiéndame una película para el fin de semana", cards=False, tools_forbidden=["recommend_actuators"])
+C("parafrasis", "about_project", "en", "so what exactly is this thing I'm talking to?", cards=False, tools_forbidden=["recommend_actuators", "lookup_actuator_by_part_number"])
+C("parafrasis", "help_request", "es", "estoy perdido, por dónde empiezo", display=["CLARIFICATION"], cards=False, tools_forbidden=["recommend_actuators"])
+C("parafrasis", "unclear", "es", "asdf qwer zxcv", display=["CLARIFICATION"], cards=False, tools_forbidden=["recommend_actuators", "lookup_actuator_by_part_number"])
+
 for i, c in enumerate(cases, 1):
     c["id"] = f"NAT-{i:03d}"
 doc = {"_doc": "Banco de comprensión natural (es/en/mezclado). Cada caso: category, act esperado, lang, turns (se valida el ÚLTIMO turno; los previos construyen contexto), real=true si el mensaje viene de chat_messages. "

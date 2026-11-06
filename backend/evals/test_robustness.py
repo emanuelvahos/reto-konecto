@@ -166,8 +166,8 @@ def test_llm_down_invalid_base_url_is_fast_and_controlled(monkeypatch):
         r2 = post(c, f"¿Qué torque tiene el {PNS[0]}?", locale="es").json()       # el router ya obtuvo la tarjeta: plantilla con datos
         elapsed = time.perf_counter() - t0
     assert elapsed < 2 * agent.TURN_BUDGET_S, elapsed
-    assert r1["intent"] == "error" and r1["ui_payload"]["alerts"][0]["code"] == "LLM_UNAVAILABLE" and clean(r1["answer"])
-    assert r1["debug_trace"]["error"]                                             # detalle técnico solo aquí
+    assert r1["intent"] == "clarify" and r1["ui_payload"]["display_type"] == "CLARIFICATION" and clean(r1["answer"])   # 6C: menú neutro
+    assert r1["ui_payload"]["clarification"]["options"] and not r1["ui_payload"]["actuators"]
     assert r2["intent"] == "lookup" and r2["verification"]["status"] == "fallback_template"
     assert r2["ui_payload"]["actuators"][0]["base_part_number"] == PNS[0] and clean(r2["answer"])
     assert f"{int(GOLDEN[PNS[0]]['on_off_torque_nm'])} Nm" in r2["answer"]

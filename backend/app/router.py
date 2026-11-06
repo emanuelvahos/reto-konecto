@@ -255,6 +255,72 @@ _AC_DC = re.compile(r"\bac\s?/?\s?-?\s?dc\b", FLAGS)
 _DC = re.compile(r"\bdc\b|\bcc\b|corriente continua|direct current", FLAGS)
 
 
+# --------------------------------------------------------------------------------------------- catálogo y ranking (SQL, sin LLM)
+_ACT_VOCAB = re.compile(
+    r"actuadores?|actuators?|motor(?:es)?|v[aá]lvulas?|valves?|torque|par|modelos?|models?|opci[oó]n(?:es)?|options?|series?|serie|planta|plant|aplicaci[oó]n|application|"
+    r"proceso|process|damper|compuerta|gate|mariposa|butterfly|esfera|ball|voltaje|voltage|nm|fase|phase|intemperie|exterior|outdoor|zona|hazard|explos", FLAGS)
+_CAT_SIZES = re.compile(r"qu[eé] tama[nñ]os|cu[aá]ntos tama[nñ]os|which sizes|what sizes|how many sizes|tama[nñ]os (?:hay|existen|manejan|tienen)|sizes (?:are|do you)", FLAGS)
+_CAT_VOLTS = re.compile(r"qu[eé] (?:voltajes|tensiones)(?!.{0,25}toleranc)|cu[aá]les (?:son )?(?:los )?(?:voltajes|tensiones)|(?:voltajes|tensiones) (?:disponibles|manejan|hay|ofrecen|tienen)|(?:which|what) (?:supply )?voltages(?!.{0,25}toleranc)|voltages? (?:available|do you)", FLAGS)
+_CAT_ENCL = re.compile(r"tipos? de carcasa|qu[eé] carcasas|(?:what|which) enclosures?|enclosure types?", FLAGS)
+_CAT_PHASE = re.compile(r"tipos? de alimentaci[oó]n|qu[eé] alimentaciones|(?:what|which) (?:supply|power) types?|supply types?|qu[eé] fases", FLAGS)
+_CAT_COUNT = re.compile(r"\bcu[aá]nt[oa]s\b|how many|n[uú]mero total de|total number of", FLAGS)
+_CAT_EXISTS = re.compile(r"^\W*(?:hay|existen?|tienen|manejan|ofrecen|do you (?:have|offer)|are there|is there)\b", FLAGS)
+_CAT_NOUN = re.compile(r"modelos?|actuadores?|variantes?|versiones|models?|actuators?|variants?|versions", FLAGS)
+_CAT_DIFF = re.compile(r"diferenc\w+|difference|comp[aá]r\w+|compare|versus|\bvs\.?\b", FLAGS)
+_BARE_SIZE = re.compile(r"(?<![A-Za-z0-9\-/.])(76[1-7])(?![A-Za-z0-9\-/])")
+
+_RANK_RULES = [   # (patrón, métrica, sentido) en orden de especificidad
+    (re.compile(r"m[aá]s potente|most powerful|strongest|mayor potencia|highest power|m[aá]s fuerte", FLAGS), "power", "max"),
+    (re.compile(r"mayor (?:torque|par)\b|highest torque|torque (?:m[aá]s alto|m[aá]ximo)|m[aá]s torque|most torque|biggest torque", FLAGS), "torque", "max"),
+    (re.compile(r"m[aá]s peque\w+|smallest|menor (?:torque|par)\b|lowest torque|least torque|menos torque", FLAGS), "torque", "min"),
+    (re.compile(r"m[aá]s r[aá]pid\w+|fastest|quickest|menor tiempo|shortest (?:time|travel)|menos tiempo", FLAGS), "speed", "min"),
+    (re.compile(r"m[aá]s lent\w+|slowest", FLAGS), "speed", "max"),
+    (re.compile(r"menos (?:consum\w*|gast\w*|corriente|amper\w*)|least (?:current|power)|lowest (?:current|fla|consumption)|menor (?:consumo|corriente|fla)|m[aá]s eficien\w+|draws? the least|uses? the least", FLAGS), "fla", "min"),
+    (re.compile(r"m[aá]s (?:consum\w*|gast\w*)|highest (?:current|fla|consumption)|draws? the most|mayor (?:consumo|corriente|fla)", FLAGS), "fla", "max"),
+    (re.compile(r"mayor (?:ciclo|duty)|highest duty|m[aá]s ciclo", FLAGS), "duty", "max"),
+]
+
+
+def _catalog_filters(crit: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: crit[k] for k in ("voltage_num", "phase_type", "enclosure_type") if k in crit}
+
+
+def catalog_decision(text: str, crit: Dict[str, Any], d: "Decision") -> Optional["Decision"]:
+    """Preguntas sobre el catálogo (cuántos modelos, qué voltajes/tamaños/carcasas, diferencia entre dos tamaños)."""
+    sizes = list(dict.fromkeys(_BARE_SIZE.findall(text)))
+    if len(sizes) >= 2 and _CAT_DIFF.search(text):
+        args = {"aspect": "compare_sizes", "sizes": [int(x) - 760 for x in sizes[:2]]}
+    elif _CAT_SIZES.search(text):
+        args = {"aspect": "sizes"}
+    elif _CAT_VOLTS.search(text):
+        args = {"aspect": "voltages"}
+    elif _CAT_ENCL.search(text):
+        args = {"aspect": "enclosures"}
+    elif _CAT_PHASE.search(text):
+        args = {"aspect": "phases"}
+    elif _CAT_COUNT.search(text) and not any(k in crit for k in ("min_torque_nm", "min_torque_in_lbs", "max_speed_sec", "min_duty_cycle_pct", "max_fla_amps")):
+        flt = _catalog_filters(crit)
+        args = {"aspect": "count", **flt} if flt else {"aspect": "summary" if not _CAT_NOUN.search(text) else "count"}
+    elif _CAT_EXISTS.search(text) and _CAT_NOUN.search(text) and _catalog_filters(crit) \
+            and not any(k in crit for k in ("min_torque_nm", "min_torque_in_lbs", "max_speed_sec", "min_duty_cycle_pct", "max_fla_amps")):
+        args = {"aspect": "count", **_catalog_filters(crit)}
+    else:
+        return None
+    d.kind, d.rule, d.act = "tools", "catalog_overview", "catalog_overview"
+    d.calls = [{"name": "catalog_overview", "args": args}]
+    return d
+
+
+def rank_decision(text: str, crit: Dict[str, Any], d: "Decision") -> Optional["Decision"]:
+    """«el más potente», «el más rápido en 24V», «el que menos consume»: ranking por SQL con filtros duros opcionales."""
+    for rx, metric, order in _RANK_RULES:
+        if rx.search(text):
+            d.kind, d.rule, d.act = "tools", "ranking", "ranking"
+            d.calls = [{"name": "rank_actuators", "args": {"metric": metric, "order": order, **_catalog_filters(crit)}}]
+            return d
+    return None
+
+
 def _size_ref_args(text: str, token: str, pending: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     crit = extract_criteria(text)
     phase = crit.get("phase_type")
@@ -303,6 +369,8 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
         if act:
             d.kind, d.reply, d.rule, d.act = "reply", act, f"act:{act}", act
             return d
+    if not pns and not _SPEC_GENERIC.search(text) and not _RECO_VERB.search(text) and not focus_groups(text)             and (_CAT_COUNT.search(text) or _CAT_SIZES.search(text)) and (cd0 := catalog_decision(text, crit0, d)) is not None:
+        return cd0          # «cuántas versiones hay en total» no es una pregunta por un atributo ausente aunque diga «big»/«grande»
     if not _SPEC_GENERIC.search(text) and not _RECO_VERB.search(text) and not focus_groups(text):
         attr = acts.detect_attribute(text)
         if attr:
@@ -311,6 +379,9 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
     if acts.is_application_context(text) and not pns and "min_torque_nm" not in crit0 and "min_torque_in_lbs" not in crit0:
         d.kind, d.reply, d.rule, d.act = "reply", "application", "act:application", "application_context"
         return d
+
+    if not pns and (cd := catalog_decision(text, crit0, d)) is not None and cd.calls[0]["args"].get("aspect") == "compare_sizes":
+        return cd
 
     if pns:
         groups = focus_groups(text)
@@ -346,6 +417,15 @@ def route(query: str, active_parts: List[str], known_keys: Set[str], pending_arg
         return d
 
     crit = crit0
+    if not any(k in crit for k in ("min_torque_nm", "min_torque_in_lbs")):
+        if (rd := rank_decision(text, crit, d)) is not None:
+            return rd
+        if (cd := catalog_decision(text, crit, d)) is not None:
+            return cd
+    if (_RECO_VERB.search(text) and not any(k in crit for k in _NUMERIC_CRITERIA) and len(text.split()) >= 4
+            and not _ACT_VOCAB.search(text) and not crit):
+        d.rule, d.act = "uncertain", "unclear"     # «recomiéndame una película»: un verbo de selección sin nada de actuadores lo decide el clasificador
+        return d
     if any(k in crit for k in _NUMERIC_CRITERIA) or (_RECO_VERB.search(text) and not _SUPERLATIVE.search(text)):
         d.kind, d.rule, d.act = "tools", "selection_criteria", "recommend"
         d.calls = [{"name": "recommend_actuators", "args": crit}]

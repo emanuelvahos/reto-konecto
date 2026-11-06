@@ -157,8 +157,9 @@ def help_menu(lang: str) -> List[Dict[str, str]]:
 
 # --------------------------------------------------------------------------------------------- respuestas deterministas
 _FOLLOW_KEYS = {
-    "greeting": ["sample_spec", "sample_compare", "start_recommend", "ask_s4"],
-    "capabilities": ["sample_spec", "sample_compare", "start_recommend", "ask_s4"],
+    "greeting": ["sample_spec", "start_recommend", "sample_compare"],        # contrato: máximo 3 botones (ficha, recomendar, comparar)
+    "capabilities": ["sample_spec", "start_recommend", "sample_compare"],
+    "data": ["sample_spec", "start_recommend", "ask_capabilities"],
     "about_project": ["ask_capabilities", "sample_spec", "start_recommend"],
     "thanks": ["start_recommend", "ask_capabilities"],
     "bye": [],
@@ -179,6 +180,10 @@ def render_act(act: str, lang: str, attr_label: Optional[Dict[str, str]] = None)
         ui = _payload("CLARIFICATION", [])
         ui["clarification"] = {"question": t_act(lang, "help_question"), "options": help_menu(lang)}
         return t_act(lang, "help_question"), ui, "clarify"
+    if act == "unclear":          # el clasificador no pudo (o no quiso) decidir: menú neutro, nunca una recomendación al azar
+        ui = _payload("CLARIFICATION", [])
+        ui["clarification"] = {"question": t_act(lang, "unclear"), "options": help_menu(lang)}
+        return t_act(lang, "unclear"), ui, "clarify"
     if act == "application":      # explica que el par lo da el fabricante de la válvula y ofrece caminos como botones
         text = t_act(lang, "application")
         ui = _payload("CLARIFICATION", [])
@@ -259,5 +264,9 @@ def new_session_title(lang: str) -> str:
     return NEW_TITLE.get(lang, NEW_TITLE["en"])
 
 
-__all__ = ["detect_conversational", "detect_attribute", "is_application_context", "is_conversational_only", "render_act",
+def data_followups(lang: str) -> List[Dict[str, str]]:
+    return _followups(_FOLLOW_KEYS["data"], lang)
+
+
+__all__ = ["data_followups", "detect_conversational", "detect_attribute", "is_application_context", "is_conversational_only", "render_act",
            "resolve_size_reference", "render_supply_clarification", "truncate_title", "new_session_title", "norm"]

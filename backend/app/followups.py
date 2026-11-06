@@ -133,3 +133,20 @@ def describe_requirements(args: Dict[str, Any], lang: str) -> str:
     elif args.get("enclosure_type") == "Weatherproof":
         bits.append("Weatherproof")
     return ", ".join(bits)
+
+
+def known_requirements(args: Dict[str, Any], lang: str) -> str:
+    """Lo que el usuario ya dijo, para no volver a preguntarlo y mostrarle que se entendió: «500 Nm, 220 V, trifásico, On/Off»."""
+    bits: List[str] = []
+    if args.get("min_torque_nm") is not None:
+        v = float(args["min_torque_nm"])
+        bits.append(f"{int(v) if v.is_integer() else v} Nm")
+    elif args.get("min_torque_in_lbs") is not None:
+        v = float(args["min_torque_in_lbs"])
+        bits.append(f"{int(v) if v.is_integer() else v} in-lbs")
+    hard = describe_requirements(args, lang)
+    if hard:
+        bits.append(hard)
+    if args.get("application_type"):
+        bits.append(str(args["application_type"]))
+    return ", ".join(bits)

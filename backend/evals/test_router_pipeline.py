@@ -110,9 +110,12 @@ def test_turn_budget_returns_template_with_the_card_already_obtained(turn, monke
     assert steps(dbg)["fallback_template"]["detail"] == "llm_unavailable"
 
 
-def test_uncertain_query_falls_back_to_llm_path(turn):
-    (answer, _, dbg, _, _, meta), fake = turn("Hello! Which voltage do you need?", "blorp zindle quarbit")
-    assert fake.calls == 1 and steps(dbg)["router"]["detail"] == "uncertain" and meta["intent"] == "clarify"
+def test_uncertain_query_goes_to_the_classifier_not_to_a_free_agent(turn, fake_classifier):
+    clf = fake_classifier('{"act":"recommend","language":"en","part_references":[],"criteria":{},"focus":[],"reference":"none","confidence":0.9}')
+    (answer, ui, dbg, _, _, meta), fake = turn("Hello! Which voltage do you need?", "blorp zindle quarbit")
+    assert clf.calls == 1 and fake.calls == 0                       # el agente libre ya no existe: la herramienta pidió el dato faltante
+    assert steps(dbg)["router"]["detail"] == "uncertain" and steps(dbg)["classifier"]["detail"] == "recommend"
+    assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION"
 
 
 # --------------------------------------------------------------------------------------------- 4H: orden y nombres incompletos

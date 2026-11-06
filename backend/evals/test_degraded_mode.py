@@ -123,6 +123,8 @@ def test_prompt_injection_without_llm(nollm):
     assert meta["intent"] != "error" and answer
 
 
-def test_unroutable_query_without_key_is_still_a_controlled_error(no_key):
+def test_unroutable_query_without_key_gets_the_neutral_help_menu(no_key):
+    # 6C: sin clasificador no hay agente libre; lo ambiguo recibe el menú neutro con botones (no un error, no una recomendación)
     answer, ui, _, _, _, meta = turn("tell me something interesting", "en")
-    assert meta["intent"] == "error" and degraded_alerts(ui)[0]["severity"] == "error"
+    assert meta["intent"] == "clarify" and ui["display_type"] == "CLARIFICATION" and len(ui["clarification"]["options"]) >= 2
+    assert not ui["actuators"] and meta["technical"] is False

@@ -34,6 +34,10 @@ ACT_TEXT: Dict[str, Dict[str, str]] = {
         "en": "Sure, I'll guide you. What would you like to do?",
         "es": "Claro, te guío. ¿Qué quieres hacer?",
     },
+    "unclear": {
+        "en": "I'm not sure I understood. I can help with spec sheets, comparisons, recommendations and concepts of the Series 76 actuators. What would you like to do?",
+        "es": "No estoy seguro de haber entendido. Puedo ayudarte con fichas, comparaciones, recomendaciones y conceptos de los actuadores Serie 76. ¿Qué quieres hacer?",
+    },
     "off_topic": {
         "en": "That is outside what I do: I only cover the Series 76 electric actuators. I can give you a spec sheet, compare models or help you choose one.",
         "es": "Eso queda fuera de lo que hago: solo cubro los actuadores eléctricos Serie 76. Puedo darte una ficha, comparar modelos o ayudarte a elegir uno.",
