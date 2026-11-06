@@ -1692,7 +1692,53 @@ fun ClarificationView(
 }
 
 /**
- * Fila de Chips de Preguntas Sugeridas (SUGGESTED_FOLLOWUPS)
+ * Deduplica y construye la lista efectiva de chips de acción interactivos:
+ * 1) Para display.type CLARIFICATION, sus opciones como botones (con option.value como texto a enviar)
+ * 2) suggested_followups (máx. 3) como botones (con followup.query como texto a enviar)
+ * 3) No duplica si ambos traen el mismo texto o etiqueta
+ */
+fun buildEffectiveActionChips(uiPayload: UIPayload?): List<SuggestedFollowup> {
+    if (uiPayload == null) return emptyList()
+    val result = mutableListOf<SuggestedFollowup>()
+    val seenQueries = mutableSetOf<String>()
+    val seenLabels = mutableSetOf<String>()
+
+    fun normalize(s: String) = s.trim().lowercase()
+
+    // Opciones interactivas de CLARIFICATION
+    if (uiPayload.displayType == "CLARIFICATION" && uiPayload.clarification != null) {
+        for (option in uiPayload.clarification.options) {
+            val q = if (option.value.isNotBlank()) option.value.trim() else option.label.trim()
+            val l = option.label.trim()
+            val qNorm = normalize(q)
+            val lNorm = normalize(l)
+            if (q.isNotEmpty() && !seenQueries.contains(qNorm) && !seenLabels.contains(lNorm)) {
+                seenQueries.add(qNorm)
+                seenLabels.add(lNorm)
+                result.add(SuggestedFollowup(label = option.label, query = q))
+            }
+        }
+    }
+
+    // suggested_followups (máximo 3)
+    val followups = uiPayload.suggestedFollowups.take(3)
+    for (f in followups) {
+        val q = if (f.query.isNotBlank()) f.query.trim() else f.label.trim()
+        val l = f.label.trim()
+        val qNorm = normalize(q)
+        val lNorm = normalize(l)
+        if (q.isNotEmpty() && !seenQueries.contains(qNorm) && !seenLabels.contains(lNorm)) {
+            seenQueries.add(qNorm)
+            seenLabels.add(lNorm)
+            result.add(SuggestedFollowup(label = f.label, query = q))
+        }
+    }
+
+    return result
+}
+
+/**
+ * Fila de Chips de Preguntas Sugeridas / Acciones (SUGGESTED_FOLLOWUPS / CLARIFICATION)
  */
 @Composable
 fun SuggestedFollowupRow(
@@ -1702,7 +1748,6 @@ fun SuggestedFollowupRow(
 ) {
     if (followups.isEmpty()) return
     val haptic = LocalHapticFeedback.current
-    val limited = followups.take(3)
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -1723,7 +1768,7 @@ fun SuggestedFollowupRow(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
         ) {
-            limited.forEach { followup ->
+            followups.forEach { followup ->
                 Surface(
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(20.dp),
@@ -1761,15 +1806,20 @@ fun SuggestedFollowupRow(
 
 /**
  * Insignia de Verificación discreta
+ * Mostrarla solo si verification.numbers_checked > 0 o ui_payload.actuators no está vacío.
+ * Si no, no muestra nada (saludo, capacidades, atributo no incluido).
  */
 @Composable
 fun VerificationBadge(
     verification: Verification?,
+    uiPayload: UIPayload? = null,
     modifier: Modifier = Modifier
 ) {
     if (verification == null) return
     when (verification.status) {
         "verified" -> {
+            val hasVerifiedData = (verification.numbersChecked > 0) || (uiPayload?.actuators?.isNotEmpty() == true)
+            if (!hasVerifiedData) return
             Surface(
                 color = KonectoTheme.semantics.successBg,
                 shape = RoundedCornerShape(12.dp),

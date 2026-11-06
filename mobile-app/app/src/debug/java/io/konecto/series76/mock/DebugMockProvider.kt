@@ -26,7 +26,14 @@ object DebugMockProvider {
         "model_listed_as_na",
         "typo_correction",
         "out_of_scope",
-        "llm_error"
+        "llm_error",
+        "greeting",
+        "capabilities",
+        "help_menu",
+        "catalog_overview",
+        "ranking",
+        "attribute_not_included",
+        "size_clarification"
     )
 
     private var cachedSamples: Map<String, ConversationResponse>? = null

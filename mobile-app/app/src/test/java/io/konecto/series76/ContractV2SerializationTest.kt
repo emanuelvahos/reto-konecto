@@ -1,7 +1,12 @@
 package io.konecto.series76
 
 import io.konecto.series76.data.ApiClient
+import io.konecto.series76.data.ClarificationOption
+import io.konecto.series76.data.ClarificationPayload
 import io.konecto.series76.data.ConversationResponse
+import io.konecto.series76.data.SuggestedFollowup
+import io.konecto.series76.data.UIPayload
+import io.konecto.series76.ui.buildEffectiveActionChips
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -197,7 +202,7 @@ class ContractV2SerializationTest {
     }
 
     @Test
-    fun testDeserializeAll12SamplesFromAssets() {
+    fun testDeserializeAll19SamplesFromAssets() {
         val possiblePaths = listOf(
             java.io.File("src/debug/assets/contract_v2_samples.json"),
             java.io.File("app/src/debug/assets/contract_v2_samples.json"),
@@ -221,10 +226,17 @@ class ContractV2SerializationTest {
             "typo_correction",
             "out_of_scope",
             "llm_error",
-            "degraded_lookup"
+            "degraded_lookup",
+            "greeting",
+            "capabilities",
+            "help_menu",
+            "catalog_overview",
+            "ranking",
+            "attribute_not_included",
+            "size_clarification"
         )
 
-        assertEquals("Expected exactly 12 samples", 12, rootObj.size)
+        assertEquals("Expected exactly 19 samples", 19, rootObj.size)
         expectedKeys.forEach { key ->
             assertTrue("Sample key '$key' must exist in fixture", rootObj.containsKey(key))
             val element = rootObj[key]!!
@@ -243,13 +255,15 @@ class ContractV2SerializationTest {
         assertNotNull("source_page should be present in real data", actuator?.sourcePage)
         assertTrue("source_page should be > 0", (actuator?.sourcePage ?: 0) > 0)
 
-        // Verify llm_error error fields
+        // Verify llm_error clarification guide
         val llmError = ApiClient.jsonFormat.decodeFromJsonElement(
             ConversationResponse.serializer(),
             rootObj["llm_error"]!!
         )
-        assertTrue("llm_error should contain alerts", llmError.uiPayload.alerts.isNotEmpty())
-        assertNotNull("debug_trace.error or alerts should be populated", llmError.debugTrace.error ?: llmError.uiPayload.alerts.firstOrNull()?.message)
+        assertNotNull("llm_error answer should be present", llmError.answer)
+        assertEquals("CLARIFICATION", llmError.uiPayload.displayType)
+        assertNotNull("llm_error clarification should be populated", llmError.uiPayload.clarification)
+        assertTrue("llm_error options should not be empty", llmError.uiPayload.clarification?.options?.isNotEmpty() == true)
 
         // Verify degraded_lookup sample with informative mode alert
         val degradedLookup = ApiClient.jsonFormat.decodeFromJsonElement(
@@ -266,6 +280,74 @@ class ContractV2SerializationTest {
         assertEquals("info", degradedAlert?.severity)
         assertEquals("Modo reducido", degradedAlert?.title)
         assertTrue("degraded_lookup alert message should not be blank", degradedAlert?.message?.isNotBlank() == true)
+
+        // Verify greeting, capabilities, attribute_not_included have numbers_checked=0 and empty actuators
+        for (k in listOf("greeting", "capabilities", "attribute_not_included")) {
+            val sample = ApiClient.jsonFormat.decodeFromJsonElement(
+                ConversationResponse.serializer(),
+                rootObj[k]!!
+            )
+            assertEquals("Sample $k must have 0 numbers_checked", 0, sample.verification.numbersChecked)
+            assertTrue("Sample $k must have empty actuators", sample.uiPayload.actuators.isEmpty())
+        }
+    }
+
+    @Test
+    fun testBuildEffectiveActionChipsClarificationAndFollowups() {
+        // Test 1: CLARIFICATION options are converted to action chips
+        val payloadClarification = UIPayload(
+            displayType = "CLARIFICATION",
+            clarification = ClarificationPayload(
+                question = "¿Qué voltaje?",
+                options = listOf(
+                    ClarificationOption(label = "110 V monofásico", value = "110V monofásico"),
+                    ClarificationOption(label = "220 V trifásico", value = "220V trifásico")
+                )
+            ),
+            suggestedFollowups = emptyList()
+        )
+        val chipsClar = buildEffectiveActionChips(payloadClarification)
+        assertEquals(2, chipsClar.size)
+        assertEquals("110 V monofásico", chipsClar[0].label)
+        assertEquals("110V monofásico", chipsClar[0].query)
+        assertEquals("220 V trifásico", chipsClar[1].label)
+        assertEquals("220V trifásico", chipsClar[1].query)
+
+        // Test 2: suggested_followups limited to 3
+        val payloadFollowups = UIPayload(
+            displayType = "TEXT_ONLY",
+            suggestedFollowups = listOf(
+                SuggestedFollowup(label = "Chip 1", query = "query 1"),
+                SuggestedFollowup(label = "Chip 2", query = "query 2"),
+                SuggestedFollowup(label = "Chip 3", query = "query 3"),
+                SuggestedFollowup(label = "Chip 4", query = "query 4")
+            )
+        )
+        val chipsFol = buildEffectiveActionChips(payloadFollowups)
+        assertEquals(3, chipsFol.size)
+        assertEquals("Chip 1", chipsFol[0].label)
+        assertEquals("Chip 3", chipsFol[2].label)
+
+        // Test 3: Deduplication when both CLARIFICATION and suggested_followups have same query or label
+        val payloadBoth = UIPayload(
+            displayType = "CLARIFICATION",
+            clarification = ClarificationPayload(
+                question = "¿Qué voltaje?",
+                options = listOf(
+                    ClarificationOption(label = "110 V monofásico", value = "110V monofásico"),
+                    ClarificationOption(label = "220 V monofásico", value = "220V monofásico")
+                )
+            ),
+            suggestedFollowups = listOf(
+                SuggestedFollowup(label = "110 V monofásico", query = "110V monofásico"), // duplicate
+                SuggestedFollowup(label = "Ficha del 761A", query = "Ficha del 761A00-11300000/A") // new
+            )
+        )
+        val chipsBoth = buildEffectiveActionChips(payloadBoth)
+        assertEquals(3, chipsBoth.size)
+        assertEquals("110 V monofásico", chipsBoth[0].label)
+        assertEquals("220 V monofásico", chipsBoth[1].label)
+        assertEquals("Ficha del 761A", chipsBoth[2].label)
     }
 }
 

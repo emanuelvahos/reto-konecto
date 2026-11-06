@@ -24,6 +24,7 @@ import io.konecto.series76.data.Verification
 import io.konecto.series76.ui.ProductDataVisualizer
 import io.konecto.series76.ui.SuggestedFollowupRow
 import io.konecto.series76.ui.VerificationBadge
+import io.konecto.series76.ui.buildEffectiveActionChips
 import io.konecto.series76.ui.theme.KonectoTheme
 import io.konecto.series76.ui.theme.Spacing
 
@@ -87,8 +88,12 @@ fun ChatBubbleItem(
             horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
         ) {
             // Insignia de verificación (discreta verde-azulado para verified, sutil advertencia para fallback)
+            // Mostrarla solo si verification.numbers_checked > 0 o ui_payload.actuators no está vacío
             if (!isUser && verification != null) {
-                VerificationBadge(verification = verification)
+                VerificationBadge(
+                    verification = verification,
+                    uiPayload = msg.uiPayload
+                )
             }
 
             // Burbuja de texto (suprimida si es pregunta de aclaración para no duplicar con la tarjeta)
@@ -130,10 +135,13 @@ fun ChatBubbleItem(
                 )
             }
 
-            // Chips deterministas de seguimiento (suggested_followups) debajo del último mensaje del asistente
-            if (!isUser && isLastAssistantMessage && msg.uiPayload?.suggestedFollowups?.isNotEmpty() == true) {
+            // Chips deterministas de seguimiento / opciones interactivas de aclaración
+            val effectiveChips = remember(msg.uiPayload) {
+                buildEffectiveActionChips(msg.uiPayload)
+            }
+            if (!isUser && isLastAssistantMessage && effectiveChips.isNotEmpty()) {
                 SuggestedFollowupRow(
-                    followups = msg.uiPayload.suggestedFollowups,
+                    followups = effectiveChips,
                     onSelect = onSendQuery
                 )
             }
