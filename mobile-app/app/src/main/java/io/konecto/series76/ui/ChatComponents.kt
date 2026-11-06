@@ -68,8 +68,14 @@ fun ProductDataVisualizer(
             .padding(top = Spacing.xs),
         verticalArrangement = Arrangement.spacedBy(Spacing.s)
     ) {
-        // Alertas de Ingeniería
-        uiPayload.engineeringWarnings.forEach { warning ->
+        // Alertas estructuradas (Contract v2) con colores por severidad y botón de reintento
+        if (uiPayload.alerts.isNotEmpty()) {
+            UIAlertsView(alerts = uiPayload.alerts, onRetry = onRetry)
+        }
+
+        // Warnings de ingeniería no cubiertos por alertas estructuradas (evita duplicados con Contract v2)
+        val alertMessages = uiPayload.alerts.map { it.message }
+        uiPayload.engineeringWarnings.filter { it !in alertMessages }.forEach { warning ->
             Surface(
                 color = KonectoTheme.semantics.warningBg,
                 shape = RoundedCornerShape(12.dp),
@@ -91,11 +97,6 @@ fun ProductDataVisualizer(
                     )
                 }
             }
-        }
-
-        // Alertas estructuradas (UIAlerts) con colores por severidad y botón de reintento
-        if (uiPayload.alerts.isNotEmpty()) {
-            UIAlertsView(alerts = uiPayload.alerts, onRetry = onRetry)
         }
 
         // Enrutamiento según display_type
