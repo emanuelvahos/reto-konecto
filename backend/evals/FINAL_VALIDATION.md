@@ -210,3 +210,127 @@ Fallos (texto del arnés, sin editar):
 - HLD-20 falla en ambos proveedores. En la corrida NIM el caso terminó con la respuesta de error controlada (`LLM_UNAVAILABLE`) tras 5 reintentos de transporte y 0 llamadas a `lookup_actuator_by_part_number`; en OpenRouter la respuesta fue `lookup` verificada pero sin decir que el modelo trifásico no está disponible (ver `HELDOUT_REPORT.md`, «Fallos que quedan»).
 - Una corrida por batería y proveedor; con 10–40 casos las diferencias entre proveedores no son concluyentes.
 - Los `.md` y `.json` de resultados originales de estas corridas no se versionan; esta tabla es su transcripción.
+
+## Corrida 4F: validación desde GitHub (OpenRouter, clon limpio)
+
+- **Fecha:** 2026-11-05.
+- **Commit probado:** `eaa6ecf` (`feat/backend-v2`), clonado de `https://github.com/emanuelvahos/reto-konecto` en un directorio temporal, sin Android Studio ni Gradle en el equipo, con `autocrlf=true` por defecto.
+- **Configuración:** `docker compose up -d` en el clon con el `.env` del usuario (proveedor `openrouter`, modelo `openai/gpt-4o-mini`; `/health` con `llm_configured: true`). El `.env` no se versiona y no se reproduce aquí.
+- **Cómo se ejecutó:** las tres baterías por HTTP contra el contenedor del clon en `http://localhost:8001` (`run_evals.py --live`; `run_adversarial.py --base-url http://localhost:8001`, con `--cases backend/evals/heldout.json` para la ciega). Una primera pasada de adversarial y ciega se ejecutó en proceso por omisión de `--base-url`; se descartó y se repitió por HTTP (no se reproduce aquí; dio 30/30 y 39/40, igual que esta).
+- **Costo:** tokens × precio de lista del perfil (USD 0.15 / 0.60 por 1M tokens entrada/salida); no es la factura. El informe de evals no registra tokens ni reintentos.
+- **Latencia:** por caso (suma de turnos); p50/p95 por vecino más cercano.
+
+### Resumen
+
+| Batería | Resultado | Reintentos transporte | Reintentos verificador | Latencia p50 / p95 (ms) | Tokens | Costo estimado (USD) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Evals (11 escenarios) | 11/11 | no registrado | no registrado | 1869 / 5087 | no registrado | no registrado |
+| Adversarial (30 casos) | 30/30 | 0 | 0 | 1835 / 4479 | 52888 | 0.00862 |
+| Ciega completa (40 casos) | 39/40 | 0 | 1 | 1861 / 6257 | 85869 | 0.01413 |
+
+Costo total estimado de adversarial + ciega: USD 0.02274.
+
+### Evals (11 escenarios)
+
+| Escenario | Latencia (ms) | Estado |
+| --- | --- | --- |
+| EVAL-01 | 5087 | PASS |
+| EVAL-02 | 4594 | PASS |
+| EVAL-03 | 1564 | PASS |
+| EVAL-04 | 2282 | PASS |
+| EVAL-05 | 2223 | PASS |
+| EVAL-06 | 1847 | PASS |
+| EVAL-07 | 1535 | PASS |
+| EVAL-08 | 1869 | PASS |
+| EVAL-09 | 1778 | PASS |
+| EVAL-10 | 2631 | PASS |
+| EVAL-11 | 1409 | PASS |
+
+### Adversarial (30 casos)
+
+| Caso | Categoría | Idioma | Resultado | Latencia (ms) | Tokens | Costo (USD) | Reint. transporte | Reint. verificador | Intent | Verificación |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ADV-01 | typo | es | PASS | 2226 | 1903 | 0.00032 | 0 | 0 | lookup | verified |
+| ADV-02 | typo | en | PASS | 5824 | 2608 | 0.00045 | 0 | 0 | lookup | verified |
+| ADV-03 | na_3phase | es | PASS | 3659 | 2223 | 0.00039 | 0 | 0 | lookup | verified |
+| ADV-04 | na_3phase | en | PASS | 2708 | 2134 | 0.00034 | 0 | 0 | lookup | verified |
+| ADV-05 | invented_pn | es | PASS | 1586 | 1695 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-06 | invented_pn | en | PASS | 1814 | 1700 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-07 | ambiguity | es | PASS | 119 | 0 | 0.00000 | 0 | 0 | clarify | verified |
+| ADV-08 | ambiguity | en | PASS | 118 | 0 | 0.00000 | 0 | 0 | clarify | verified |
+| ADV-09 | impossible | en | PASS | 2566 | 1643 | 0.00026 | 0 | 0 | recommend | verified |
+| ADV-10 | impossible | es | PASS | 2376 | 2097 | 0.00036 | 0 | 0 | recommend | verified |
+| ADV-11 | 24v_weatherproof | es | PASS | 3675 | 1634 | 0.00026 | 0 | 0 | recommend | verified |
+| ADV-12 | 24v_weatherproof | en | PASS | 4479 | 1647 | 0.00026 | 0 | 0 | recommend | verified |
+| ADV-13 | 24v_no_hz | es | PASS | 3936 | 1753 | 0.00029 | 0 | 0 | lookup | verified |
+| ADV-14 | 24v_no_hz | en | PASS | 2253 | 1771 | 0.00029 | 0 | 0 | lookup | verified |
+| ADV-15 | cycles_vs_starts | es | PASS | 1570 | 1728 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-16 | cycles_vs_starts | en | PASS | 1169 | 1721 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-17 | csa_warning | es | PASS | 1829 | 1818 | 0.00028 | 0 | 0 | lookup | verified |
+| ADV-18 | csa_warning | en | PASS | 1348 | 1814 | 0.00028 | 0 | 0 | lookup | verified |
+| ADV-19 | prompt_injection | es | PASS | 1222 | 1718 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-20 | prompt_injection | en | PASS | 1502 | 1730 | 0.00027 | 0 | 0 | lookup | verified |
+| ADV-21 | out_of_catalog | es | PASS | 56 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| ADV-22 | out_of_catalog | en | PASS | 55 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| ADV-23 | followup_no_pn | es | PASS | 2876 | 3422 | 0.00053 | 0 | 0 | lookup | verified |
+| ADV-24 | followup_no_pn | en | PASS | 2581 | 3457 | 0.00055 | 0 | 0 | lookup | verified |
+| ADV-25 | compare | es | PASS | 1911 | 2139 | 0.00036 | 0 | 0 | lookup | verified |
+| ADV-26 | compare | en | PASS | 1714 | 2115 | 0.00034 | 0 | 0 | lookup | verified |
+| ADV-27 | 3phase_modulating | es | PASS | 2668 | 2349 | 0.00042 | 0 | 0 | recommend | verified |
+| ADV-28 | 3phase_modulating | en | PASS | 1647 | 1763 | 0.00029 | 0 | 0 | lookup | verified |
+| ADV-29 | knowledge | en | PASS | 1835 | 1890 | 0.00031 | 0 | 0 | knowledge | verified |
+| ADV-30 | clarification_flow | es | PASS | 2694 | 2416 | 0.00042 | 0 | 0 | recommend | verified |
+
+### Ciega completa (40 casos)
+
+| Caso | Categoría | Idioma | Resultado | Latencia (ms) | Tokens | Costo (USD) | Reint. transporte | Reint. verificador | Intent | Verificación |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| HLD-01 | plain_lookup | es | PASS | 1627 | 1712 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-02 | plain_lookup | en | PASS | 5614 | 1708 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-03 | plain_lookup | mixed | PASS | 3497 | 1792 | 0.00029 | 0 | 0 | lookup | verified |
+| HLD-04 | voice_dictated | es | PASS | 4324 | 4373 | 0.00071 | 0 | 1 | lookup | fallback_template |
+| HLD-05 | voice_dictated | en | PASS | 5320 | 1731 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-06 | voice_dictated | mixed | PASS | 1861 | 1706 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-07 | part_number_typo | es | PASS | 2802 | 1889 | 0.00031 | 0 | 0 | lookup | verified |
+| HLD-08 | part_number_typo | en | PASS | 3274 | 1980 | 0.00038 | 0 | 0 | lookup | fallback_template |
+| HLD-09 | part_number_typo | mixed | PASS | 1782 | 1978 | 0.00033 | 0 | 0 | lookup | verified |
+| HLD-10 | long_noisy | es | PASS | 1250 | 1787 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-11 | long_noisy | en | PASS | 1132 | 1831 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-12 | long_noisy | mixed | PASS | 1148 | 1754 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-13 | multi_requirement | es | PASS | 2662 | 2399 | 0.00043 | 0 | 0 | recommend | verified |
+| HLD-14 | multi_requirement | en | PASS | 2163 | 2216 | 0.00038 | 0 | 0 | recommend | verified |
+| HLD-15 | multi_requirement | en | PASS | 2192 | 1998 | 0.00034 | 0 | 0 | recommend | verified |
+| HLD-16 | multi_requirement | mixed | PASS | 1942 | 2107 | 0.00036 | 0 | 0 | recommend | verified |
+| HLD-17 | followup | es | PASS | 4818 | 3770 | 0.00068 | 0 | 0 | lookup | verified |
+| HLD-18 | followup | en | PASS | 6591 | 4214 | 0.00076 | 0 | 0 | lookup | verified |
+| HLD-19 | followup | es | PASS | 4959 | 3738 | 0.00061 | 0 | 0 | lookup | verified |
+| HLD-20 | followup | en | FAIL | 7909 | 8530 | 0.00142 | 0 | 0 | lookup | verified |
+| HLD-21 | prompt_injection | en | PASS | 1475 | 1726 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-22 | prompt_injection | es | PASS | 62 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| HLD-23 | prompt_injection | en | PASS | 56 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| HLD-24 | prompt_injection | mixed | PASS | 1536 | 1703 | 0.00027 | 0 | 0 | lookup | verified |
+| HLD-25 | out_of_scope | es | PASS | 62 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| HLD-26 | out_of_scope | en | PASS | 4215 | 3733 | 0.00059 | 0 | 0 | knowledge | verified |
+| HLD-27 | out_of_scope | mixed | PASS | 57 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| HLD-28 | out_of_scope | es | PASS | 53 | 0 | 0.00000 | 0 | 0 | knowledge | verified |
+| HLD-29 | impossible_request | en | PASS | 1600 | 1633 | 0.00026 | 0 | 0 | recommend | verified |
+| HLD-30 | impossible_request | es | PASS | 134 | 0 | 0.00000 | 0 | 0 | clarify | verified |
+| HLD-31 | impossible_request | mixed | PASS | 1913 | 1647 | 0.00026 | 0 | 0 | recommend | verified |
+| HLD-32 | nonexistent_data | es | PASS | 1447 | 1751 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-33 | nonexistent_data | en | PASS | 6257 | 7502 | 0.00121 | 0 | 0 | lookup | verified |
+| HLD-34 | nonexistent_data | mixed | PASS | 1778 | 1709 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-35 | csa_na_single_torque | es | PASS | 4884 | 1818 | 0.00028 | 0 | 0 | lookup | verified |
+| HLD-36 | csa_na_single_torque | en | PASS | 1491 | 2135 | 0.00034 | 0 | 0 | lookup | verified |
+| HLD-37 | csa_na_single_torque | es | PASS | 1492 | 1775 | 0.00029 | 0 | 0 | lookup | verified |
+| HLD-38 | conceptual | en | PASS | 1333 | 1802 | 0.00028 | 0 | 0 | knowledge | verified |
+| HLD-39 | conceptual | es | PASS | 1459 | 1882 | 0.00030 | 0 | 0 | knowledge | verified |
+| HLD-40 | conceptual | mixed | PASS | 3640 | 1840 | 0.00030 | 0 | 0 | knowledge | verified |
+
+Fallos (texto del arnés, sin editar):
+
+- HLD-20: la respuesta no contiene ninguno de ['not available', 'n/a', 'no disponible', 'not listed', 'no está disponible']: 'The small three-phase models 761B00-11300000/A and 761B00-11320000/A are usable. 761B00-11300000/A: 100 Nm torque, 40% duty cycle, 15 W powe'
+
+### Lectura
+
+- Una corrida por batería. La ciega repite el único fallo conocido (HLD-20, ver `HELDOUT_REPORT.md`).
+- Con OpenRouter no hubo reintentos de transporte (0) en ninguna batería; los de NIM fueron 52 y 73 en las secciones anteriores.
