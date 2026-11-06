@@ -6,7 +6,7 @@ Asistente conversacional para consultar, comparar y recomendar los actuadores el
 
 <table>
 <tr><td align="center"><img src="docs/screenshots/01-login.png" width="200" alt="Pantalla de inicio de sesión con el botón «Usar cuenta demo»"><br><sub>Pantalla de inicio de sesión con el botón «Usar cuenta demo»</sub></td><td align="center"><img src="docs/screenshots/02-sesiones.png" width="200" alt="Lista de conversaciones guardadas"><br><sub>Lista de conversaciones guardadas</sub></td><td align="center"><img src="docs/screenshots/03-ficha-actuador.png" width="200" alt="Ficha de un actuador con selector 60 Hz / 50 Hz"><br><sub>Ficha de un actuador con selector 60 Hz / 50 Hz</sub></td><td align="center"><img src="docs/screenshots/04-comparacion.png" width="200" alt="Tabla comparativa de dos actuadores"><br><sub>Tabla comparativa de dos actuadores</sub></td></tr>
-<tr><td align="center"><img src="docs/screenshots/05-ficha-completa.png" width="200" alt="Ficha técnica completa en un panel inferior"><br><sub>Ficha técnica completa en un panel inferior</sub></td><td align="center"><img src="docs/screenshots/06-voz-escuchando.png" width="200" alt="Dictado por voz en curso"><br><sub>Dictado por voz en curso</sub></td><td align="center"><img src="docs/screenshots/08-modo-claro.png" width="200" alt="Tema claro"><br><sub>Tema claro</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/05-ficha-completa.png" width="200" alt="Ficha técnica completa en un panel inferior"><br><sub>Ficha técnica completa en un panel inferior</sub></td><td align="center"><img src="docs/screenshots/07-alerta.png" width="200" alt="Alerta de modelo no disponible"><br><sub>Alerta de modelo no disponible</sub></td><td align="center"><img src="docs/screenshots/06-voz-escuchando.png" width="200" alt="Dictado por voz en curso"><br><sub>Dictado por voz en curso</sub></td><td align="center"><img src="docs/screenshots/08-modo-claro.png" width="200" alt="Tema claro"><br><sub>Tema claro</sub></td></tr>
 </table>
 
 ## Qué es y cómo funciona
@@ -27,7 +27,7 @@ Asistente conversacional para consultar, comparar y recomendar los actuadores el
 ## Arranque
 
 ```bash
-git clone <url-del-repositorio> reto-konecto
+git clone https://github.com/emanuelvahos/reto-konecto.git
 cd reto-konecto
 cp .env.example .env          # en PowerShell: Copy-Item .env.example .env
 ```
@@ -149,7 +149,7 @@ Hay casos equivalentes en `backend/evals/adversarial.json` y en las pruebas de `
 - **Orden en las comparaciones.** `ui_payload.actuators` sigue el orden en que el usuario nombró los modelos (con LLM y con la plantilla). Antes dependía del orden de llegada de las herramientas, que corren en paralelo. Prueba: `test_router_pipeline.py`.
 - **Nombres incompletos.** «Compare 763B and 763C» ya no se expande a todas las variantes de ambos tamaños ni a modelos no nombrados: el router responde con una aclaración fija, sin LLM, sin herramientas y sin cifras (fila 8b).
 - **Alias `token` en el login** y alerta `AMBIGUOUS_SERVICE_TYPE` documentados arriba (fila 4b y paso 2 de «Verificar que funciona»).
-- **Capturas.** Se retiró del repositorio y de su historial una captura personal que no era del producto; la galería no incluye por ahora la captura de alerta.
+- **Capturas.** Se retiró del repositorio y de su historial una captura personal que no era del producto; la captura de alerta (`07-alerta.png`) se volvió a generar con el backend real.
 
 ## Ingestión de datos
 
@@ -164,7 +164,7 @@ El **oráculo** (`golden.json`) es independiente de lo que devuelven las herrami
 Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q    # 520 pruebas; una (test_api_e2e multiturno) llama al LLM real y se omite si el proveedor no responde
+python -m pytest backend/evals -q    # 529 pruebas pasan (corrida del 2026-11-06: 529 passed, 1 skipped); una (test_api_e2e multiturno) llama al LLM real y se omite si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
@@ -228,7 +228,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 - **HLD-20 y seguimientos ambiguos.** En la batería ciega falla un seguimiento («¿alguno de esos modelos trifásicos pequeños sirve?» tras un N/A): el router lo clasifica `uncertain`, decide el LLM y su respuesta habla de alternativos monofásicos sin decir que los trifásicos no están disponibles. No se corrigió con una regla general.
 - **El router solo cubre español e inglés.** Otro idioma pasa al LLM sin las protecciones previas.
 - **Variabilidad de NIM.** La capa gratuita es no determinista y a veces falla o tarda; hay reintentos con retroceso y, si no responde, plantilla. Una misma batería puede variar de una corrida a otra (la batería ciega dio 36/40, 36/40, 38/40 y 37–39/40 en distintas corridas).
-- **OpenRouter medido solo en una pasada corta** (una corrida: 11/11 evals, 30/30 adversarial y 9/10 en una muestra de 10 casos ciegos). La tasa y la latencia de `gpt-4o-mini` no están medidas con la batería ciega completa ni en varias corridas, y el costo es estimado por tokens, no facturado. Datos completos en [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md).
+- **OpenRouter con pocas corridas.** Hay una corrida completa desde un clon limpio (2026-11-05, commit `eaa6ecf`): 11/11 evals, 30/30 adversarial y 39/40 en la batería ciega completa (p50 1,9 s, p95 6,3 s; costo estimado USD 0,014 la ciega y USD 0,009 la adversarial; el fallo es HLD-20), además de la pasada corta de la tabla. No hay varias repeticiones, y el costo es estimado por tokens, no facturado. Datos completos en [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md).
 - **Dictado de números con palabras fuera de la tabla.** La normalización solo cubre las palabras de dígitos, letras y separadores que reconoce (es/en); si falta un dígito o hay palabras de relleno, la app propone el modelo más cercano y lo avisa en lugar de adivinar.
 - **Modo degradado.** Las respuestas de plantilla son más rígidas que las del LLM y las consultas que el router no clasifica no se pueden contestar sin modelo. Las cifras son las mismas (vienen de la base de datos), no la redacción. Esta ruta se probó con pruebas automáticas, no con una corrida de las baterías sin LLM.
 - La batería ciega tiene 40 casos y los adversarios 30: sirven para detectar regresiones, no son una estimación estadística de la tasa de acierto real.
@@ -241,9 +241,16 @@ La aplicación móvil (`mobile-app/`) está escrita en **Kotlin** con **Jetpack 
 
 ### Obtener la app sin compilar
 
-<!-- APK: enlace a la Release -->
+Descarga el APK de la última Release: <https://github.com/emanuelvahos/reto-konecto/releases/latest> (archivo `series76-assistant.apk`).
 
-(Pendiente: el enlace al APK se añadirá al publicar la Release.)
+- **Con adb:** `adb install -r series76-assistant.apk`
+- **Sin adb:** copia el archivo al teléfono, ábrelo y permite la instalación de orígenes desconocidos cuando Android lo pida.
+
+Notas:
+
+- Va firmado con una clave de depuración (no es una firma de publicación en tienda).
+- No incluye el modo mock: necesita el backend en marcha.
+- En un celular físico la URL por defecto es `http://localhost:8001/`; con cable USB requiere `adb reverse tcp:8001 tcp:8001`. Sin cable, escribe la IP del PC en Ajustes (ver «Conexión con el servidor backend»).
 
 ### Compilación y pruebas
 
