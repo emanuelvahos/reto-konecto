@@ -10,6 +10,9 @@ import retrofit2.http.*
 import java.util.concurrent.TimeUnit
 
 interface Series76Api {
+    @GET("health")
+    suspend fun healthCheck(): HealthResponse
+
     @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
 
@@ -28,7 +31,7 @@ interface Series76Api {
 
 object ApiClient {
     var authToken: String? = null
-    var baseUrl: String = "http://10.0.2.2:8001/"
+    var baseUrl: String = ServerPreferences.DEFAULT_SERVER_URL
         set(value) {
             field = if (value.endsWith("/")) value else "$value/"
             rebuildRetrofit()
@@ -77,5 +80,26 @@ object ApiClient {
             .addConverterFactory(jsonFormat.asConverterFactory(contentType))
             .build()
             .create(Series76Api::class.java)
+    }
+
+    suspend fun testConnection(targetUrl: String): Result<HealthResponse> {
+        return try {
+            val url = if (targetUrl.endsWith("/")) targetUrl else "$targetUrl/"
+            val testClient = OkHttpClient.Builder()
+                .connectTimeout(5, TimeUnit.SECONDS)
+                .readTimeout(5, TimeUnit.SECONDS)
+                .build()
+            val contentType = "application/json".toMediaType()
+            val testApi = Retrofit.Builder()
+                .baseUrl(url)
+                .client(testClient)
+                .addConverterFactory(jsonFormat.asConverterFactory(contentType))
+                .build()
+                .create(Series76Api::class.java)
+            val resp = testApi.healthCheck()
+            Result.success(resp)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

@@ -1,6 +1,6 @@
 # Command: `/run-e2e-harness`
 
-Runs the complete 4-tier verification harness across Data Integrity, Deterministic SQL/Vector Tools, FastAPI Multi-Turn Persistence, and the 11-Scenario End-to-End Evaluation Suite.
+Runs the complete 4-tier verification harness across Data Integrity, Deterministic SQL + Keyword-Knowledge Tools, FastAPI Multi-Turn Persistence, and the 11-Scenario End-to-End Evaluation Suite.
 
 ## Execution Steps
 
@@ -8,7 +8,7 @@ Runs the complete 4-tier verification harness across Data Integrity, Determinist
 # Tier 1: Physical & Catalog Integrity (9 checks, $0.00 LLM cost)
 python -m pytest backend/evals/test_data_integrity.py -v
 
-# Tier 2: Deterministic Tool & pgvector Retrieval Verification (5 checks)
+# Tier 2: Deterministic Tool Verification
 python -m pytest backend/evals/test_tools.py -v
 
 # Tier 3: JWT Auth, Multi-Turn Coreference & PostgreSQL Persistence (2 E2E checks)

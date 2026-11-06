@@ -1,5 +1,4 @@
 -- 1. Extensiones requeridas
-CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -16,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- 3. Tabla Maestra de Actuadores Serie 76 (Datos Estructurados Exactos)
 CREATE TABLE IF NOT EXISTS actuators (
     id SERIAL PRIMARY KEY,
-    base_part_number VARCHAR(64) NOT NULL,
+    base_part_number VARCHAR(64) NOT NULL,       -- Ej: 761A00-11300000/A; 3-fase: 763A00-11330C00/A (sin '*' de nota al pie)
     normalized_part_number VARCHAR(64) NOT NULL, -- Sin guiones ni barras para bÃºsqueda rÃ¡pida
     size_code VARCHAR(16) NOT NULL,              -- Ej: 761A, 761B, 762X, etc.
     frame_size INTEGER NOT NULL,                 -- 1 al 7 (para filtrar Nota de TamaÃ±os 6 y 7)
@@ -63,6 +62,7 @@ CREATE TABLE IF NOT EXISTS actuators (
     hazardous_classification TEXT,
     table_notes JSONB DEFAULT '[]'::jsonb,
     source_page INTEGER NOT NULL,
+    source_method TEXT,
 
     UNIQUE(base_part_number, power_supply, service_support)
 );
@@ -74,19 +74,7 @@ CREATE INDEX IF NOT EXISTS idx_actuators_power ON actuators(power_supply);
 CREATE INDEX IF NOT EXISTS idx_actuators_torque_onoff ON actuators(on_off_torque_nm);
 CREATE INDEX IF NOT EXISTS idx_actuators_torque_mod ON actuators(modulating_torque_nm);
 
--- 4. Tabla de Conocimiento SemÃ¡ntico (pgvector) para series_76_summary.pdf y Notas TÃ©cnicas
-CREATE TABLE IF NOT EXISTS knowledge_chunks (
-    id SERIAL PRIMARY KEY,
-    chunk_key VARCHAR(100) UNIQUE NOT NULL,
-    source_document VARCHAR(100) NOT NULL,
-    category VARCHAR(64) NOT NULL, -- 'business_context', 'electrical_definitions', 'certifications', 'operating_tolerances'
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    embedding vector(1536) -- Default 1536 (OpenRouter); ingest.py executes ALTER TABLE dynamically based on EMBEDDING_DIMENSIONS in .env (1536 or 2048)
-);
-
--- No HNSW index: pgvector limits HNSW/IVFFlat to 2000 dims; table is tiny so exact search is fine.
+-- 4. (Retirado) knowledge_chunks/pgvector: el conocimiento vive en backend/data/knowledge.json
 
 -- 5. Tablas de Persistencia de Conversaciones Multi-Turno
 CREATE TABLE IF NOT EXISTS chat_sessions (

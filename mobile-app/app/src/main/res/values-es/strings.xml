@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Asistente Serie 76</string>
+    <string name="app_subtitle">Referencia Técnica de Ingeniería de Planta</string>
+    <string name="brand_name">KONECTO</string>
+
+    <!-- Login -->
+    <string name="login_server_label">SERVIDOR</string>
+    <string name="login_change">Cambiar</string>
+    <string name="login_email_label">Identidad Corporativa / Correo</string>
+    <string name="login_password_label">Código de Acceso</string>
+    <string name="login_use_demo">Usar cuenta demo</string>
+    <string name="login_continue_no_login">Continuar sin iniciar sesión</string>
+    <string name="login_sign_in">Iniciar Sesión</string>
+
+    <!-- Sessions -->
+    <string name="sessions_title">Consultas</string>
+    <string name="sessions_default_user">Ingeniero Líder • engineer@konecto.io</string>
+    <string name="sessions_new">Nueva Consulta</string>
+    <string name="sessions_empty_title">Sin consultas aún</string>
+    <string name="sessions_empty_subtitle">Toca una sugerencia o inicia una nueva consulta técnica.</string>
+    <string name="sessions_msgs_count">%1$d mensajes</string>
+    <string name="sessions_undo">Deshacer</string>
+    <string name="sessions_deleted">Conversación eliminada</string>
+    <string name="sessions_refresh">Actualizar</string>
+    <string name="sessions_logout">Cerrar sesión</string>
+    <string name="sessions_delete">Eliminar</string>
+
+    <!-- Chat -->
+    <string name="chat_back">Atrás</string>
+    <string name="chat_default_title">Nueva Consulta Serie 76</string>
+    <string name="chat_subtitle">Asistente Técnico Serie 76</string>
+    <string name="chat_suggested_queries">CONSULTAS TÉCNICAS SUGERIDAS</string>
+    <string name="chat_suggested_1">Especificaciones de 763B00-11300000/A</string>
+    <string name="chat_suggested_2">Compara 763B y 763C</string>
+    <string name="chat_suggested_3">Antiexplosivo 24V con 200 Nm</string>
+    <string name="chat_suggested_4">¿Está 761A00-11330C00/A disponible en 220V Trifásico?</string>
+    <string name="chat_thinking">Analizando catálogo…</string>
+    <string name="chat_input_placeholder">Consulta número de parte, torque o 50Hz…</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_voice">Entrada por voz</string>
+    <string name="chat_open_debug">Abrir pantalla de telemetría</string>
+
+    <!-- Product Card -->
+    <string name="card_datasheet">FICHA TÉCNICA SERIE 76</string>
+    <string name="card_frame">TAMAÑO %1$d</string>
+    <string name="card_csa_certified">Certificado CSA</string>
+    <string name="card_csa_not_certified">Sin Certificación CSA</string>
+    <string name="card_on_off_service">SERVICIO ON/OFF</string>
+    <string name="card_modulating_service">MODULANTE</string>
+    <string name="card_output_torque">Torque de salida</string>
+    <string name="card_single_torque_alert">Régimen de torque único (trifásico). Aplica régimen S4 70% sin distinción modulante.</string>
+    <string name="card_duty_cycle">Ciclo %1$d%%</string>
+    <string name="card_cycles_per_hour">%1$s ciclos/h</string>
+    <string name="card_starts_per_hour">%1$s arranques/h</string>
+    <string name="card_speed_label">Tiempo de giro 90°</string>
+    <string name="card_speed_value">%1$s s</string>
+    <string name="card_fla_label">FLA (%1$d Hz)</string>
+    <string name="card_lra_label">LRA (%1$d Hz)</string>
+    <string name="card_power_label">Potencia</string>
+    <string name="card_power_value">%1$d W</string>
+    <string name="card_frequency_60hz">Frecuencia de Red 60 Hz</string>
+    <string name="card_frequency_50hz">Frecuencia de Red 50 Hz</string>
+    <string name="card_null_placeholder">—</string>
+    <string name="card_col_metric">Parámetro</string>
+    <string name="card_col_60hz">60 Hz</string>
+    <string name="card_col_50hz">50 Hz</string>
+    <string name="card_spec_semantics">Ficha técnica del actuador %1$s</string>
+    <string name="card_copy_action">Copiar número de parte</string>
+    <string name="card_copied_part">Número de parte copiado</string>
+    <string name="card_share_action">Compartir</string>
+    <string name="card_share_title">Compartir Ficha Serie 76</string>
+    <string name="card_speed_metric">Tiempo de giro 90°</string>
+    <string name="card_fla_metric">Corriente nominal (FLA)</string>
+    <string name="card_lra_metric">Corriente de arranque (LRA)</string>
+    <string name="chat_loading_skeleton">Obteniendo especificaciones técnicas…</string>
+    <string name="chat_error_title">Error de Comunicación</string>
+    <string name="theme_toggle">Cambiar Tema</string>
+
+    <!-- Comparison Table -->
+    <string name="table_title">COMPARATIVA SERIE 76</string>
+    <string name="table_selected_count">%1$d Actuadores Seleccionados</string>
+    <string name="table_hz_toggle">%1$d Hz (Tocar para alternar)</string>
+    <string name="table_col_part">Número de parte</string>
+    <string name="table_col_enclosure">Carcasa</string>
+    <string name="table_col_power_supply">Alimentación</string>
+    <string name="table_col_on_off_torque">Torque On/Off</string>
+    <string name="table_col_mod_torque">Torque Modulante</string>
+    <string name="table_col_duty">Ciclo (On/Mod)</string>
+    <string name="table_col_cert">Certificación</string>
+    <string name="table_col_fla_freq">FLA (60|50Hz)</string>
+    <string name="table_col_lra_freq">LRA (60|50Hz)</string>
+
+    <!-- Server Dialog -->
+    <string name="server_dialog_title">Configuración del Servidor</string>
+    <string name="server_dialog_subtitle">Configura el endpoint o activa el mock de depuración.</string>
+    <string name="server_dialog_url_label">URL DEL SERVIDOR (PUERTO 8001)</string>
+    <string name="server_dialog_test_btn">Probar Conexión (/health)</string>
+    <string name="server_dialog_testing">Probando /health…</string>
+    <string name="server_dialog_connected">¡Conectado! Estado: %1$s, Actuadores: %2$d</string>
+    <string name="server_dialog_failed">Fallo de conexión: %1$s</string>
+    <string name="server_dialog_save">Guardar</string>
+    <string name="server_dialog_cancel">Cancelar</string>
+    <string name="server_dialog_mock_title">MODO MOCK DE DEPURACIÓN</string>
+    <string name="server_dialog_mock_desc">Servir muestras de contract_v2_samples.json sin backend.</string>
+    <string name="server_dialog_active_sample">MUESTRA ACTIVA</string>
+    <string name="server_dialog_invalid_url">Formato de URL no válido. Ejemplo: http://10.0.2.2:8001/ o http://192.168.1.100:8001/</string>
+    <string name="server_dialog_preset_emulator">Emulador (10.0.2.2)</string>
+    <string name="server_dialog_preset_localhost">Localhost</string>
+
+    <!-- Debug Telemetry -->
+    <string name="debug_title">Inspector de Telemetría X-Ray</string>
+    <string name="debug_subtitle">Herramientas invocadas, parámetros, SQL y salida PostgreSQL</string>
+    <string name="debug_mock_banner">MOCK DATA • Telemetría simulada de muestras</string>
+    <string name="debug_mock_badge">DATOS MOCK</string>
+    <string name="debug_session_cost">Coste de Sesión: $%1$s</string>
+    <string name="debug_language">Idioma: %1$s</string>
+    <string name="debug_empty">No hay respuestas del agente con telemetría en esta sesión aún.</string>
+    <string name="debug_copy_json">Copiar JSON</string>
+    <string name="debug_copied">JSON de la traza copiado</string>
+    <string name="debug_no_tools">No se invocaron herramientas en este turno.</string>
+    <string name="debug_active_context">Contexto Activo: %1$s</string>
+    <string name="debug_timeline_title">LÍNEA DE TIEMPO EN CASCADA</string>
+    <string name="debug_answer_preview">Respuesta: \"%1$s…\"</string>
+    <string name="debug_metric_summary">Modelo: %1$s (%2$s) • Latencia: %3$d ms • Coste: $%4$s</string>
+    <string name="debug_token_usage">Uso de Tokens: %1$s</string>
+    <string name="debug_tool_header">HERRAMIENTA #%1$d: %2$s (%3$d ms)</string>
+    <string name="debug_params">Parámetros: %1$s</string>
+    <string name="debug_sql">SQL: %1$s</string>
+    <string name="debug_returned_data">Datos Devueltos: %1$s</string>
+
+    <!-- Verification Badges -->
+    <string name="verification_verified">Datos verificados</string>
+    <string name="verification_fallback">Respuesta generada desde el catálogo</string>
+
+    <!-- Recommendation -->
+    <string name="recommendation_title">ACTUADORES RECOMENDADOS</string>
+    <string name="recommendation_hard_constraints">Requisitos Estrictos</string>
+    <string name="recommendation_relaxed_constraints">Restricciones Flexibilizadas</string>
+    <string name="recommendation_no_match">No encontramos un actuador que cumpla todas las restricciones estrictas</string>
+    <string name="recommendation_failed_constraints">Restricciones no satisfechas:</string>
+    <string name="recommendation_score">Ajuste</string>
+    <string name="recommendation_why">Ventajas y Puntos Fuertes</string>
+    <string name="recommendation_why_not">Limitaciones y Advertencias</string>
+    <string name="recommendation_view_spec">Ver Ficha Completa</string>
+    <string name="recommendation_hide_spec">Ocultar Ficha</string>
+
+    <!-- Clarification -->
+    <string name="clarification_title">ACLARACIÓN DE ESPECIFICACIÓN</string>
+
+    <!-- Common -->
+    <string name="retry">Reintentar</string>
+
+    <!-- Comparison Table Enhancements -->
+    <string name="comparison_best_legend">▲ mayor valor · ▼ menor valor</string>
+    <string name="comparison_copy_btn">Copiar comparativa</string>
+    <string name="comparison_copied_toast">Comparativa copiada al portapapeles</string>
+
+    <!-- Full Datasheet Sheet -->
+    <string name="btn_view_full_datasheet">Ver ficha completa</string>
+    <string name="datasheet_sheet_title">Ficha Técnica Serie 76</string>
+    <string name="datasheet_group_mechanical">Especificaciones Mecánicas</string>
+    <string name="datasheet_group_electrical">Especificaciones Eléctricas</string>
+    <string name="datasheet_group_certifications">Normativas y Certificaciones</string>
+    <string name="datasheet_source_page">Fuente: Series 76 electric data, pág. %1$d</string>
+    <string name="datasheet_copied_toast">Ficha técnica copiada al portapapeles</string>
+    <string name="datasheet_field_frame">Tamaño de bastidor</string>
+    <string name="datasheet_field_enclosure">Tipo de cerramiento</string>
+    <string name="datasheet_field_phase">Fases</string>
+    <string name="datasheet_field_duty_rating">Régimen de servicio</string>
+    <string name="datasheet_field_on_off_torque">Torque On/Off</string>
+    <string name="datasheet_field_mod_torque">Torque modulante</string>
+    <string name="datasheet_field_on_off_duty">Ciclo de trabajo On/Off</string>
+    <string name="datasheet_field_mod_duty">Ciclo de trabajo modulante</string>
+    <string name="datasheet_field_cycles_hour">Ciclos / hora</string>
+    <string name="datasheet_field_starts_hour">Arranques / hora</string>
+    <string name="datasheet_field_power_supply">Alimentación eléctrica</string>
+    <string name="datasheet_field_motor_power">Potencia del motor</string>
+    <string name="datasheet_field_speed_60">Tiempo de giro 90° (60 Hz)</string>
+    <string name="datasheet_field_speed_50">Tiempo de giro 90° (50 Hz)</string>
+    <string name="datasheet_field_fla">Corriente nominal (FLA)</string>
+    <string name="datasheet_field_lra">Corriente de arranque (LRA)</string>
+    <string name="datasheet_field_csa">Certificación CSA</string>
+    <string name="datasheet_field_ce_ukca">Certificación CE / UKCA</string>
+    <string name="datasheet_field_hazardous">Clasificación de áreas peligrosas</string>
+
+    <!-- Settings Dialog: Language & TTS -->
+    <string name="settings_dialog_title">Ajustes y Servidor</string>
+    <string name="settings_lang_title">Idioma de la aplicación</string>
+    <string name="settings_lang_auto">Automático (Sistema)</string>
+    <string name="settings_lang_es">Español</string>
+    <string name="settings_lang_en">English</string>
+    <string name="settings_tts_title">Lectura en voz alta</string>
+    <string name="settings_tts_desc">Leer automáticamente la respuesta técnica con voz del sistema</string>
+    <string name="settings_tts_engine_unavailable">Motor de síntesis de voz (TTS) no encontrado en este dispositivo</string>
+    <string name="settings_tts_download_language">Descargar datos de voz para este idioma</string>
+    <string name="server_dialog_localhost_help">Con el celular por USB, ejecuta adb reverse tcp:8001 tcp:8001 y usa Localhost.</string>
+
+    <!-- Voice Input, States and Confirmation -->
+    <string name="voice_state_preparing">Preparando…</string>
+    <string name="voice_state_listening">Te escucho</string>
+    <string name="voice_state_processing">Procesando…</string>
+    <string name="voice_silence_warning">No detecto sonido: revisa el micrófono o habla más cerca</string>
+    <string name="voice_listening_title">Escuchando consulta técnica…</string>
+    <string name="voice_listening_desc">Dicte números de parte o consultas en español o inglés</string>
+    <string name="voice_processing">Procesando audio…</string>
+    <string name="voice_permission_rationale_title">Acceso al micrófono requerido</string>
+    <string name="voice_permission_rationale_msg">El dictado por voz requiere acceso al micrófono para reconocer códigos de actuadores Serie 76 directamente en su dispositivo.</string>
+    <string name="voice_permission_grant">Permitir acceso</string>
+    <string name="voice_permission_denied">Permiso de micrófono denegado. Puede habilitarlo en los ajustes del sistema.</string>
+    <string name="voice_confirm_title">Confirmar consulta técnica</string>
+    <string name="voice_confirm_query_label">Consulta</string>
+    <string name="voice_confirm_desc">Revise y edite la consulta reconocida antes de enviar:</string>
+    <string name="voice_confirm_send">Confirmar y Enviar</string>
+    <string name="voice_cancel">Cancelar</string>
+    <string name="voice_stop">Detener</string>
+    <string name="voice_unavailable">El reconocimiento de voz no está disponible en este dispositivo</string>
+    <string name="voice_retry">Reintentar</string>
+    <string name="voice_error_no_match">No te escuché, intenta de nuevo</string>
+    <string name="voice_error_network">Error de conexión de red</string>
+    <string name="voice_error_server_disconnected">Servidor de voz desconectado</string>
+    <string name="voice_error_language_not_supported">Idioma no admitido por el motor de voz</string>
+    <string name="voice_error_language_unavailable">Idioma sin conexión no disponible</string>
+    <string name="voice_error_busy">El micrófono está ocupado, espera un momento</string>
+    <string name="voice_error_permissions">Permiso de micrófono no otorgado</string>
+    <string name="voice_error_generic">No se pudo procesar la voz</string>
+
+    <!-- Alert Titles -->
+    <string name="alert_title_duty_cycle">Información de ciclo de trabajo</string>
+    <string name="alert_title_hazardous">Área clasificada / A prueba de explosión</string>
+    <string name="alert_title_service_unavailable">Servicio no disponible</string>
+    <string name="alert_title_no_match">Sin coincidencias exactas</string>
+    <string name="alert_title_single_torque">Especificación de torque trifásico</string>
+    <string name="alert_title_safety_factor">Factor de seguridad aplicado</string>
+    <string name="alert_title_generic">Aviso de ingeniería</string>
+    <string name="error_service_unavailable_clean_msg">El asistente técnico no se encuentra disponible temporalmente. Por favor, reintente su consulta.</string>
+    <string name="error_connection_clean_msg">Error de conexión. Verifica tu conexión de red y reintenta.</string>
+    <string name="error_server_unreachable">No se pudo conectar al servidor en %1$s. Verifica que el backend esté en ejecución o abre Ajustes para cambiar la URL.</string>
+    <string name="error_change_server_url">Abrir Ajustes / Cambiar URL</string>
+    <string name="error_open_settings">Ajustes</string>
+    <string name="login_error_credentials">Credenciales incorrectas. Verifica tu correo y contraseña.</string>
+</resources>
+

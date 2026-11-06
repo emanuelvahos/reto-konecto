@@ -7,6 +7,15 @@ import kotlinx.serialization.json.JsonElement
 
 @Immutable
 @Serializable
+data class HealthResponse(
+    val status: String = "",
+    @SerialName("actuators_loaded") val actuatorsLoaded: Int = 0,
+    @SerialName("llm_provider") val llmProvider: String? = null,
+    @SerialName("llm_model") val llmModel: String? = null
+)
+
+@Immutable
+@Serializable
 data class LoginRequest(
     val email: String,
     val password: String
@@ -34,7 +43,9 @@ data class LoginResponse(
 @Serializable
 data class ConversationRequest(
     @SerialName("session_id") val sessionId: String? = null,
-    val query: String
+    val query: String,
+    val locale: String? = null,
+    @SerialName("input_mode") val inputMode: String? = null
 )
 
 @Immutable
@@ -52,6 +63,8 @@ data class ActuatorDto(
     @SerialName("is_available") val isAvailable: Boolean = true,
     @SerialName("on_off_torque_in_lbs") val onOffTorqueInLbs: Double? = null,
     @SerialName("on_off_torque_nm") val onOffTorqueNm: Double? = null,
+    @SerialName("single_torque_in_lbs") val singleTorqueInLbs: Double? = null,
+    @SerialName("single_torque_nm") val singleTorqueNm: Double? = null,
     @SerialName("on_off_duty_cycle_pct") val onOffDutyCyclePct: Int? = null,
     @SerialName("cycles_per_hour") val cyclesPerHour: Int? = null,
     @SerialName("modulating_torque_in_lbs") val modulatingTorqueInLbs: Double? = null,
@@ -70,15 +83,69 @@ data class ActuatorDto(
     @SerialName("motor_power_watts") val motorPowerWatts: Int? = null,
     @SerialName("csa_certified") val csaCertified: Boolean = true,
     @SerialName("ce_ukca_certified") val ceUkcaCertified: Boolean = false,
-    @SerialName("hazardous_classification") val hazardousClassification: String? = null
+    @SerialName("hazardous_classification") val hazardousClassification: String? = null,
+    @SerialName("source_page") val sourcePage: Int? = null,
+    @SerialName("source_method") val sourceMethod: String? = null
+)
+
+@Immutable
+@Serializable
+data class UIAlert(
+    val code: String = "",
+    val severity: String = "",
+    val title: String = "",
+    val message: String = ""
+)
+
+@Immutable
+@Serializable
+data class RankedActuator(
+    @SerialName("part_number") val partNumber: String = "",
+    val score: Double = 0.0,
+    val why: List<String> = emptyList(),
+    @SerialName("why_not") val whyNot: List<String> = emptyList()
+)
+
+@Immutable
+@Serializable
+data class RecommendationPayload(
+    val ranking: List<RankedActuator> = emptyList(),
+    @SerialName("hard_constraints") val hardConstraints: List<String> = emptyList(),
+    @SerialName("relaxed_constraints") val relaxedConstraints: List<String> = emptyList()
+)
+
+@Immutable
+@Serializable
+data class ClarificationOption(
+    val label: String = "",
+    val value: String = ""
+)
+
+@Immutable
+@Serializable
+data class ClarificationPayload(
+    val question: String = "",
+    val options: List<ClarificationOption> = emptyList()
+)
+
+@Immutable
+@Serializable
+data class SuggestedFollowup(
+    val label: String = "",
+    val query: String = ""
 )
 
 @Immutable
 @Serializable
 data class UIPayload(
+    // SINGLE_SPEC_CARD | COMPARISON_TABLE | EDGE_CASE_ALERT | TEXT_ONLY | RECOMMENDATION_LIST | CLARIFICATION
     @SerialName("display_type") val displayType: String = "TEXT_ONLY",
     val actuators: List<ActuatorDto> = emptyList(),
-    @SerialName("engineering_warnings") val engineeringWarnings: List<String> = emptyList()
+    @SerialName("engineering_warnings") val engineeringWarnings: List<String> = emptyList(),
+    val alerts: List<UIAlert> = emptyList(),
+    val recommendation: RecommendationPayload? = null,
+    val clarification: ClarificationPayload? = null,
+    @SerialName("suggested_followups") val suggestedFollowups: List<SuggestedFollowup> = emptyList()
 )
 
 @Immutable
@@ -93,17 +160,42 @@ data class ToolCallTrace(
 
 @Immutable
 @Serializable
+data class TraceStep(
+    val name: String = "",
+    @SerialName("start_ms") val startMs: Double = 0.0,
+    @SerialName("duration_ms") val durationMs: Double = 0.0
+)
+
+@Immutable
+@Serializable
 data class DebugTracePayload(
     @SerialName("model_used") val modelUsed: String = "",
     @SerialName("total_latency_ms") val totalLatencyMs: Double = 0.0,
     @SerialName("token_usage") val tokenUsage: JsonElement? = null,
     @SerialName("active_context_part_numbers") val activeContextPartNumbers: List<String> = emptyList(),
-    @SerialName("tool_calls") val toolCalls: List<ToolCallTrace> = emptyList()
+    @SerialName("tool_calls") val toolCalls: List<ToolCallTrace> = emptyList(),
+    val steps: List<TraceStep> = emptyList(),
+    @SerialName("cost_usd_estimate") val costUsdEstimate: Double = 0.0,
+    val provider: String = "",
+    @SerialName("session_cost_usd") val sessionCostUsd: Double = 0.0,
+    val language: String = "",
+    @SerialName("error") val error: String? = null
+)
+
+@Immutable
+@Serializable
+data class Verification(
+    val status: String = "unverified",
+    @SerialName("numbers_checked") val numbersChecked: Int = 0,
+    val ungrounded: List<String> = emptyList()
 )
 
 @Immutable
 @Serializable
 data class ConversationResponse(
+    @SerialName("schema_version") val schemaVersion: Int = 2,
+    val intent: String = "lookup",
+    val verification: Verification = Verification(),
     @SerialName("session_id") val sessionId: String,
     val answer: String,
     @SerialName("ui_payload") val uiPayload: UIPayload = UIPayload(),
@@ -115,6 +207,8 @@ data class ConversationResponse(
 data class SessionSummary(
     @SerialName("session_id") val sessionId: String,
     val title: String,
+    @SerialName("short_title") val shortTitle: String? = null,
+    @SerialName("cost_usd_total") val costUsdTotal: Double = 0.0,
     @SerialName("active_part_numbers") val activePartNumbers: List<String> = emptyList(),
     @SerialName("message_count") val messageCount: Int = 0,
     @SerialName("created_at") val createdAt: String = "",

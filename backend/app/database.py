@@ -52,3 +52,17 @@ def get_db_cursor():
         raise
     finally:
         conn.close()
+
+
+_schema_ready = False
+
+
+def ensure_schema() -> None:
+    """Migración aditiva e idempotente (columnas nuevas de chat_sessions). Seguro de llamar en cada arranque."""
+    global _schema_ready
+    if _schema_ready:
+        return
+    with get_db_cursor() as cur:
+        cur.execute("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS short_title TEXT;")
+        cur.execute("ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS cost_usd_total NUMERIC(12, 6) NOT NULL DEFAULT 0;")
+    _schema_ready = True

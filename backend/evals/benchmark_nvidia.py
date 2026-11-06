@@ -1,13 +1,14 @@
 """Benchmark de LLMs y embeddings del catálogo NVIDIA NIM para el asistente Series 76.
 
 Uso (desde la raíz):  python backend/evals/benchmark_nvidia.py [--chat] [--embed]
-Lee LLM_API_KEY / LLM_BASE_URL de .env. Escribe backend/evals/benchmark_results.json
+Lee el perfil nim (LLM_API_KEY_NIM / LLM_BASE_URL_NIM) de .env. Escribe backend/evals/benchmark_results.json
 """
 import argparse
 import json
 import math
 import os
 import re
+import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -17,8 +18,13 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env")
-BASE = os.getenv("LLM_BASE_URL", "https://integrate.api.nvidia.com/v1").rstrip("/")
-KEY = os.getenv("LLM_API_KEY", "")
+os.environ["LLM_PROVIDER"] = "nim"
+sys.path.insert(0, str(ROOT / "backend"))
+from app.config import load_llm_config  # noqa: E402
+
+_CFG = load_llm_config()
+BASE = _CFG.base_url
+KEY = _CFG.api_key
 HEAD = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
 
 CHAT_MODELS = [
