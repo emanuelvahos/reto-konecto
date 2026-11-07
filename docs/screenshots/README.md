@@ -16,6 +16,7 @@ Este documento certifica la auditoría visual y funcional exhaustiva de la aplic
 | 06 | [`06-voz-escuchando.png`](06-voz-escuchando.png) | Modal de reconocimiento de voz interactivo con botón de micrófono y cancelación | 1080 × 2400 | Oscuro | ✓ (Sin notificaciones personales) |
 | 07 | [`07-alerta.png`](07-alerta.png) | Manejo de modelo N/A con alerta amarilla, explicación técnica y alternativas | 1080 × 2400 | Oscuro | ✓ (12:00, sin notificaciones) |
 | 08 | [`08-modo-claro.png`](08-modo-claro.png) | Tabla comparativa y chips interactivos visualizados en tema claro de alto contraste | 1080 × 2400 | Claro | ✓ (10:00 AM, 100% bat, sin notif.) |
+| 09 | [`09-saludo.png`](09-saludo.png) | Saludo y capacidades generales con chips sugeridos y SIN insignia de verificación | 1080 × 2400 | Oscuro | ✓ (10:00 AM, 100% bat, sin notif.) |
 
 ---
 
@@ -111,6 +112,14 @@ Este documento certifica la auditoría visual y funcional exhaustiva de la aplic
   - Chips de seguimiento con borde acento naranja y texto legible.
 - **Ajuste y Verificación:** Cumplimiento total de WCAG 2.1 AA en contraste de color tanto para texto como para iconos y divisores.
 
+### 09-saludo.png
+- **Elementos Visibles:**
+  - Consulta del usuario: `hola` y `en qué me puedes ayudar`.
+  - Respuesta del asistente: Bienvenida técnica detallando capacidades del asistente (fichas, comparaciones, recomendaciones según voltaje/torque).
+  - Chips sugeridos interactivos: `Ficha de un modelo ↗`, `Recomendar un actuador ↗`, `Comparar dos modelos ↗`.
+  - **Insignia «Datos verificados» ausente**, cumpliendo la regla de no mostrarla en preguntas de conocimiento general sin números de catálogo validados.
+- **Ajuste y Verificación:** Diálogo fluido, tipografía clara, márgenes y padding consistentes en modo oscuro.
+
 ---
 
 ## 3. Entrega del APK Release
@@ -132,3 +141,4 @@ Este documento certifica la auditoría visual y funcional exhaustiva de la aplic
 1. **Robustez Técnica:** La aplicación compila limpiamente (`BUILD SUCCESSFUL`), pasa todos los tests unitarios (`:app:test`) con cero errores, y se comunica de manera estable con el backend real sobre Docker y ADB reverse.
 2. **Diseño Mobile-First y Responsividad:** Se solucionaron todos los casos de desbordamiento horizontal en tablas de comparación mediante pesos proporcionales (`Modifier.weight(1f)`), y las listas de sesiones ahora envuelven los números de parte con `FlowRow` sin truncamiento.
 3. **Calidad de Documentación:** Se verificaron cada una de las 8 capturas oficiales asegurando ausencia absoluta de notificaciones ajenas, nombres de terceros o datos de depuración en la barra de estado.
+
