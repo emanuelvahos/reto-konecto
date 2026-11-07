@@ -2070,8 +2070,9 @@ fun ActuatorFullDatasheetSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = Spacing.m)
-                .padding(bottom = Spacing.l)
+                .padding(bottom = Spacing.xl)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Spacing.s)
         ) {
