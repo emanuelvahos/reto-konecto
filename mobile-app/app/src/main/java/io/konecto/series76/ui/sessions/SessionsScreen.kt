@@ -16,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -103,7 +104,7 @@ fun IndustrialActuatorSchematic(modifier: Modifier = Modifier) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun SessionsScreen(vm: MainViewModel) {
     val context = LocalContext.current
@@ -459,12 +460,16 @@ fun SessionsScreen(vm: MainViewModel) {
                                                 text = session.shortTitle ?: session.title,
                                                 style = MaterialTheme.typography.titleMedium,
                                                 color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
+                                                maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
                                             )
 
                                             if (session.activePartNumbers.isNotEmpty()) {
-                                                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
+                                                FlowRow(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(Spacing.xxs),
+                                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
                                                     session.activePartNumbers.forEach { pn ->
                                                         Surface(
                                                             color = MaterialTheme.colorScheme.surfaceVariant,

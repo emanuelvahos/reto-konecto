@@ -1040,64 +1040,71 @@ fun ActuatorComparisonTable(
 
             HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
 
-            // Table content: Fixed Parameter Column on left, Horizontal Scroll on right
+            val isTwoColumns = actuators.size <= 2
+            val paramColWidth = if (isTwoColumns) 92.dp else 115.dp
+
+            // Table content: Fixed Parameter Column on left, Actuators on right (weight(1f) if 2 cols, scroll if 3+)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp)
+                    .padding(8.dp)
             ) {
                 // 1. Columna de etiquetas FIJA
                 Column(
                     modifier = Modifier
-                        .width(115.dp)
+                        .width(paramColWidth)
                         .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                         .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                        .padding(8.dp),
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_part), fontWeight = FontWeight.Bold, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Box(modifier = Modifier.height(34.dp), contentAlignment = Alignment.CenterStart) {
+                        Text(stringResource(R.string.table_col_part), fontWeight = FontWeight.Bold, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, softWrap = true, maxLines = 2, lineHeight = 13.sp)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_enclosure), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_enclosure), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
-                    Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_power_supply), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_on_off_torque), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.CenterStart) {
+                        Text(stringResource(R.string.table_col_power_supply), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = true, maxLines = 2, lineHeight = 13.sp)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_mod_torque), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_on_off_torque), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_duty), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_mod_torque), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.card_speed_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_duty), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_fla_freq), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.card_speed_label), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_lra_freq), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_fla_freq), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.card_power_label), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.table_col_lra_freq), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_cert), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.card_power_label), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    }
+                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                        Text(stringResource(R.string.table_col_cert), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
 
-                // 2. Columnas de actuadores con scroll horizontal
+                // 2. Columnas de actuadores: ajustadas a lo ancho sin scroll si son 2 columnas, o con scroll horizontal si son 3+
                 Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .horizontalScroll(scrollState),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = if (isTwoColumns) {
+                        Modifier.weight(1f)
+                    } else {
+                        Modifier
+                            .weight(1f)
+                            .horizontalScroll(scrollState)
+                    },
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     actuators.forEachIndexed { index, act ->
                         val isActThreePhase = act.phaseType.contains("3") ||
@@ -1105,7 +1112,7 @@ fun ActuatorComparisonTable(
                             (act.modulatingTorqueNm == null && act.onOffTorqueNm != null)
 
                         val speedStr = when {
-                            act.speed60HzSec != null && act.speed50HzSec != null -> "${act.speed60HzSec}s | ${act.speed50HzSec}s"
+                            act.speed60HzSec != null && act.speed50HzSec != null -> "${act.speed60HzSec}s|${act.speed50HzSec}s"
                             act.speed60HzSec != null -> "${act.speed60HzSec}s (60Hz)"
                             act.speed50HzSec != null -> "${act.speed50HzSec}s (50Hz)"
                             act.speedDcOrFixedSec != null -> "${act.speedDcOrFixedSec}s"
@@ -1113,7 +1120,7 @@ fun ActuatorComparisonTable(
                         }
 
                         val flaStr = when {
-                            act.fla60HzAmps != null && act.fla50HzAmps != null -> "${act.fla60HzAmps} | ${act.fla50HzAmps} A"
+                            act.fla60HzAmps != null && act.fla50HzAmps != null -> "${act.fla60HzAmps}|${act.fla50HzAmps}A"
                             act.fla60HzAmps != null -> "${act.fla60HzAmps} A"
                             act.fla50HzAmps != null -> "${act.fla50HzAmps} A"
                             act.flaDcOrFixedAmps != null -> "${act.flaDcOrFixedAmps} A"
@@ -1121,37 +1128,48 @@ fun ActuatorComparisonTable(
                         }
 
                         val lraStr = when {
-                            act.lra60HzAmps != null && act.lra50HzAmps != null -> "${act.lra60HzAmps} | ${act.lra50HzAmps} A"
+                            act.lra60HzAmps != null && act.lra50HzAmps != null -> "${act.lra60HzAmps}|${act.lra50HzAmps}A"
                             act.lra60HzAmps != null -> "${act.lra60HzAmps} A"
                             act.lra50HzAmps != null -> "${act.lra50HzAmps} A"
                             act.lraDcOrFixedAmps != null -> "${act.lraDcOrFixedAmps} A"
                             else -> "—"
                         }
 
-                        Column(
-                            modifier = Modifier
-                                .width(150.dp)
+                        val colModifier = if (isTwoColumns) {
+                            Modifier
+                                .weight(1f)
                                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                                .padding(8.dp),
+                                .padding(horizontal = 6.dp, vertical = 6.dp)
+                        } else {
+                            Modifier
+                                .width(140.dp)
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                        }
+
+                        Column(
+                            modifier = colModifier,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
+                            Box(modifier = Modifier.height(34.dp), contentAlignment = Alignment.CenterStart) {
                                 Text(
                                     text = act.basePartNumber,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     color = KonectoTheme.semantics.accentText,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    softWrap = true,
+                                    maxLines = 2,
+                                    lineHeight = 13.sp
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(act.enclosureType, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                                Text(act.enclosureType, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             }
-                            Box(modifier = Modifier.height(28.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(act.powerSupply, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, lineHeight = 13.sp)
+                            Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.CenterStart) {
+                                Text(act.powerSupply, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface, softWrap = true, maxLines = 2, lineHeight = 12.sp)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val rawTorque = (act.singleTorqueNm ?: act.onOffTorqueNm)
@@ -1164,7 +1182,7 @@ fun ActuatorComparisonTable(
                                 }
                                 Text(
                                     text = onOff,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
                                     color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
@@ -1175,49 +1193,52 @@ fun ActuatorComparisonTable(
                                 val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${marker}${act.modulatingTorqueNm.toInt()} Nm" else "—"
                                 Text(
                                     text = mod,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
                                     color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val duty = if (isActThreePhase) "70% (S4)" else "${act.onOffDutyCyclePct ?: "—"}% / ${act.modulatingDutyCyclePct ?: "—"}%"
-                                Text(duty, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+                                Text(duty, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val marker = speed60Markers.getOrElse(index) { "" }
                                 val isMarked = marker.isNotEmpty()
                                 Text(
                                     text = if (isMarked && speedStr != "—") "${marker}$speedStr" else speedStr,
-                                    fontSize = 11.sp,
+                                    fontSize = 10.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = if (isMarked) FontWeight.Bold else FontWeight.SemiBold,
-                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(flaStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(flaStr, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                                Text(lraStr, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                Text(lraStr, fontSize = 10.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 val marker = powerMarkers.getOrElse(index) { "" }
                                 val isMarked = marker.isNotEmpty()
                                 Text(
                                     text = if (act.motorPowerWatts != null) "${marker}${act.motorPowerWatts} W" else "—",
-                                    fontSize = 11.sp,
+                                    fontSize = 10.5.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = if (isMarked) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
+                                    color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1
                                 )
                             }
                             Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                                 Text(
                                     text = if (act.csaCertified) "✓ CSA" else "⚠ No CSA",
-                                    fontSize = 11.sp,
+                                    fontSize = 10.5.sp,
                                     color = if (act.csaCertified) KonectoTheme.semantics.successText else KonectoTheme.semantics.warningText,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1
                                 )
                             }
                         }
