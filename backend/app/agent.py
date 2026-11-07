@@ -421,8 +421,8 @@ def _known_keys() -> set:
         return set()
 
 
-ACT_REPLIES = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria"}
-CONVERSATIONAL_ACTS = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria"}
+ACT_REPLIES = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria", "translate_which"}
+CONVERSATIONAL_ACTS = {"unclear", "greeting", "thanks", "bye", "capabilities", "about_project", "help_request", "off_topic", "attribute", "application", "clarify_which", "ask_criteria", "translate_which"}
 FILTER_MAX_IDLE_TURNS = 3   # los filtros de una recomendación caducan tras este nº de turnos sin usarse
 
 
@@ -718,7 +718,17 @@ def run_agent_turn(
     # ------------------------------------------------------------------ ROUTER determinista (sin LLM)
     r0 = time.perf_counter()
     decision: Optional[Decision] = None
-    if ROUTER_ENABLED:
+    translate_to = acts.detect_translate(user_query) if ROUTER_ENABLED and not re.search(r"\d", user_query) else None
+    if translate_to:
+        # «repítelo en inglés»: se vuelve a resolver la última pregunta real del usuario con el idioma destino. Las mismas
+        # herramientas dan las mismas cifras (nada nuevo); si no hay pregunta previa, se pregunta qué traducir.
+        idx = next((i for i in range(len(history_messages) - 1, -1, -1)
+                    if history_messages[i].get("role") == "user" and not acts.detect_translate(str(history_messages[i].get("content", "")))), None)
+        if idx is not None:
+            return run_agent_turn(str(history_messages[idx]["content"]), history_messages[:idx], active_part_numbers, active_filters,
+                                  locale=translate_to, request_t0=request_t0, history_load_ms=history_load_ms)
+        decision = Decision(kind="reply", reply="translate_which", rule="act:translate_which", act="translate", clean_query=user_query)
+    elif ROUTER_ENABLED:
         try:
             known = _known_keys()
             decision = route(user_query, active_part_numbers, known, pending_args,

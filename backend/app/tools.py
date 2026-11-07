@@ -773,6 +773,11 @@ def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None,
                 r = cur.fetchone()
                 result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "filters": {k: v for k, v in filters.items() if v is not None},
                           "models": int(r["n"]), "available": int(r["av"] or 0)}
+                if result["models"] == 0 and voltage_num is not None:     # voltaje inexistente (12 V, 48 V...): se listan los que sí hay
+                    sql_v = ("SELECT voltage_num v, array_agg(DISTINCT enclosure_type) encs FROM actuators WHERE is_available GROUP BY voltage_num ORDER BY voltage_num;")
+                    cur.execute(sql_v)
+                    sql_used += " " + sql_v
+                    result["voltages_available"] = [{"voltage": int(x["v"]), "enclosures": sorted(x["encs"])} for x in cur.fetchall()]
                 if any(v is not None for v in filters.values()):          # desglose por carcasa y sufijo (para «¿hay de 24 V?»)
                     sql_g = ("SELECT enclosure_type e, split_part(split_part(base_part_number, '-', 2), '/', 1) suf, COUNT(*) n, "
                              f"SUM(is_available::int) av FROM actuators WHERE TRUE{w} GROUP BY 1, 2 ORDER BY 1, 2;")

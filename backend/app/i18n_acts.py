@@ -54,6 +54,10 @@ ACT_TEXT: Dict[str, Dict[str, str]] = {
         "en": "With only one model there is nothing to weigh it against. Tell me what matters for your application (torque, speed, current draw, enclosure or voltage) or name a second model to compare.",
         "es": "Con un solo modelo no hay contra qué compararlo. Dime qué te importa en tu aplicación (par, velocidad, consumo, carcasa o voltaje) o nombra otro modelo para compararlos.",
     },
+    "translate_which": {
+        "en": "There is no earlier answer in this conversation to repeat. Ask me something about the Series 76 (a spec sheet, a comparison or a recommendation) and I can answer it in English or Spanish.",
+        "es": "Aún no hay una respuesta anterior en esta conversación para repetir. Pregúntame algo de la Serie 76 (una ficha, una comparación o una recomendación) y te respondo en español o en inglés.",
+    },
     "clarify_which": {
         "en": "Which model do you mean? Give me its part number (or size code) and I'll answer.",
         "es": "¿De qué modelo hablas? Dame su número de parte (o el código de tamaño) y te respondo.",

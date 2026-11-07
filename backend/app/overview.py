@@ -98,6 +98,16 @@ def render_overview(out: Dict[str, Any], lang: str) -> str:
         desc = _count_desc(out.get("filters") or {}, lang)
         n, av = out["models"], out["available"]
         if n == 0:
+            vs = out.get("voltages_available") or []
+            if vs and (out.get("filters") or {}).get("voltage_num") is not None:
+                v0 = out["filters"]["voltage_num"]
+                items = []
+                for x in vs:
+                    encs = [_short(ENCLOSURE.get(e, {}).get(lang, e)) for e in x["enclosures"]]
+                    only = (f" (solo {encs[0]})" if es else f" ({encs[0]} only)") if len(encs) == 1 else ""
+                    items.append(f"{x['voltage']} V{only}")
+                return (f"No existe ningún modelo de {v0} V en la Serie 76. Los voltajes que sí se ofrecen son {_join(items, lang)}." if es
+                        else f"There is no {v0} V model in the Series 76. The voltages that are offered are {_join(items, lang)}.")
             return (f"No hay modelos {desc} en el catálogo." if es else f"There are no {desc} models in the catalog.")
         what = f" {desc}" if desc else ""
         by_enc: Dict[str, Dict[str, Any]] = {}

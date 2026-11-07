@@ -57,7 +57,26 @@ _CAPS = re.compile(
     r"\bque (?:puedes|sabes|podrias) (?:hacer|ofrecer)\b|\bque sabes\b|\bpara que sirves\b|"
     r"\bque (?:datos|informacion|cosas|tipo de (?:preguntas|consultas)) (?:manejas|tienes|conoces|puedo|te puedo)\b|"
     r"\bwhat (?:can|do) you (?:do|know|offer)\b|\bwhat kind of (?:questions|things|data)\b|\bwhat (?:data|information) do you\b|"
-    r"\bhow do you work\b|\bcomo funcionas\b|\bwhat puedes\b|\bque haces\b", FLAGS)
+    r"\bhow do you work\b|\bcomo funcionas\b|\bwhat puedes\b|\bque haces\b|"
+    r"\bpara que sirve (?:esto|esta app|esta aplicacion|este asistente|la app|el asistente|este bot)\b|\bque hace (?:esta app|esta aplicacion|este asistente|la app|el asistente|este bot|esto)\b|"
+    r"\bpara que te (?:uso|puedo usar|utilizo)\b|\bwhat (?:does|is) (?:this|the) (?:app|assistant|bot|thing) (?:do|for)\b|\bwhat is this for\b|\bwhat do i use you for\b|\bwhat are you for\b", FLAGS)
+_TRANSLATE = re.compile(
+    r"\b(?:repite\w*|dimelo|dime lo mismo|lo mismo|otra vez|de nuevo|traduc\w+|say (?:it|that)|tell me (?:it|that)|repeat\w*|same|translate|again|reply|respond\w*|answer|contestame|responde\w*)\b"
+    r".*\b(?:en|in|to) (?:ingles|english|espanol|spanish|castellano)\b|^(?:en|in) (?:ingles|english|espanol|spanish)\W*$", FLAGS)
+
+
+def detect_translate(text: str) -> Optional[str]:
+    """«repítelo / dímelo en inglés», «say that in Spanish»: devuelve el idioma destino ('en' | 'es') o None. Solo mensajes cortos."""
+    t = norm(text).strip()
+    if not t or len(t.split()) > 9 or not _TRANSLATE.search(t):
+        return None
+    m = re.search(r"\b(ingles|english)\b", t)
+    n = re.search(r"\b(espanol|spanish|castellano)\b", t)
+    if m and not n:
+        return "en"
+    if n and not m:
+        return "es"
+    return None
 
 
 def detect_conversational(text: str) -> Optional[str]:
@@ -168,6 +187,7 @@ _FOLLOW_KEYS = {
     "application": ["start_recommend", "ask_s4", "ask_capabilities"],
     "clarify_which": ["sample_spec", "start_recommend"],
     "ask_criteria": ["start_recommend", "sample_compare"],
+    "translate_which": ["sample_spec", "start_recommend"],
 }
 
 
@@ -190,6 +210,8 @@ def render_act(act: str, lang: str, attr_label: Optional[Dict[str, str]] = None)
         ui = _payload("CLARIFICATION", [])
         ui["clarification"] = {"question": text, "options": help_menu(lang)}
         return text, ui, "clarify"
+    if act == "translate_which":
+        return t_act(lang, "translate_which"), _payload("TEXT_ONLY", _followups(_FOLLOW_KEYS["translate_which"], lang)), "clarify"
     if act == "ask_criteria":
         return t_act(lang, "ask_criteria"), _payload("TEXT_ONLY", _followups(_FOLLOW_KEYS["ask_criteria"], lang)), "clarify"
     if act == "clarify_which":

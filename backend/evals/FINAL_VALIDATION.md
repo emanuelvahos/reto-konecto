@@ -398,3 +398,19 @@ Tasa REAL sobre mensajes no vistos: la de la **primera corrida**. El 235/235 del
 ## Set B del usuario (20 mensajes, `evals/blind_b.json`): una sola corrida, sin tocar código (2026-11-06)
 
 HTTP, OpenRouter, contenedor con el commit `ec6fd8d`. Automático 15/20; **auditado 16/20 (80 %)**. Fallos reales: BB-04 («para qué sirve esto» da «quién soy», igual que BLD-02), BB-09 («hay de 12 voltios?» dice que no existe pero no lista 24/110/220 V), BB-13 («150 Nm monofasico 110»: el 110 sin unidad tras la fase no se reconoce como voltaje y pregunta el voltaje) y BB-19 («dime lo mismo pero en inglés» devuelve el menú en español). Detalle respuesta real vs esperada en `BLIND_B_REPORT.md`; datos en `baselines/blind_b_http.json`. Esta cifra (80 % en mensajes nuevos tras los arreglos del set A) es la mejor estimación de la tasa real del sistema en entradas no vistas, junto al 82,5 % de la primera corrida del set A; el 95 % de la segunda corrida del set A es optimista.
+
+## Tercera ronda de arreglos (tras el set B) y regresión de A y B (2026-11-06)
+
+**Tasa real (las dos primeras corridas, sin ajuste previo): ≈ 80 %.** Set A primera corrida 33/40 (82,5 %) y set B primera corrida 16/20 (80 %), auditados a mano, OpenRouter por HTTP. Es la cifra a citar. NIM es una alternativa menos estable y no tiene puerta (última medición: ciega propia 35/40 y adversarial 30/30 antes de las rondas 2 y 3, sin repetir).
+
+**Arreglos de la tercera ronda (generales):** (1) «para qué sirve esto / qué hace esta app / para qué te uso» es el acto de capacidades; (2) voltaje sin unidad en cualquier posición («110 monofásico», «monofásico 110», «220 trifásico»), sin confundir «trifásico 220 Nm»; (3) voltaje inexistente (12 V, 48 V…) dice que no existe y lista los que sí hay (24 V solo Explosionproof, 110 V, 220 V) desde SQL, sin tarjetas; (4) «repítelo / dímelo en inglés (o español)» vuelve a resolver la última pregunta real del usuario en ese idioma con las mismas herramientas (mismas cifras, ninguna nueva) y, si no hay pregunta previa, pregunta qué repetir.
+
+**Puertas (contenedor reconstruido, HTTP, OpenRouter):** evals 11/11; adversarial 30/30; ciega propia 40/40 (USD 0,0172); banco natural 235/235 (no es tasa real); suite pytest 689 pasan, 1 omitida.
+
+**Regresión de A y B (solo regresión, NO tasa nueva; los arreglos se hicieron viendo esos casos):**
+| Set | Ejecutor automático | Auditado | Fallos reales que quedan |
+| --- | --- | --- | --- |
+| A (40) | 34/40 | 39/40 | BLD-25 («800 libras pulgada»: anota 800 in-lbs y pregunta el voltaje antes de recomendar) |
+| B (20) | 17/20 | 19/20 | BB-13 («150 Nm monofasico 110»: ahora reconoce 110 V y anota 150 Nm, monofásico, pero pregunta el tipo de servicio antes de recomendar) |
+
+Los demás «fallos» del ejecutor son sus límites (sin oráculo de catálogo): BLD-03, 21, 22, 23, 24 y BB-08, 09. Datos: `baselines/blind_6D3_regression_http.json` y `baselines/blind_b_6D3_regression_http.json`.

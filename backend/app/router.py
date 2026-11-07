@@ -146,6 +146,10 @@ def extract_criteria(text: str) -> Dict[str, Any]:
         m = re.search(r"(?<![\d.\-/])(24|110|220)(?![\d.%])\s*(?:,\s*)?(?:monof\w*|trif\w*|single|three|3\s?ph|1\s?ph|fase|phase)", text, FLAGS)
         if m:
             a["voltage_num"] = int(m.group(1))
+    if "voltage_num" not in a:        # «monofásico 110», «trifásico a 220»: el voltaje sin unidad después de la fase
+        m = re.search(r"(?:monof\w*|trif\w*|single[- ]?phase|three[- ]?phase|\b3\s?ph\w*|\b1\s?ph\w*)\s*(?:,|de|a|at|en)?\s*(24|110|220)(?![\d.,%])(?!\s*(?:nm|n\.?m|in\b|lb|hz|s\b|seg|a\b|w\b|amp|mm|cm))", text, FLAGS)
+        if m:
+            a["voltage_num"] = int(m.group(1))
     if "voltage_num" not in a:        # «hay antiexplosivos de 220?»: voltaje al final, sin unidad
         m = re.search(r"(?<![A-Za-z])(?:de|a|en|at|for|con)\s+(24|110|220)\s*[?.!]*\s*$", text, FLAGS)
         if m:

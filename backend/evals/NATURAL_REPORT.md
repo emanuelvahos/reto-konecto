@@ -1,6 +1,6 @@
 # Banco de comprensión natural
 
-- Fecha: `2026-11-06 23:37:54 UTC`
+- Fecha: `2026-11-07 00:02:01 UTC`
 - Modo: HTTP http://localhost:8001 · proveedor/modelo: `openrouter` / `openai/gpt-4o-mini`
 - Casos: 235 (reales de chat_messages: 32)
 
@@ -11,8 +11,8 @@
 | Comprensión correcta | **235/235 (100.0%)** |
 | Respuesta no relacionada (tool/tarjetas/texto no pedidos) | 0 (0.0%) |
 | Caída en `uncertain` del router | 16 (6.8%) |
-| Latencia último turno p50 / p95 | 480 ms / 4536 ms |
-| Costo total (estimado) | USD 0.04286 (por caso 0.000182) |
+| Latencia último turno p50 / p95 | 135 ms / 4747 ms |
+| Costo total (estimado) | USD 0.04307 (por caso 0.000183) |
 
 ## Por categoría
 
