@@ -23,8 +23,9 @@ Asistente conversacional para consultar, comparar y recomendar los actuadores el
 
 - Docker y Docker Compose v2.24 o superior (`docker compose version`).
 - Puertos libres en el host: `5433` (PostgreSQL) y `8001` (API). Se pueden cambiar con `DB_HOST_PORT` y `API_HOST_PORT` en `.env`.
+- Los contenedores se llaman `series76_backend` y `series76_postgres` (nombres fijos). Si ya existe otro proyecto Docker con esos nombres, ejecuta `docker compose down` (sin `-v`) en la carpeta de ese proyecto antes de arrancar este; usar `-p` con otro nombre de proyecto tampoco evita el choque.
 - Opcional: una clave de LLM (NVIDIA NIM u OpenRouter). Sin clave el backend arranca y responde en **modo degradado** (ver más abajo).
-- Opcional, solo para ejecutar las pruebas desde el host: Python 3.11+ y `pip install -r backend/requirements.txt`.
+- Opcional, solo para ejecutar las pruebas desde el host: Python 3.11+ y `pip install -r backend/requirements.txt` (puede tardar varios minutos según la red).
 
 ## Arranque
 
@@ -41,20 +42,21 @@ cp .env.example .env          # en PowerShell: Copy-Item .env.example .env
 El resto de variables tiene valores de demostración y no hace falta tocarlas.
 
 ```bash
-docker compose up --build
+docker compose up -d --build
+docker compose logs -f backend    # seguir el arranque; Ctrl+C sale del log sin detener los contenedores
 ```
 
 La primera vez descarga imágenes base y dependencias (medición en frío del 2026-11-06, clon nuevo y proyecto aparte, sin `.env`, con la imagen base de Python ya descargada: construcción del backend con `--no-cache` 80 s y 12 s hasta que `/health` respondió, 92 s en total; en reposo el backend usa ≈ 84 MiB y PostgreSQL ≈ 33 MiB. El total depende de tu red). Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
 
 - API: <http://localhost:8001> (Swagger: <http://localhost:8001/docs>). PostgreSQL en el host: puerto `5433`.
 - Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (validando las reglas físicas) y siembra 68 actuadores y 3 usuarios demo; después se inicia Uvicorn.
-- La imagen del backend es autosuficiente (sin bind mounts ni `--reload`); `db` y `backend` tienen healthcheck y límite de memoria (512 MB y 1 GB). Si cambias código del backend, repite `docker compose up --build`.
+- La imagen del backend es autosuficiente (sin bind mounts ni `--reload`); `db` y `backend` tienen healthcheck y límite de memoria (512 MB y 1 GB). Si cambias código del backend, repite `docker compose up -d --build`.
 - Todas las variables están documentadas en `.env.example`. Las claves van siempre vacías ahí; `.env` está ignorado por git.
 - Para detener: `docker compose down` (conserva los datos); `docker compose down -v` también borra el volumen de PostgreSQL.
 
 ### Verificar que funciona
 
-Los comandos usan `curl` (en PowerShell de Windows usa `curl.exe` y comillas dobles escapadas, o ejecuta estos comandos desde Git Bash).
+Los comandos usan `curl` (en PowerShell de Windows usa `curl.exe` y comillas dobles escapadas, o ejecuta estos comandos desde Git Bash). En Git Bash, si un `curl -d` con acentos devuelve HTTP 400, guarda el JSON en un archivo UTF-8 y envíalo con `--data-binary @archivo.json`.
 
 ```bash
 # 1. Salud: debe listar 68 actuadores, el proveedor/modelo activos y llm_configured (true si hay clave)
@@ -72,7 +74,7 @@ Respuesta esperada de la consulta (JSON completo; resumen de los campos estables
 
 - `intent`: `lookup`; `ui_payload.display_type`: `SINGLE_SPEC_CARD`; `ui_payload.actuators[0].base_part_number`: `763B00-11300000/A`.
 - `answer`: una o dos frases con torque on/off 500 Nm (4400 in-lbs), torque modulante 380 Nm (3350 in-lbs) y potencia 90 W (cifras del catálogo, verificadas contra el oráculo).
-- `verification.status`: `verified` si el LLM redactó la respuesta y pasó el verificador; `fallback_template` si respondió la plantilla (siempre en modo degradado). La redacción exacta del LLM varía de una ejecución a otra; las cifras no.
+- `verification.status`: para esta consulta de ficha por número de parte es normal (y frecuente) obtener `fallback_template`: responde la plantilla determinista, que ya es correcta y lleva las mismas cifras. `verified` aparece cuando el LLM redacta la respuesta y pasa el verificador, lo que ocurre sobre todo en consultas de redacción libre (p. ej. recomendaciones descritas con tus palabras); en modo degradado siempre es `fallback_template`. Las cifras no cambian entre uno y otro; la redacción sí varía entre ejecuciones.
 
 Para ejecutar las pruebas contra esa base de datos, ver «Pruebas» en la sección de ingestión.
 
@@ -175,13 +177,17 @@ El **oráculo** (`golden.json`) es independiente de lo que devuelven las herrami
 Pruebas (desde la raíz del repo, con `docker compose up` ya en marcha para tener PostgreSQL en `localhost:5433`, y `pip install -r backend/requirements.txt`):
 
 ```bash
-python -m pytest backend/evals -q    # 529 pruebas pasan (corrida del 2026-11-06: 529 passed, 1 skipped); una (test_api_e2e multiturno) llama al LLM real y se omite si el proveedor no responde
+python -m pytest backend/evals -q    # 690 pasan, 1 omitida (corrida 2026-11-07); una (test_api_e2e multiturno) llama al LLM real y se omite si el proveedor no responde
 python backend/evals/run_evals.py -v                   # 11 escenarios con LLM
 python backend/evals/run_adversarial.py                # 30 casos adversarios con LLM
 python backend/evals/run_adversarial.py --cases backend/evals/heldout.json --report backend/evals/HELDOUT_REPORT.md   # 40 casos ciegos
 ```
 
 Los tres runners requieren clave de LLM en `.env`; sobrescriben sus informes `.md`. Las pruebas de `backend/evals` no necesitan clave salvo la indicada.
+
+> Correr `run_evals.py` y `run_adversarial.py` reescribe archivos `.md` versionados de `backend/evals/` y deja el árbol de git modificado; se descarta con `git checkout -- backend/evals`.
+>
+> La batería ciega propia da 39/40 en la corrida de verificación (2026-11-07). El caso que falla varía entre corridas (HLD-20 o HLD-32) por la redacción del LLM, no por los datos.
 
 ## Modelos por entorno
 
@@ -207,7 +213,7 @@ Resultados medidos el 2026-11-05 en una validación final (los informes de `back
 
 Detalle por caso, reintentos, latencias y costos de estas corridas: [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md). Con 10–40 casos las diferencias entre proveedores no son estadísticamente concluyentes. Ambos proveedores fallan el mismo caso (HLD-20, ver limitaciones). En la primera corrida de la batería ciega, antes de las correcciones generales, NIM obtuvo 32/40.
 
-## Pantalla de depuración y credenciales demo 
+## Pantalla de depuración y credenciales demo
 
 La app tiene una pantalla oculta de telemetría (herramientas llamadas, SQL, latencias, tokens, entidades activas de la sesión). Se abre con una **pulsación larga de 2 s sobre el título** de la barra superior del chat (con vibración y aviso).
 
@@ -236,7 +242,7 @@ Son credenciales de demostración, igual que `JWT_SECRET_KEY=demo-only-change-me
 
 ## Limitaciones conocidas
 
-- **Tasa real en mensajes no vistos (fase 6, 2026-11-06, OpenRouter, HTTP): ≈ 80 %.** Dos sets que no había visto al correrlos por primera vez: set A (40 mensajes) **33/40 (82,5 %)** y set B (20 mensajes) **16/20 (80 %)**, ambos auditados a mano. Esa es la cifra honesta. Después se aplicaron arreglos generales a los fallos de cada set (tercera ronda); volver a correr los mismos sets dio 39/40 (A) y 19/20 (B), pero eso es solo una prueba de regresión, **no una tasa nueva**: los arreglos se hicieron viendo esos casos. El **235/235 del banco natural tampoco es una tasa real** (incluye casos escritos durante la fase y ajustados al corregir fallos). Otras puertas con OpenRouter: evals 11/11, adversarial 30/30, ciega propia 40/40. 16 turnos del banco (6,8 %) pasan por el clasificador (≈ +2,5 s y ≈ USD 0,0003 cada uno). Detalle por caso en [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md).
+- **Tasa real en mensajes no vistos (fase 6, 2026-11-06, OpenRouter, HTTP): ≈ 80 %.** Dos sets que no había visto al correrlos por primera vez: set A (40 mensajes) **33/40 (82,5 %)** y set B (20 mensajes) **16/20 (80 %)**, ambos auditados a mano. Esa es la cifra honesta. Después se aplicaron arreglos generales a los fallos de cada set (tercera ronda); volver a correr los mismos sets dio 39/40 (A) y 19/20 (B), pero eso es solo una prueba de regresión, **no una tasa nueva**: los arreglos se hicieron viendo esos casos. El **235/235 del banco natural tampoco es una tasa real** (incluye casos escritos durante la fase y ajustados al corregir fallos). Otras puertas con OpenRouter: evals 11/11, adversarial 30/30, ciega propia 39/40 (el caso que falla varía entre corridas, HLD-20 o HLD-32, por la redacción del LLM). 16 turnos del banco (6,8 %) pasan por el clasificador (≈ +2,5 s y ≈ USD 0,0003 cada uno). Detalle por caso en [`backend/evals/FINAL_VALIDATION.md`](backend/evals/FINAL_VALIDATION.md).
 - **NIM es una alternativa menos estable y no tiene puerta.** Con NIM (en proceso, antes de los arreglos de las rondas 2 y 3) la ciega propia dio 35/40 y el adversarial 30/30; no se volvió a medir ni se le exige un umbral. El proveedor por defecto y el que cumple las puertas es OpenRouter.
 - **Fallos conocidos que quedan:** «mi válvula pide 800 libras pulgada» y «necesito algo de 150 Nm monofásico 110» no recomiendan de inmediato: el sistema anota los criterios y pregunta lo que falta (voltaje o tipo de servicio) antes de recomendar; «dame el catálogo completo» da el resumen con botones genéricos (no de filtro); el ejecutor automático marca como fallo conteos y sufijos de catálogo porque no tiene el oráculo de catálogo.
 - **HLD-32.** El caso de 24 V «velocidad fija» falla en la ciega porque el LLM redacta con palabras que la comprobación no acepta.

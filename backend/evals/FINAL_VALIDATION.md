@@ -418,3 +418,11 @@ Los demás «fallos» del ejecutor son sus límites (sin oráculo de catálogo):
 ## Verificación tras el cambio de redacción del catálogo (2026-11-07)
 
 Contenedor reconstruido (`docker compose up -d --build backend`, `/health` ok, 68 actuadores), HTTP, OpenRouter. El catálogo ahora dice «68 referencias en la tabla; 64 disponibles y 4 marcadas N/A en el PDF (trifásicos 220 V de los tamaños 761A, 761B, 762A y 762B)». Resultados reales: evals 11/11; adversarial 30/30 (USD 0,01113); ciega propia 39/40 (USD 0,01731): HLD-40 pasa y falla HLD-32 («velocidad a 50 Hz del 761X30-11380000/A de 24V»), cuya respuesta es correcta («la velocidad es fija… 17 segundos») pero dice «fija» y el patrón del caso solo admite «fijo|fixed|única|single|no 50…» (variación de redacción del LLM, no de datos); suite pytest 690 pasan, 1 omitida.
+
+## Verificación independiente del README (2026-11-07)
+
+Un evaluador externo siguió el README desde un clon limpio de GitHub, en un proyecto Docker aparte (`readmetest`), sin tocar el stack principal. Resultado: **PASA CON RESERVAS**; las 9 observaciones se corrigieron en el README (nombres fijos de contenedor, cifra de pruebas, unificación de la ciega en 39/40, expectativa de `verification.status`, `up -d --build` y logs, aviso de que los runners reescriben `.md`, notas de `pip` y Git Bash, ancla rota del encabezado de depuración).
+
+Cifras medidas en esa verificación: pytest 690 pasan, 1 omitida; evals 11/11; adversarial 30/30; ciega propia 39/40 (el caso que falla varía entre corridas por la redacción del LLM, HLD-20 o HLD-32, nunca por datos); el APK de la Release descarga con HTTP 200 y pesa 12.296.621 bytes; memoria en reposo tras arranque en frío: 85,5 MiB el backend y 34,2 MiB PostgreSQL.
+
+Alcance: no se compiló la app Android; solo se verificó la descarga del APK publicado.
