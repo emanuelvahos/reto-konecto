@@ -84,8 +84,9 @@
     <string name="table_col_part">Part Number</string>
     <string name="table_col_enclosure">Enclosure</string>
     <string name="table_col_power_supply">Power Supply</string>
-    <string name="table_col_on_off_torque">On/Off Torque</string>
-    <string name="table_col_mod_torque">Mod. Torque</string>
+    <string name="table_col_on_off_torque">Torque On/Off</string>
+    <string name="table_col_mod_torque">Torque modulante</string>
+    <string name="table_col_speed">Speed</string>
     <string name="table_col_duty">Duty (On/Mod)</string>
     <string name="table_col_cert">Certification</string>
     <string name="table_col_fla_freq">FLA (60|50Hz)</string>

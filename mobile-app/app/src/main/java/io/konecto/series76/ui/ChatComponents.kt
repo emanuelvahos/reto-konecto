@@ -1068,16 +1068,16 @@ fun ActuatorComparisonTable(
                         Text(stringResource(R.string.table_col_power_supply), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = true, maxLines = 2, lineHeight = 13.sp)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_on_off_torque), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Text(stringResource(R.string.table_col_on_off_torque), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = true, maxLines = 1)
                     }
-                    Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.table_col_mod_torque), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.CenterStart) {
+                        Text(stringResource(R.string.table_col_mod_torque), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = true, maxLines = 2, lineHeight = 12.sp)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_duty), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(stringResource(R.string.card_speed_label), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                        Text(stringResource(R.string.table_col_speed), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
                     Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
                         Text(stringResource(R.string.table_col_fla_freq), fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -1187,7 +1187,7 @@ fun ActuatorComparisonTable(
                                     color = if (isMarked) KonectoTheme.semantics.accentText else MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            Box(modifier = Modifier.height(24.dp), contentAlignment = Alignment.CenterStart) {
+                            Box(modifier = Modifier.height(32.dp), contentAlignment = Alignment.CenterStart) {
                                 val marker = modMarkers.getOrElse(index) { "" }
                                 val isMarked = marker.isNotEmpty()
                                 val mod = if (isActThreePhase) "—" else if (act.modulatingTorqueNm != null) "${marker}${act.modulatingTorqueNm.toInt()} Nm" else "—"
@@ -2263,22 +2263,45 @@ fun ActuatorFullDatasheetSheet(
 
 @Composable
 private fun DatasheetMetricRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+    if (value.length > 25) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Spacer(modifier = Modifier.width(Spacing.s))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.End
+            )
+        }
     }
 }

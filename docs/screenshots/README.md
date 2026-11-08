@@ -61,7 +61,7 @@ Este documento certifica la auditoría visual y funcional exhaustiva de la aplic
     `El 763B00-11300000/A tiene un torque de 500 Nm y una potencia de 90 W, mientras que el 764B00-11300000/A ofrece 1100 Nm y 180 W.`
   - Cabecera: `COMPARATIVA SERIE 76`, `2 Actuadores Seleccionados`, badge `60 Hz | 50 Hz`.
   - Tabla comparativa de 2 columnas completas (`763B00-11300000/A` vs `764B00-11300000/A`):
-    - Carcasa, Alimentación, Torque On/Off (▼ 500 Nm vs ▲ 1100 Nm), Torque (▼ 380 Nm vs ▲ 930 Nm), Ciclo, Tiempo de giro (▼ 26.0s|32.0s vs ▲ 36.0s|43.0s), FLA, LRA, Potencia (▼ 90 W vs ▲ 180 W), Certificación (✓ CSA).
+    - Parámetros: Número de parte, Carcasa, Alimentación, Torque On/Off (▼ 500 Nm vs ▲ 1100 Nm), Torque modulante (con wrap en 2 líneas: ▼ 380 Nm vs ▲ 930 Nm), Ciclo (On/Mod), Tiempo de giro (▼ 26.0s|32.0s vs ▲ 36.0s|43.0s), FLA, LRA, Potencia (▼ 90 W vs ▲ 180 W), Certificación (✓ CSA).
     - Marcadores dinámicos ▲/▼ destacando valores superiores e inferiores.
     - Botón `Copiar comparativa`.
   - Barra de texto inferior despejada (sin teclado abierto en pantalla).

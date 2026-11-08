@@ -85,7 +85,8 @@
     <string name="table_col_enclosure">Carcasa</string>
     <string name="table_col_power_supply">Alimentación</string>
     <string name="table_col_on_off_torque">Torque On/Off</string>
-    <string name="table_col_mod_torque">Torque Modulante</string>
+    <string name="table_col_mod_torque">Torque modulante</string>
+    <string name="table_col_speed">Tiempo de giro</string>
     <string name="table_col_duty">Ciclo (On/Mod)</string>
     <string name="table_col_cert">Certificación</string>
     <string name="table_col_fla_freq">FLA (60|50Hz)</string>
