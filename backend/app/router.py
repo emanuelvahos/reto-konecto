@@ -285,6 +285,8 @@ _CAT_PHASE = re.compile(r"tipos? de alimentaci[oó]n|qu[eé] alimentaciones|(?:w
 _CAT_COUNT = re.compile(r"\bcu[aá]nt[oa]s\b|how many|n[uú]mero total de|total number of", FLAGS)
 _CAT_EXISTS = re.compile(r"^\W*(?:hay|existen?|tienen|manejan|ofrecen|do you (?:have|offer)|are there|is there)\b", FLAGS)
 _CAT_NOUN = re.compile(r"modelos?|actuadores?|variantes?|versiones|models?|actuators?|variants?|versions", FLAGS)
+_CAT_FULL = re.compile(r"cat[aá]logo\s+completo|todo\s+el\s+cat[aá]logo|(?:resumen|panorama|visi[oó]n general)\s+(?:del|de el)\s+cat[aá]logo|cat[aá]logo\s+(?:en\s+)?resumen|"
+                       r"(?:full|complete|entire|whole)\s+catalog(?:ue)?|catalog(?:ue)?\s+(?:summary|overview)|(?:summary|overview)\s+of\s+the\s+catalog(?:ue)?", FLAGS)
 _CAT_DIFF = re.compile(r"diferenc\w+|difference|comp[aá]r\w+|compare|versus|\bvs\.?\b", FLAGS)
 _BARE_SIZE = re.compile(r"(?<![A-Za-z0-9\-/.])(76[1-7])(?![A-Za-z0-9\-/])")
 
@@ -309,6 +311,8 @@ def catalog_decision(text: str, crit: Dict[str, Any], d: "Decision") -> Optional
     sizes = list(dict.fromkeys(_BARE_SIZE.findall(text)))
     if len(sizes) >= 2 and _CAT_DIFF.search(text):
         args = {"aspect": "compare_sizes", "sizes": [int(x) - 760 for x in sizes[:2]]}
+    elif _CAT_FULL.search(text) and not _catalog_filters(crit):
+        args = {"aspect": "summary"}
     elif _CAT_COUNT.search(text) and (_CAT_VOLTS.search(text) or _CAT_ENCL.search(text) or _CAT_PHASE.search(text) or _CAT_SIZES.search(text)) and not _catalog_filters(crit):
         args = {"aspect": "summary"}      # pregunta compuesta («cuántos modelos hay y qué voltajes manejan»): el resumen responde ambas partes
     elif _CAT_SIZES.search(text):

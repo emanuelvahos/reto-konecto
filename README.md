@@ -7,6 +7,7 @@ Asistente conversacional para consultar, comparar y recomendar los actuadores el
 <table>
 <tr><td align="center"><img src="docs/screenshots/01-login.png" width="200" alt="Pantalla de inicio de sesión con el botón «Usar cuenta demo»"><br><sub>Pantalla de inicio de sesión con el botón «Usar cuenta demo»</sub></td><td align="center"><img src="docs/screenshots/02-sesiones.png" width="200" alt="Lista de conversaciones guardadas"><br><sub>Lista de conversaciones guardadas</sub></td><td align="center"><img src="docs/screenshots/03-ficha-actuador.png" width="200" alt="Ficha de un actuador con selector 60 Hz / 50 Hz"><br><sub>Ficha de un actuador con selector 60 Hz / 50 Hz</sub></td><td align="center"><img src="docs/screenshots/04-comparacion.png" width="200" alt="Tabla comparativa de dos actuadores"><br><sub>Tabla comparativa de dos actuadores</sub></td></tr>
 <tr><td align="center"><img src="docs/screenshots/05-ficha-completa.png" width="200" alt="Ficha técnica completa en un panel inferior"><br><sub>Ficha técnica completa en un panel inferior</sub></td><td align="center"><img src="docs/screenshots/07-alerta.png" width="200" alt="Alerta de modelo no disponible"><br><sub>Alerta de modelo no disponible</sub></td><td align="center"><img src="docs/screenshots/06-voz-escuchando.png" width="200" alt="Dictado por voz en curso"><br><sub>Dictado por voz en curso</sub></td><td align="center"><img src="docs/screenshots/08-modo-claro.png" width="200" alt="Tema claro"><br><sub>Tema claro</sub></td></tr>
+<tr><td align="center"><img src="docs/screenshots/09-saludo.png" width="200" alt="Saludo y capacidades con botones sugeridos"><br><sub>Saludo y capacidades con botones sugeridos</sub></td></tr>
 </table>
 
 ## Qué es y cómo funciona
@@ -255,7 +256,7 @@ La aplicación móvil (`mobile-app/`) está escrita en **Kotlin** con **Jetpack 
 
 ### Obtener la app sin compilar
 
-Descarga el APK de la última Release: <https://github.com/emanuelvahos/reto-konecto/releases/latest> (archivo `series76-assistant.apk`).
+Descarga el APK de la última Release: <https://github.com/emanuelvahos/reto-konecto/releases/download/v1.0.0/series76-assistant.apk>.
 
 - **Con adb:** `adb install -r series76-assistant.apk`
 - **Sin adb:** copia el archivo al teléfono, ábrelo y permite la instalación de orígenes desconocidos cuando Android lo pida.

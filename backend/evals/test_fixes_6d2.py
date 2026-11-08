@@ -87,4 +87,15 @@ def test_ranking_has_no_unrequested_csa_alerts():
 
 def test_compound_question_answers_both_parts():
     answer, *_ = turn("¿Cuántos modelos hay y qué voltajes manejan?", locale="es")
-    assert "68 modelos" in answer and "24 V, 110 V y 220 V" in answer
+    assert "68 referencias en la tabla; 64 disponibles" in answer and "24 V, 110 V y 220 V" in answer
+
+
+def test_catalog_count_and_summary_explain_the_na_models():
+    """68 referencias = 64 disponibles + 4 N/A (trifásicos 220 V de 761A, 761B, 762A, 762B), leídos de la base."""
+    expected = "68 referencias en la tabla; 64 disponibles y 4 marcadas N/A en el PDF (trifásicos 220 V de los tamaños 761A, 761B, 762A y 762B)"
+    for q in ("¿cuántos actuadores hay?", "dame el catálogo completo"):
+        answer, ui, dbg, *_ = turn(q, locale="es")
+        assert expected in answer, (q, answer)
+        assert not ui["actuators"] and dbg["tool_calls"][0]["tool_name"] == "catalog_overview"
+    answer, *_ = turn("how many actuators are there?", locale="en")
+    assert "68 references in the table; 64 available and 4 marked N/A in the PDF (three-phase 220 V, sizes 761A, 761B, 762A and 762B)" in answer, answer

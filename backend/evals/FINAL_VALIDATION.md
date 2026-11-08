@@ -414,3 +414,7 @@ HTTP, OpenRouter, contenedor con el commit `ec6fd8d`. Automático 15/20; **audit
 | B (20) | 17/20 | 19/20 | BB-13 («150 Nm monofasico 110»: ahora reconoce 110 V y anota 150 Nm, monofásico, pero pregunta el tipo de servicio antes de recomendar) |
 
 Los demás «fallos» del ejecutor son sus límites (sin oráculo de catálogo): BLD-03, 21, 22, 23, 24 y BB-08, 09. Datos: `baselines/blind_6D3_regression_http.json` y `baselines/blind_b_6D3_regression_http.json`.
+
+## Verificación tras el cambio de redacción del catálogo (2026-11-07)
+
+Contenedor reconstruido (`docker compose up -d --build backend`, `/health` ok, 68 actuadores), HTTP, OpenRouter. El catálogo ahora dice «68 referencias en la tabla; 64 disponibles y 4 marcadas N/A en el PDF (trifásicos 220 V de los tamaños 761A, 761B, 762A y 762B)». Resultados reales: evals 11/11; adversarial 30/30 (USD 0,01113); ciega propia 39/40 (USD 0,01731): HLD-40 pasa y falla HLD-32 («velocidad a 50 Hz del 761X30-11380000/A de 24V»), cuya respuesta es correcta («la velocidad es fija… 17 segundos») pero dice «fija» y el patrón del caso solo admite «fijo|fixed|única|single|no 50…» (variación de redacción del LLM, no de datos); suite pytest 690 pasan, 1 omitida.

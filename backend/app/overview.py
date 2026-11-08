@@ -77,6 +77,18 @@ def _count_desc(filters: Dict[str, Any], lang: str) -> str:
     return _filters_text(filters, lang)
 
 
+def _na_clause(out: Dict[str, Any], lang: str) -> str:
+    """«…4 marcadas N/A en el PDF (trifásicos 220 V de los tamaños 761A, 761B, 762A y 762B)». Todo sale de la base."""
+    es = lang == "es"
+    groups = out.get("na_groups") or []
+    parts = []
+    for g in groups:
+        ph = PHASE.get(g["phase_type"], {}).get(lang, g["phase_type"])
+        sizes = _join(g["sizes"], lang)
+        parts.append(f"{ph} {g['voltage']} V de los tamaños {sizes}" if es else f"{ph} {g['voltage']} V, sizes {sizes}")
+    return f" ({_join(parts, lang)})" if parts else ""
+
+
 def render_overview(out: Dict[str, Any], lang: str) -> str:
     es = lang == "es"
     status = out.get("status")
@@ -90,10 +102,10 @@ def render_overview(out: Dict[str, Any], lang: str) -> str:
         volts = _join([f"{v} V" for v in out["voltages"]], lang)
         encs = _join(out["enclosures"], lang)
         if es:
-            return (f"El catálogo de la Serie 76 tiene {out['models']} modelos, {out['available']} disponibles y {out['not_available']} listados como N/A, "
-                    f"en {out['frame_sizes']} tamaños, con alimentación de {volts} y carcasa {encs}.")
-        return (f"The Series 76 catalog has {out['models']} models, {out['available']} available and {out['not_available']} listed as N/A, "
-                f"in {out['frame_sizes']} frame sizes, powered at {volts} with {encs} enclosures.")
+            return (f"El catálogo de la Serie 76 tiene {out['models']} referencias en la tabla; {out['available']} disponibles y {out['not_available']} marcadas N/A en el PDF"
+                    f"{_na_clause(out, lang)}, en {out['frame_sizes']} tamaños, con alimentación de {volts} y carcasa {encs}.")
+        return (f"The Series 76 catalog has {out['models']} references in the table; {out['available']} available and {out['not_available']} marked N/A in the PDF"
+                f"{_na_clause(out, lang)}, in {out['frame_sizes']} frame sizes, powered at {volts} with {encs} enclosures.")
     if aspect == "count":
         desc = _count_desc(out.get("filters") or {}, lang)
         n, av = out["models"], out["available"]
@@ -126,8 +138,14 @@ def render_overview(out: Dict[str, Any], lang: str) -> str:
             else:
                 tail = (" Por carcasa: " if es else " By enclosure: ") + "; ".join(enc_txt) + "."
         if es:
-            return (f"Sí. Hay {n} modelos{what} en el catálogo, {av} disponibles." + tail) if desc else f"Hay {n} modelos en el catálogo, {av} disponibles."
-        return (f"Yes. There are {n}{what} models in the catalog, {av} available." + tail) if desc else f"There are {n} models in the catalog, {av} available."
+            if desc:
+                return f"Sí. Hay {n} modelos{what} en el catálogo, {av} disponibles." + tail
+            na = f" y {n - av} marcadas N/A en el PDF{_na_clause(out, lang)}" if n > av else ""
+            return f"Hay {n} referencias en la tabla; {av} disponibles{na}."
+        if desc:
+            return f"Yes. There are {n}{what} models in the catalog, {av} available." + tail
+        na = f" and {n - av} marked N/A in the PDF{_na_clause(out, lang)}" if n > av else ""
+        return f"There are {n} references in the table; {av} available{na}."
     if aspect == "voltages":
         items = [f"{v['value']} V ({v['models']})" for v in out["values"]]
         return (f"Los modelos disponibles se ofrecen en {_join(items, lang)} (entre paréntesis, nº de modelos)." if es

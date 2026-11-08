@@ -741,6 +741,14 @@ class CatalogOverviewInput(BaseModel):
     enclosure_type: Optional[str] = Field(None, description="Filter for aspect=count: 'Weatherproof' or 'Explosionproof'.")
 
 
+def _na_groups(cur: Any, w: str = "", params: Any = ()) -> tuple:
+    """Modelos listados como N/A (is_available = FALSE) agrupados por voltaje y alimentación, leídos de la base."""
+    sql = ("SELECT voltage_num v, phase_type ph, array_agg(size_code ORDER BY size_code) sizes FROM actuators "
+           f"WHERE NOT is_available{w} GROUP BY 1, 2 ORDER BY 1, 2;")
+    cur.execute(sql, params)
+    return sql, [{"voltage": int(g["v"]), "phase_type": g["ph"], "sizes": list(g["sizes"])} for g in cur.fetchall()]
+
+
 @tool("catalog_overview", args_schema=CatalogOverviewInput)
 def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None, voltage_num: Optional[int] = None,
                      phase_type: Optional[str] = None, enclosure_type: Optional[str] = None) -> Dict[str, Any]:
@@ -773,6 +781,9 @@ def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None,
                 r = cur.fetchone()
                 result = {"status": "CATALOG_OVERVIEW", "aspect": aspect, "filters": {k: v for k, v in filters.items() if v is not None},
                           "models": int(r["n"]), "available": int(r["av"] or 0)}
+                if not any(v is not None for v in filters.values()) and result["models"] > result["available"]:
+                    sql_n, result["na_groups"] = _na_groups(cur)
+                    sql_used += " " + sql_n
                 if result["models"] == 0 and voltage_num is not None:     # voltaje inexistente (12 V, 48 V...): se listan los que sí hay
                     sql_v = ("SELECT voltage_num v, array_agg(DISTINCT enclosure_type) encs FROM actuators WHERE is_available GROUP BY voltage_num ORDER BY voltage_num;")
                     cur.execute(sql_v)
@@ -806,6 +817,9 @@ def catalog_overview(aspect: str = "summary", sizes: Optional[List[int]] = None,
                 encs = [x["enclosure_type"] for x in cur.fetchall()]
                 result = {"status": "CATALOG_OVERVIEW", "aspect": "summary", "models": int(r["n"]), "available": int(r["av"]),
                           "not_available": int(r["n"]) - int(r["av"]), "frame_sizes": int(r["fs"]), "voltages": volts, "enclosures": encs}
+                if result["not_available"]:
+                    sql_n, result["na_groups"] = _na_groups(cur)
+                    sql_used += " " + sql_n
     except Exception as exc:  # noqa: BLE001
         result = {"status": "CATALOG_ERROR", "message": f"Catalog lookup failed ({type(exc).__name__})."}
     record_tool_trace("catalog_overview", {"aspect": aspect, **{k: v for k, v in filters.items() if v is not None},
