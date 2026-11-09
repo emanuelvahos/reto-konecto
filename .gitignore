@@ -38,3 +38,7 @@ Thumbs.db
 backend/data/extraction/page*.png
 backend/data/extraction/crops/
 backend/data/extraction/A.partial.json
+
+# Claves de firma
+*.jks
+*.keystore

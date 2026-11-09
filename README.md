@@ -2,6 +2,26 @@
 
 Asistente conversacional para consultar, comparar y recomendar los actuadores eléctricos Series 76 (catálogo de 68 modelos extraído de `docs/series_76_electric_data.pdf`). Backend FastAPI + PostgreSQL 16 y una app Android.
 
+## Procedencia del catálogo y licencia
+
+El catálogo Series 76 (`docs/series_76_electric_data.pdf` y `docs/series_76_summary.pdf`) es el material entregado por Konecto para este reto y se incluye solo para poder reproducir la ingesta. Los derechos del documento son de su titular. El código se entrega para evaluación técnica y no lleva licencia de uso adicional.
+
+## Flujo de una consulta
+
+```mermaid
+flowchart TD
+    A["Mensaje del usuario"] --> B["Router determinista"]
+    B -->|"entiende"| D["Herramientas SQL sobre PostgreSQL"]
+    B -->|"ambiguo"| C["Clasificador LLM"]
+    C --> D
+    C -->|"confianza baja"| M["Menu neutro con botones"]
+    D --> E["LLM redacta la respuesta"]
+    E --> F["Verificador numerico"]
+    F -->|"cifras respaldadas"| G["Respuesta al usuario"]
+    F -->|"falla o LLM caido"| H["Plantilla determinista"]
+    H --> G
+```
+
 ## Capturas
 
 <table>
@@ -46,7 +66,7 @@ docker compose up -d --build
 docker compose logs -f backend    # seguir el arranque; Ctrl+C sale del log sin detener los contenedores
 ```
 
-La primera vez descarga imágenes base y dependencias (medición en frío del 2026-11-06, clon nuevo y proyecto aparte, sin `.env`, con la imagen base de Python ya descargada: construcción del backend con `--no-cache` 80 s y 12 s hasta que `/health` respondió, 92 s en total; en reposo el backend usa ≈ 84 MiB y PostgreSQL ≈ 33 MiB. El total depende de tu red). Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
+La primera vez descarga imágenes base y dependencias (medición en frío del 2026-11-06, clon nuevo y proyecto aparte, sin `.env`, con la imagen base de Python ya descargada: construcción del backend con `--no-cache` 80 s y 12 s hasta que `/health` respondió, 92 s en total; en reposo el backend usa ≈ 85 MiB y PostgreSQL ≈ 34 MiB, medición en frío del 2026-11-07. El total depende de tu red). Está listo cuando el log del backend muestra `Application startup complete` y `docker compose ps` marca `series76_backend` como `healthy`.
 
 - API: <http://localhost:8001> (Swagger: <http://localhost:8001/docs>). PostgreSQL en el host: puerto `5433`.
 - Al arrancar, `scripts/ingest.py --mode auto` carga `backend/data/series76_catalog.json` (validando las reglas físicas) y siembra 68 actuadores y 3 usuarios demo; después se inicia Uvicorn.

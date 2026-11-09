@@ -128,9 +128,9 @@ Este documento certifica la auditoría visual y funcional exhaustiva de la aplic
 ## 3. Entrega del APK Release
 
 - **Nombre del artefacto entregable:** `series76-assistant.apk`
-- **Ruta de instalación:** `C:\Users\Admin\Desktop\series76-assistant.apk`
-- **Ruta en workspace:** `mobile-app\app\build\outputs\apk\release\app-release.apk`
-- **Tamaño exacto:** **12,296,241 bytes** (~11.73 MB)
+- **Ruta de instalación:** `series76-assistant.apk`
+- **Ruta de salida de la compilación:** `app/build/outputs/apk/release/app-release.apk` (relativa a `mobile-app/`)
+- **Tamaño exacto:** **12.296.621 bytes** (~11,73 MB)
 - **Firma:** Variante `release` firmada con la clave debug/release para instalación directa en dispositivos físicos.
 - **Seguridad y Producción:**
   - Interruptor de Mock: **Deshabilitado / Inexistente en release**.
